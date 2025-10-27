@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Ebay",
+    "url": "https://ebay.com",
+    "category": "Shop",
+    "image": "images/ebay.png"
+  },
+  {
+    "name": "ChatGPT 5o",
+    "url": "https://chat.openai.com/?mo_=gpt-5",
+    "category": "AI",
+    "image": "images/gpt5.png"
+  }
+]
