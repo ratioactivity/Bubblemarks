@@ -16,13 +16,15 @@
 
 @font-face {
   font-family: "Bigbesty";
-  src: url("fonts/Bigbesty.ttf") format("truetype");
+  src: local("Bigbesty"), url("fonts/Bigbesty.woff2") format("woff2"),
+    url("fonts/Bigbesty.ttf") format("truetype");
   font-display: swap;
 }
 
 @font-face {
   font-family: "Papernotes";
-  src: url("fonts/Papernotes.ttf") format("truetype");
+  src: local("Papernotes"), url("fonts/Papernotes.woff2") format("woff2"),
+    url("fonts/Papernotes.ttf") format("truetype");
   font-display: swap;
 }
 
@@ -110,6 +112,23 @@ body {
   }
   100% {
     transform: translate3d(-15px, 20px, 0) rotate(-6deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    animation: none;
+  }
+
+  .charm {
+    animation: none;
+  }
+
+  .card,
+  .soft-btn,
+  .key-btn,
+  .clear-search {
+    transition: none;
   }
 }
 
@@ -367,6 +386,9 @@ body {
   position: relative;
   overflow: hidden;
   background: linear-gradient(135deg, rgba(255, 203, 234, 0.6), rgba(175, 208, 255, 0.6));
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .card-image {
@@ -374,6 +396,13 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.3s ease;
+}
+
+.card-image.is-fallback {
+  object-fit: contain;
+  padding: 1.2rem;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.92), rgba(200, 214, 255, 0.4));
 }
 
 .card-body {
