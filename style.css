@@ -45,6 +45,10 @@ body {
   padding: clamp(1.5rem, 3vw, 3rem);
 }
 
+[hidden] {
+  display: none !important;
+}
+
 #bubbles-background {
   position: fixed;
   inset: 0;
@@ -633,6 +637,8 @@ body {
 
 .data-tools {
   display: flex;
+  gap: clamp(0.35rem, 2vw, 0.75rem);
+  justify-content: center;
   flex-wrap: wrap;
   gap: 0.8rem;
   justify-content: center;

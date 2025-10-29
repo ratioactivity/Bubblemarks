@@ -210,7 +210,8 @@ const categoryForm = document.getElementById("category-form");
 const categorySettingsList = document.getElementById("category-settings-list");
 const addCategoryBtn = document.getElementById("add-category");
 const categoryItemTemplate = document.getElementById("category-item-template");
-const controlTabButtons = Array.from(document.querySelectorAll("[data-controls-tab]"));
+const getControlPanels = () =>
+  Array.from(document.querySelectorAll("[data-controls-panel]"));
 
 window.addEventListener("DOMContentLoaded", async () => {
   setupControlTabs();
@@ -251,40 +252,46 @@ async function hydrateData() {
 }
 
 function setupControlTabs() {
-  if (!controlTabButtons.length) return;
+  const buttons = Array.from(document.querySelectorAll("[data-controls-tab]"));
+  const panels = getControlPanels();
+
+  if (!buttons.length || !panels.length) return;
 
   const activateControlTab = (name, focus = false) => {
-    controlTabButtons.forEach((button) => {
+    panels.forEach((panel) => {
+      const isActive = panel.dataset.controlsPanel === name;
+      panel.hidden = !isActive;
+      panel.setAttribute("aria-hidden", isActive ? "false" : "true");
+    });
+
+    buttons.forEach((button) => {
       const isActive = button.dataset.controlsTab === name;
       button.setAttribute("aria-selected", isActive ? "true" : "false");
       button.setAttribute("tabindex", isActive ? "0" : "-1");
       button.classList.toggle("controls__tab--active", isActive);
 
-      const panelId = button.getAttribute("aria-controls");
-      if (panelId) {
-        const panel = document.getElementById(panelId);
-        if (panel) {
-          if (isActive) {
-            panel.removeAttribute("hidden");
-          } else {
-            panel.setAttribute("hidden", "");
-          }
-        }
-      }
-
       if (isActive && focus) {
         button.focus();
       }
     });
+
+    if (name === "keyboard") {
+      const searchInput = document.getElementById("search");
+      if (searchInput) {
+        window.requestAnimationFrame(() => {
+          searchInput.focus();
+        });
+      }
+    }
   };
 
   const focusTabAtIndex = (index) => {
-    const button = controlTabButtons[index];
+    const button = buttons[index];
     if (!button) return;
     activateControlTab(button.dataset.controlsTab, true);
   };
 
-  controlTabButtons.forEach((button, index) => {
+  buttons.forEach((button, index) => {
     button.addEventListener("click", () => {
       activateControlTab(button.dataset.controlsTab);
     });
@@ -293,20 +300,20 @@ function setupControlTabs() {
       if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
         event.preventDefault();
         const direction = event.key === "ArrowRight" ? 1 : -1;
-        const nextIndex = (index + direction + controlTabButtons.length) % controlTabButtons.length;
+        const nextIndex = (index + direction + buttons.length) % buttons.length;
         focusTabAtIndex(nextIndex);
       } else if (event.key === "Home") {
         event.preventDefault();
         focusTabAtIndex(0);
       } else if (event.key === "End") {
         event.preventDefault();
-        focusTabAtIndex(controlTabButtons.length - 1);
+        focusTabAtIndex(buttons.length - 1);
       }
     });
   });
 
-  const defaultTab = controlTabButtons.find((button) => button.dataset.controlsTab === "bookmarks");
-  const initial = defaultTab || controlTabButtons[0];
+  const defaultTab = buttons.find((button) => button.dataset.controlsTab === "bookmarks");
+  const initial = defaultTab || buttons[0];
   if (initial) {
     activateControlTab(initial.dataset.controlsTab);
   }
@@ -1641,6 +1648,7 @@ function startAxolotlSwim(pathEl, spriteEl, callbacks = {}) {
     }
     if (awaitingTransition) {
       awaitingTransition = false;
+      spriteEl.style.setProperty("--axolotl-tilt", "0deg");
       if (typeof onSwimStop === "function") {
         onSwimStop();
       }
@@ -1676,11 +1684,11 @@ function startAxolotlSwim(pathEl, spriteEl, callbacks = {}) {
 
   const swim = () => {
     const { x, y, duration } = choosePoint();
-    spriteEl.style.setProperty(
-      "--axolotl-flip",
-      x < currentX ? "180deg" : "0deg"
-    );
-    spriteEl.style.setProperty("--axolotl-tilt", "0deg");
+    spriteEl.style.setProperty("--axolotl-flip", "0deg");
+    const tiltRange = 8;
+    const direction = x < currentX ? -1 : 1;
+    const tilt = (Math.random() * tiltRange + 4) * direction;
+    spriteEl.style.setProperty("--axolotl-tilt", `${tilt}deg`);
 
     const hasDuration = duration > 0;
 
@@ -1736,6 +1744,7 @@ function startAxolotlSwim(pathEl, spriteEl, callbacks = {}) {
     pathEl.removeEventListener("transitionend", handleTransitionEnd);
     if (awaitingTransition) {
       awaitingTransition = false;
+      spriteEl.style.setProperty("--axolotl-tilt", "0deg");
       if (typeof onSwimStop === "function") {
         onSwimStop();
       }
@@ -1976,465 +1985,6 @@ function applyBookmarkImage(imageEl, bookmark) {
 
   imageEl.addEventListener("error", handleError, { once: true });
   imageEl.src = primarySource;
-}
-
-function createFallbackImage(bookmark) {
-  const title = bookmark.name?.trim() || "?";
-  const initials = title
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  const displayInitials = initials || "☆";
-  const palette = pickFallbackPalette(title + (bookmark.category ?? ""));
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Bookmark placeholder">
-      <defs>
-        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="${palette.background}" />
-          <stop offset="100%" stop-color="${palette.shadow}" />
-        </linearGradient>
-        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="${palette.shadow}" flood-opacity="0.65" />
-        </filter>
-      </defs>
-      <rect width="160" height="160" rx="36" fill="url(#grad)" />
-      <g filter="url(#shadow)">
-        <circle cx="50" cy="42" r="10" fill="rgba(255, 255, 255, 0.7)" />
-        <circle cx="108" cy="34" r="14" fill="rgba(255, 255, 255, 0.4)" />
-        <circle cx="124" cy="110" r="12" fill="rgba(255, 255, 255, 0.4)" />
-      </g>
-      <text x="50%" y="55%" text-anchor="middle" font-size="64" font-family="'Bigbesty', 'Papernotes', 'Comic Sans MS', 'Segoe UI', sans-serif" fill="${palette.accent}" dominant-baseline="middle">${displayInitials}</text>
-    </svg>`;
-
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-}
-
-function pickFallbackPalette(seed) {
-  const index = Math.abs(hashString(seed)) % FALLBACK_PALETTES.length;
-  return FALLBACK_PALETTES[index];
-}
-
-function hashString(value) {
-  let hash = 0;
-  const stringValue = String(value);
-  for (let i = 0; i < stringValue.length; i += 1) {
-    hash = (hash << 5) - hash + stringValue.charCodeAt(i);
-    hash |= 0;
-  }
-  return hash;
-}
-
-function buildFaviconUrl(url) {
-  try {
-    const domain = new URL(url).origin;
-    return `https://www.google.com/s2/favicons?sz=256&domain=${encodeURIComponent(domain)}`;
-  } catch (error) {
-    return "https://www.google.com/s2/favicons?sz=256&domain=https://example.com";
-  }
-}
-
-function setLoading(isLoading) {
-  grid.setAttribute("aria-busy", String(isLoading));
-}
-
-function showEmptyState(message) {
-  emptyState.textContent = message;
-  emptyState.hidden = false;
-}
-
-function hideEmptyState() {
-  emptyState.hidden = true;
-}
-
-async function initAxolotlMascot() {
-  if (!axolotlPath || !axolotlSprite || !axolotlFigure) {
-    return;
-  }
-
-  try {
-    const discovery = await discoverAxolotlFrames();
-    let stopFrameAnimation = null;
-    let stateAnimator = null;
-    let stopSwimming = null;
-
-    const stopFrameAnimationIfNeeded = () => {
-      if (typeof stopFrameAnimation === "function") {
-        stopFrameAnimation();
-        stopFrameAnimation = null;
-      }
-    };
-
-    const destroyStateAnimatorIfNeeded = () => {
-      if (stateAnimator) {
-        stateAnimator.destroy();
-        stateAnimator = null;
-      }
-    };
-
-    const settleMascot = () => {
-      const width = window.innerWidth || document.documentElement.clientWidth || 0;
-      const height = window.innerHeight || document.documentElement.clientHeight || 0;
-      const targetX = clamp(width * 0.72, 80, Math.max(width - 110, 80));
-      const targetY = clamp(height * 0.68, 90, Math.max(height - 150, 90));
-      axolotlPath.style.transitionDuration = "0ms";
-      axolotlPath.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`;
-      axolotlSprite.style.setProperty("--axolotl-flip", "0deg");
-      axolotlSprite.style.setProperty("--axolotl-tilt", "0deg");
-    };
-
-    const stopSwim = () => {
-      if (typeof stopSwimming === "function") {
-        stopSwimming();
-        stopSwimming = null;
-      }
-    };
-
-    if (discovery.mode === "states") {
-      axolotlFigure.classList.remove("axolotl--fallback");
-      stateAnimator = createAxolotlStateAnimator(axolotlFigure, discovery.states);
-
-      if (!stateAnimator.hasAny()) {
-        destroyStateAnimatorIfNeeded();
-        axolotlFigure.classList.add("axolotl--fallback");
-        axolotlFigure.style.backgroundImage = `url('${DEFAULT_AXOLOTL_IMAGE}')`;
-        return;
-      }
-
-      const findAvailableState = (candidates) =>
-        candidates.find((name) => stateAnimator.hasState(name)) || null;
-
-      const restState = findAvailableState(["resting", "floating", "swimming"]);
-      const floatState = findAvailableState(["floating", "resting", "swimming"]);
-      const swimState = findAvailableState(["swimming", "floating", "resting"]);
-      const prepState = stateAnimator.hasState("swimmode") ? "swimmode" : null;
-      const wakeState = stateAnimator.hasState("getup") ? "getup" : null;
-
-      const stateTimers = new Set();
-      const clearStateTimers = () => {
-        stateTimers.forEach((id) => window.clearTimeout(id));
-        stateTimers.clear();
-      };
-      const scheduleStateTimer = (fn, delay) => {
-        const id = window.setTimeout(() => {
-          stateTimers.delete(id);
-          fn();
-        }, delay);
-        stateTimers.add(id);
-        return id;
-      };
-
-      const showStill = () => {
-        clearStateTimers();
-        if (restState && stateAnimator.showState(restState)) {
-          return;
-        }
-        if (floatState && stateAnimator.showState(floatState)) {
-          return;
-        }
-        if (swimState) {
-          stateAnimator.showState(swimState);
-        }
-      };
-
-      const playFloatingLoop = () => {
-        clearStateTimers();
-        if (floatState && stateAnimator.playLoop(floatState, floatState === "floating" ? 190 : 210)) {
-          return;
-        }
-        if (restState) {
-          stateAnimator.playLoop(restState, 240);
-        } else if (swimState) {
-          stateAnimator.playLoop(swimState, 150);
-        }
-      };
-
-      const scheduleRestingCycle = () => {
-        if (!restState || restState === floatState) {
-          return;
-        }
-        scheduleStateTimer(() => {
-          if (!restState) return;
-          stateAnimator.playLoop(restState, 260);
-          if (wakeState) {
-            scheduleStateTimer(() => {
-              stateAnimator.playOnce(wakeState, {
-                interval: 150,
-                holdLast: true,
-                onComplete: () => {
-                  playFloatingLoop();
-                },
-              });
-            }, 2800);
-          } else if (floatState) {
-            scheduleStateTimer(() => {
-              playFloatingLoop();
-            }, 3200);
-          }
-        }, 9000);
-      };
-
-      const playIdleCycle = () => {
-        clearStateTimers();
-        if (restState && restState !== floatState) {
-          stateAnimator.playLoop(restState, 260);
-          if (wakeState) {
-            scheduleStateTimer(() => {
-              stateAnimator.playOnce(wakeState, {
-                interval: 150,
-                holdLast: true,
-                onComplete: () => {
-                  playFloatingLoop();
-                  scheduleRestingCycle();
-                },
-              });
-            }, 3200);
-          } else {
-            scheduleStateTimer(() => {
-              playFloatingLoop();
-              scheduleRestingCycle();
-            }, 3200);
-          }
-        } else {
-          playFloatingLoop();
-          scheduleRestingCycle();
-        }
-      };
-
-      const transitionToSwim = () => {
-        clearStateTimers();
-
-        return new Promise((resolve) => {
-          let resolved = false;
-          const finish = () => {
-            if (!resolved) {
-              resolved = true;
-              resolve();
-            }
-          };
-
-          const beginSwimLoop = () => {
-            if (swimState && stateAnimator.playLoop(swimState, 110)) {
-              finish();
-              return;
-            }
-            if (floatState && stateAnimator.playLoop(floatState, 180)) {
-              finish();
-              return;
-            }
-            if (restState && stateAnimator.playLoop(restState, 220)) {
-              finish();
-              return;
-            }
-            finish();
-          };
-
-          const enterSwimMode = () => {
-            if (
-              prepState &&
-              stateAnimator.playOnce(prepState, {
-                interval: 130,
-                holdLast: false,
-                onComplete: beginSwimLoop,
-              })
-            ) {
-              return;
-            }
-            beginSwimLoop();
-          };
-
-          const enterFloating = () => {
-            if (!floatState) {
-              enterSwimMode();
-              return;
-            }
-
-            if (stateAnimator.getCurrentState() === floatState) {
-              enterSwimMode();
-              return;
-            }
-
-            if (
-              stateAnimator.playOnce(floatState, {
-                interval: 150,
-                holdLast: true,
-                onComplete: enterSwimMode,
-              })
-            ) {
-              return;
-            }
-
-            enterSwimMode();
-          };
-
-          const wakeAndFloat = () => {
-            const current = stateAnimator.getCurrentState();
-
-            if (current === restState && wakeState) {
-              if (
-                stateAnimator.playOnce(wakeState, {
-                  interval: 150,
-                  holdLast: true,
-                  onComplete: () => {
-                    enterFloating();
-                  },
-                })
-              ) {
-                return;
-              }
-            }
-
-            if (
-              current === restState &&
-              floatState &&
-              restState !== floatState &&
-              stateAnimator.playOnce(floatState, {
-                interval: 150,
-                holdLast: true,
-                onComplete: enterSwimMode,
-              })
-            ) {
-              return;
-            }
-
-            enterFloating();
-          };
-
-          wakeAndFloat();
-        });
-      };
-
-      const settleAfterSwim = () => {
-        playFloatingLoop();
-        scheduleRestingCycle();
-      };
-
-      const startSwim = () => {
-        stopSwim();
-        stopSwimming = startAxolotlSwim(axolotlPath, axolotlSprite, {
-          onSwimStart: transitionToSwim,
-          onSwimStop: settleAfterSwim,
-        });
-      };
-
-      const handleMotionPreference = () => {
-        if (prefersReducedMotion.matches) {
-          stopSwim();
-          settleMascot();
-          showStill();
-        } else {
-          if (!stopSwimming) {
-            startSwim();
-          }
-          playIdleCycle();
-        }
-      };
-
-      handleMotionPreference();
-
-      addMotionPreferenceListener(() => {
-        handleMotionPreference();
-      });
-
-      window.addEventListener("resize", () => {
-        if (prefersReducedMotion.matches) {
-          settleMascot();
-          showStill();
-        }
-      });
-
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-          stopSwim();
-          showStill();
-        } else if (!prefersReducedMotion.matches) {
-          if (!stopSwimming) {
-            startSwim();
-          }
-          playIdleCycle();
-        }
-      });
-
-      return;
-    }
-
-    destroyStateAnimatorIfNeeded();
-
-    const frames = discovery.frames || [];
-
-    const startFrameAnimation = () => {
-      stopFrameAnimationIfNeeded();
-      if (frames.length > 1) {
-        stopFrameAnimation = createAxolotlFrameAnimator(axolotlFigure, frames, 130);
-      }
-    };
-
-    const syncFramesWithMotionPreference = () => {
-      if (frames.length <= 1) return;
-      if (prefersReducedMotion.matches) {
-        stopFrameAnimationIfNeeded();
-      } else if (!stopFrameAnimation) {
-        startFrameAnimation();
-      }
-    };
-
-    if (frames.length === 0) {
-      axolotlFigure.classList.add("axolotl--fallback");
-      axolotlFigure.style.backgroundImage = `url('${DEFAULT_AXOLOTL_IMAGE}')`;
-    } else if (frames.length === 1) {
-      axolotlFigure.classList.remove("axolotl--fallback");
-      axolotlFigure.style.backgroundImage = `url('${frames[0]}')`;
-    } else {
-      axolotlFigure.classList.remove("axolotl--fallback");
-      startFrameAnimation();
-    }
-
-    const startSwim = () => {
-      stopSwim();
-      stopSwimming = startAxolotlSwim(axolotlPath, axolotlSprite, {
-        onSwimStop: () => {
-          if (prefersReducedMotion.matches) {
-            settleMascot();
-          }
-        },
-      });
-    };
-
-    const handleMotionPreference = () => {
-      if (prefersReducedMotion.matches) {
-        stopSwim();
-        settleMascot();
-      } else if (!stopSwimming) {
-        startSwim();
-      }
-      syncFramesWithMotionPreference();
-    };
-
-    handleMotionPreference();
-
-    addMotionPreferenceListener(() => {
-      handleMotionPreference();
-    });
-
-    window.addEventListener("resize", () => {
-      if (prefersReducedMotion.matches) {
-        settleMascot();
-      }
-    });
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) {
-        stopSwim();
-      } else if (!prefersReducedMotion.matches && !stopSwimming) {
-        startSwim();
-      }
-    });
-  } catch (error) {
-    console.warn("Axolotl mascot could not be initialized", error);
-    axolotlFigure.classList.add("axolotl--fallback");
-    axolotlFigure.style.backgroundImage = `url('${DEFAULT_AXOLOTL_IMAGE}')`;
-  }
 }
 
 function createAxolotlFrameAnimator(target, frames, interval = 120) {
