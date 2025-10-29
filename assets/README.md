@@ -4,7 +4,7 @@ Drop your sparkle GIFs, pastel stickers, or the wandering axolotl sprites into t
 
 The interface looks for:
 
-- Optional star/heart GIFs referenced from CSS classes (see `style.css`).
+- Optional star/heart GIFs referenced from CSS classes (see `style.css`). Drop a wide `stars.gif` for the ribbon borders and the trio `singlestar1.gif`, `singlestar2.gif`, `singlestar3.gif` for floating sparkles.
 - The axolotl animation frames inside an `assets/axolotl/` subfolder. Create the folder and place your sequence inside to bring the mascot to life.
 
 ### Axolotl animation tips
