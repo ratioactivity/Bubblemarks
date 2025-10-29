@@ -85,8 +85,10 @@ body {
 }
 
 .axolotl-sprite {
-  transform: rotate(var(--axolotl-rotation, 0deg));
+  transform: rotateX(var(--axolotl-flip, 0deg)) rotateZ(var(--axolotl-tilt, 0deg));
   transform-origin: center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
   transition: transform 1.2s ease;
 }
 
