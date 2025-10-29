@@ -40,6 +40,12 @@
 
       <div class="filter-bar" id="categories" role="tablist" aria-label="Category filters"></div>
 
+      <div class="category-actions">
+        <button id="customize-categories" type="button" class="soft-btn soft-btn--ghost">
+          Customize Categories
+        </button>
+      </div>
+
       <div class="data-tools">
         <button id="import-btn" type="button" class="soft-btn">Import JSON</button>
         <button id="export-btn" type="button" class="soft-btn">Export Backup</button>
@@ -63,6 +69,48 @@
         <h2 class="card-title"></h2>
       </div>
     </article>
+  </template>
+
+  <div id="category-modal" class="category-modal" role="dialog" aria-modal="true" aria-labelledby="category-modal-title" hidden>
+    <div class="category-modal__backdrop" data-modal-dismiss="true"></div>
+    <div class="category-modal__dialog">
+      <div class="category-modal__header">
+        <h2 id="category-modal-title">Customize Categories</h2>
+        <button type="button" class="category-modal__close" data-modal-dismiss="true" aria-label="Close">✕</button>
+      </div>
+      <form id="category-form" class="category-form">
+        <p class="category-form__hint">
+          Rename, recolor, or add extra tabs to match your vibe. These settings stay in your browser.
+        </p>
+        <div id="category-settings-list" class="category-settings-list"></div>
+        <div class="category-form__footer">
+          <button id="add-category" type="button" class="soft-btn soft-btn--ghost">Add Category</button>
+          <span class="category-form__spacer" aria-hidden="true"></span>
+          <button type="button" class="soft-btn soft-btn--ghost" data-modal-dismiss="true">Cancel</button>
+          <button type="submit" class="soft-btn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <template id="category-item-template">
+    <div class="category-setting" data-category-key="">
+      <div class="category-setting__inputs">
+        <label class="category-setting__label">
+          <span>Name</span>
+          <input type="text" name="label" required />
+        </label>
+        <label class="category-setting__color">
+          <span>Color</span>
+          <input type="color" name="color" value="#ff80c8" />
+        </label>
+      </div>
+      <div class="category-setting__actions">
+        <button type="button" class="category-setting__move" data-direction="up" aria-label="Move up">▲</button>
+        <button type="button" class="category-setting__move" data-direction="down" aria-label="Move down">▼</button>
+        <button type="button" class="category-setting__remove" aria-label="Remove category">Remove</button>
+      </div>
+    </div>
   </template>
 
   <script src="script.js"></script>

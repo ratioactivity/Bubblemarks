@@ -6,6 +6,48 @@ const FALLBACK_PALETTES = [
   { background: "#fff5e5", accent: "#ffba6b", shadow: "#ffe3ba" },
   { background: "#e8fff6", accent: "#6ad6a6", shadow: "#c2f7da" },
 ];
+const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
+const DEFAULT_CATEGORY_LABEL = "Unsorted";
+const DEFAULT_CATEGORY_SLUG = "unsorted";
+const DEFAULT_AXOLOTL_IMAGE = (() => {
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="140" viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="body" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop stop-color="#ffb9dc" offset="0%"/>
+      <stop stop-color="#ffdff1" offset="100%"/>
+    </linearGradient>
+    <radialGradient id="belly" cx="50%" cy="45%" r="60%">
+      <stop stop-color="#fff6fb" offset="0%"/>
+      <stop stop-color="#ffd0ec" stop-opacity="0.85" offset="100%"/>
+    </radialGradient>
+  </defs>
+  <g fill="none" stroke="#ff89c9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 42c10-6 18-10 26-10"/>
+    <path d="M212 42c-10-6-18-10-26-10"/>
+    <path d="M30 70c9 4 18 6 26 4"/>
+    <path d="M210 70c-9 4-18 6-26 4"/>
+  </g>
+  <g>
+    <path d="M60 40c-20 12-32 32-26 52s26 34 70 36c28 1 40-2 56-2 46 0 72-16 74-38s-14-46-40-58c-28-14-84-14-134 10z" fill="url(#body)" stroke="#ff89c9" stroke-width="3"/>
+    <ellipse cx="118" cy="78" rx="46" ry="32" fill="url(#belly)"/>
+    <g fill="#ff8fb5">
+      <circle cx="88" cy="72" r="8"/>
+      <circle cx="148" cy="72" r="8"/>
+    </g>
+    <path d="M102 94c8 10 20 10 28 0" stroke="#ff89c9" stroke-width="4" stroke-linecap="round"/>
+    <g stroke="#ff89c9" stroke-width="4" stroke-linecap="round">
+      <path d="M90 52c-6-12-18-18-32-18"/>
+      <path d="M146 52c6-12 18-18 32-18"/>
+    </g>
+    <g stroke="#ffb0d9" stroke-width="4" stroke-linecap="round">
+      <path d="M82 48c-8-10-20-14-34-12"/>
+      <path d="M154 48c8-10 20-14 34-12"/>
+    </g>
+  </g>
+</svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+})();
 
 const prefersReducedMotion = (() => {
   if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
@@ -26,11 +68,26 @@ const AXOLOTL_FRAME_PATTERNS = [
     `assets/axolotl/frame-${String(index).padStart(2, "0")}.${extension}`,
   (index, extension) => `assets/axolotl/frame${index}.${extension}`,
   (index, extension) =>
+    `assets/axolotl/frame_${String(index).padStart(2, "0")}.${extension}`,
+  (index, extension) => `assets/axolotl/frame_${index}.${extension}`,
+  (index, extension) =>
     `assets/axolotl/axolotl-${String(index).padStart(2, "0")}.${extension}`,
   (index, extension) => `assets/axolotl/axolotl${index}.${extension}`,
   (index, extension) =>
+    `assets/axolotl/axolotl_${String(index).padStart(2, "0")}.${extension}`,
+  (index, extension) => `assets/axolotl/axolotl_${index}.${extension}`,
+  (index, extension) =>
     `assets/axolotl/swim-${String(index).padStart(2, "0")}.${extension}`,
   (index, extension) => `assets/axolotl/swim${index}.${extension}`,
+  (index, extension) =>
+    `assets/axolotl/swim_${String(index).padStart(2, "0")}.${extension}`,
+  (index, extension) => `assets/axolotl/swim_${index}.${extension}`,
+  (index, extension) =>
+    `assets/axolotl/idle-${String(index).padStart(2, "0")}.${extension}`,
+  (index, extension) => `assets/axolotl/idle${index}.${extension}`,
+  (index, extension) =>
+    `assets/axolotl/idle_${String(index).padStart(2, "0")}.${extension}`,
+  (index, extension) => `assets/axolotl/idle_${index}.${extension}`,
 ];
 const AXOLOTL_SINGLE_ASSETS = [
   "assets/axolotl/axolotl.gif",
@@ -39,6 +96,9 @@ const AXOLOTL_SINGLE_ASSETS = [
   "assets/axolotl/swim.gif",
   "assets/axolotl/swim.png",
   "assets/axolotl/swim.webp",
+  "assets/axolotl/idle.gif",
+  "assets/axolotl/idle.png",
+  "assets/axolotl/idle.webp",
 ];
 const AXOLOTL_FRAME_LIMIT = 30;
 
@@ -46,6 +106,8 @@ let bookmarks = [];
 let defaultBookmarks = [];
 let activeCategory = "all";
 let searchTerm = "";
+let categorySettings = loadCategorySettings();
+let categoryInfo = new Map();
 
 const grid = document.getElementById("bookmarks");
 const emptyState = document.getElementById("empty-state");
@@ -62,11 +124,18 @@ const template = document.getElementById("bookmark-card-template");
 const axolotlPath = document.getElementById("axolotl-path");
 const axolotlSprite = document.getElementById("axolotl-sprite");
 const axolotlFigure = document.getElementById("axolotl-figure");
+const customizeCategoriesBtn = document.getElementById("customize-categories");
+const categoryModal = document.getElementById("category-modal");
+const categoryForm = document.getElementById("category-form");
+const categorySettingsList = document.getElementById("category-settings-list");
+const addCategoryBtn = document.getElementById("add-category");
+const categoryItemTemplate = document.getElementById("category-item-template");
 
 window.addEventListener("DOMContentLoaded", async () => {
   setupSearch();
   setupKeyboard();
   setupDataTools();
+  setupCategoryCustomization();
   initAxolotlMascot();
   await hydrateData();
 });
@@ -143,8 +212,573 @@ function sanitizeBookmarks(entries) {
     .filter((entry) => entry.name && entry.url);
 }
 
+function loadCategorySettings() {
+  if (typeof localStorage === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = localStorage.getItem(CATEGORY_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    const deduped = [];
+    const seen = new Set();
+
+    parsed.forEach((entry) => {
+      const normalized = normalizeCategorySetting(entry);
+      if (!normalized || seen.has(normalized.key)) {
+        return;
+      }
+      seen.add(normalized.key);
+      deduped.push(normalized);
+    });
+
+    return deduped;
+  } catch (error) {
+    console.warn("Unable to load category settings", error);
+    return [];
+  }
+}
+
+function saveCategorySettings() {
+  if (typeof localStorage === "undefined") {
+    return;
+  }
+
+  try {
+    localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(categorySettings));
+  } catch (error) {
+    console.warn("Unable to save category preferences", error);
+  }
+}
+
+function normalizeCategorySetting(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const key = typeof entry.key === "string" ? normalizeCategoryKey(entry.key) : null;
+  if (!key) {
+    return null;
+  }
+
+  const label = typeof entry.label === "string" ? entry.label.trim() : "";
+  const color = ensureHexColor(entry.color);
+  const isExtra = Boolean(entry.isExtra);
+
+  return { key, label, color, isExtra };
+}
+
+function ensureHexColor(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  let trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^#[0-9a-f]{3}$/i.test(trimmed)) {
+    trimmed = `#${trimmed.slice(1).split("").map((char) => char + char).join("")}`;
+  }
+
+  if (/^[0-9a-f]{6}$/i.test(trimmed)) {
+    trimmed = `#${trimmed}`;
+  }
+
+  if (!/^#[0-9a-f]{6}$/i.test(trimmed)) {
+    return "";
+  }
+
+  return trimmed.toLowerCase();
+}
+
+function normalizeCategoryKey(name) {
+  if (typeof name !== "string") {
+    return "";
+  }
+
+  const base = name.trim().toLowerCase();
+  if (!base) {
+    return "";
+  }
+
+  const slug = base.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || DEFAULT_CATEGORY_SLUG;
+}
+
+function prettifyCategoryKey(key) {
+  if (!key) {
+    return DEFAULT_CATEGORY_LABEL;
+  }
+
+  return key
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+    .join(" ") || DEFAULT_CATEGORY_LABEL;
+}
+
+function findCategorySetting(key) {
+  return categorySettings.find((setting) => setting.key === key) || null;
+}
+
+function getCategoryLabel(key, fallback = DEFAULT_CATEGORY_LABEL) {
+  const setting = findCategorySetting(key);
+  if (setting && setting.label) {
+    return setting.label;
+  }
+  const info = categoryInfo.get(key);
+  if (info?.originalLabel) {
+    return info.originalLabel;
+  }
+  if (fallback) {
+    return fallback;
+  }
+  return prettifyCategoryKey(key);
+}
+
+function getCategoryColor(key) {
+  const setting = findCategorySetting(key);
+  const color = ensureHexColor(setting?.color);
+  if (color) {
+    return color;
+  }
+  return pickCategoryColor(key);
+}
+
+function pickCategoryColor(seed) {
+  const palette = pickFallbackPalette(seed || "category");
+  return palette.accent || "#ff99da";
+}
+
+function generateCategoryKey(label, existingKeys) {
+  const existing = new Set(existingKeys ?? []);
+  existing.add("all");
+  let base = normalizeCategoryKey(label);
+  if (!base) {
+    base = "category";
+  }
+
+  let candidate = base;
+  let counter = 2;
+  while (!candidate || existing.has(candidate)) {
+    candidate = `${base}-${counter}`;
+    counter += 1;
+  }
+  existing.add(candidate);
+  return candidate;
+}
+
+function collectCategoryInfo() {
+  const info = new Map();
+
+  bookmarks.forEach((bookmark) => {
+    const raw = bookmark.category || DEFAULT_CATEGORY_LABEL;
+    const key = normalizeCategoryKey(raw) || DEFAULT_CATEGORY_SLUG;
+    if (!info.has(key)) {
+      info.set(key, {
+        key,
+        originalLabel: raw || DEFAULT_CATEGORY_LABEL,
+      });
+    }
+  });
+
+  if (!info.has(DEFAULT_CATEGORY_SLUG)) {
+    info.set(DEFAULT_CATEGORY_SLUG, {
+      key: DEFAULT_CATEGORY_SLUG,
+      originalLabel: DEFAULT_CATEGORY_LABEL,
+    });
+  }
+
+  return info;
+}
+
+function computeCategoryDescriptors() {
+  const info = collectCategoryInfo();
+  categoryInfo = info;
+
+  const sanitized = [];
+  const seenKeys = new Set();
+  let mutated = false;
+
+  categorySettings.forEach((entry) => {
+    const normalized = normalizeCategorySetting(entry);
+    if (!normalized || seenKeys.has(normalized.key)) {
+      mutated = true;
+      return;
+    }
+    seenKeys.add(normalized.key);
+    sanitized.push({ ...normalized });
+  });
+
+  const descriptors = [];
+  const used = new Set();
+
+  sanitized.forEach((entry) => {
+    const details = info.get(entry.key);
+    const color = ensureHexColor(entry.color) || pickCategoryColor(entry.key);
+    const label = entry.label || details?.originalLabel || prettifyCategoryKey(entry.key);
+    const isExtra = entry.isExtra || !details;
+    descriptors.push({
+      key: entry.key,
+      label,
+      color,
+      isExtra,
+      originalLabel: details?.originalLabel || null,
+    });
+
+    if (entry.label !== label || entry.color !== color || entry.isExtra !== isExtra) {
+      entry.label = label;
+      entry.color = color;
+      entry.isExtra = isExtra;
+      mutated = true;
+    }
+
+    used.add(entry.key);
+  });
+
+  info.forEach((details, key) => {
+    if (used.has(key)) {
+      return;
+    }
+    const color = pickCategoryColor(key);
+    descriptors.push({
+      key,
+      label: details.originalLabel,
+      color,
+      isExtra: false,
+      originalLabel: details.originalLabel,
+    });
+    sanitized.push({ key, label: details.originalLabel, color, isExtra: false });
+    mutated = true;
+  });
+
+  categorySettings = sanitized;
+
+  if (mutated) {
+    saveCategorySettings();
+  }
+
+  return descriptors;
+}
+
+function applyCategoryStylesToPill(pill, color) {
+  const base = parseHexColor(color) || parseHexColor(pickCategoryColor(pill.dataset.category));
+  if (!base) {
+    return;
+  }
+  const soft = toRgba(mixWithWhite(base, 0.75), 0.45);
+  const border = toRgba(mixWithWhite(base, 0.55), 0.7);
+  const strongStart = toRgba(mixWithWhite(base, 0.1), 0.95);
+  const strongEnd = toRgba(mixWithWhite(base, 0.4), 0.95);
+  const shadow = toRgba(mixWithBlack(base, 0.35), 0.35);
+  const shadowStrong = toRgba(mixWithBlack(base, 0.2), 0.45);
+  const contrast = getContrastColor(rgbToHex(mixWithWhite(base, 0.15)));
+  const quiet = toRgba(mixWithBlack(base, 0.5), 0.72);
+
+  pill.style.setProperty("--category-color-soft", soft);
+  pill.style.setProperty("--category-color-border", border);
+  pill.style.setProperty(
+    "--category-color-strong",
+    `linear-gradient(135deg, ${strongStart}, ${strongEnd})`
+  );
+  pill.style.setProperty("--category-color-contrast", contrast);
+  pill.style.setProperty("--category-color-shadow", shadow);
+  pill.style.setProperty("--category-color-shadow-strong", shadowStrong);
+  pill.style.setProperty("--category-color-text", quiet);
+}
+
+function applyCategoryStylesToBadge(element, color) {
+  const base = parseHexColor(color);
+  if (!base) {
+    return;
+  }
+  const background = toRgba(mixWithWhite(base, 0.82), 0.55);
+  const border = toRgba(mixWithWhite(base, 0.55), 0.75);
+  const textColor = getContrastColor(rgbToHex(mixWithWhite(base, 0.15)));
+
+  element.style.setProperty("--category-chip-bg", background);
+  element.style.setProperty("--category-chip-border", border);
+  element.style.setProperty("--category-chip-text", textColor);
+}
+
+function mixWithWhite(rgb, amount) {
+  return {
+    r: Math.round(rgb.r + (255 - rgb.r) * amount),
+    g: Math.round(rgb.g + (255 - rgb.g) * amount),
+    b: Math.round(rgb.b + (255 - rgb.b) * amount),
+  };
+}
+
+function mixWithBlack(rgb, amount) {
+  return {
+    r: Math.round(rgb.r * (1 - amount)),
+    g: Math.round(rgb.g * (1 - amount)),
+    b: Math.round(rgb.b * (1 - amount)),
+  };
+}
+
+function toRgba(rgb, alpha = 1) {
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${Math.min(Math.max(alpha, 0), 1)})`;
+}
+
+function parseHexColor(hex) {
+  if (typeof hex !== "string") {
+    return null;
+  }
+  const normalized = ensureHexColor(hex);
+  if (!normalized) {
+    return null;
+  }
+  const value = normalized.slice(1);
+  return {
+    r: parseInt(value.slice(0, 2), 16),
+    g: parseInt(value.slice(2, 4), 16),
+    b: parseInt(value.slice(4, 6), 16),
+  };
+}
+
+function rgbToHex(rgb) {
+  const clamp = (channel) => Math.min(255, Math.max(0, Math.round(channel)));
+  return `#${clamp(rgb.r).toString(16).padStart(2, "0")}${clamp(rgb.g)
+    .toString(16)
+    .padStart(2, "0")}${clamp(rgb.b).toString(16).padStart(2, "0")}`;
+}
+
+function getContrastColor(hex) {
+  const rgb = parseHexColor(hex);
+  if (!rgb) {
+    return "#2b1f33";
+  }
+  const luminance =
+    0.2126 * srgbComponent(rgb.r) + 0.7152 * srgbComponent(rgb.g) + 0.0722 * srgbComponent(rgb.b);
+  return luminance > 0.6 ? "#2b1f33" : "#ffffff";
+}
+
+function srgbComponent(value) {
+  const channel = value / 255;
+  if (channel <= 0.03928) {
+    return channel / 12.92;
+  }
+  return ((channel + 0.055) / 1.055) ** 2.4;
+}
+
+function setupCategoryCustomization() {
+  if (!customizeCategoriesBtn || !categoryModal || !categoryForm || !categorySettingsList) {
+    return;
+  }
+
+  customizeCategoriesBtn.addEventListener("click", () => {
+    openCategoryModal();
+  });
+
+  categoryModal.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target && target.dataset && target.dataset.modalDismiss === "true") {
+      closeCategoryModal();
+    }
+  });
+
+  categoryForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    handleCategoryFormSubmit();
+  });
+
+  if (addCategoryBtn) {
+    addCategoryBtn.addEventListener("click", () => {
+      addNewCategoryRow();
+    });
+  }
+
+  categorySettingsList.addEventListener("click", handleCategoryListClick);
+  document.addEventListener("keydown", handleCategoryModalKeydown);
+}
+
+function openCategoryModal() {
+  renderCategorySettingsEditor();
+  categoryModal.hidden = false;
+  document.body.classList.add("modal-open");
+  const firstInput = categorySettingsList.querySelector('input[name="label"]');
+  if (firstInput) {
+    window.setTimeout(() => firstInput.focus(), 20);
+  }
+}
+
+function closeCategoryModal() {
+  categoryModal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function handleCategoryModalKeydown(event) {
+  if (event.key === "Escape" && !categoryModal.hidden) {
+    event.preventDefault();
+    closeCategoryModal();
+  }
+}
+
+function renderCategorySettingsEditor() {
+  if (!categorySettingsList) {
+    return;
+  }
+  categorySettingsList.innerHTML = "";
+  const descriptors = computeCategoryDescriptors();
+  const fragment = document.createDocumentFragment();
+
+  descriptors.forEach((descriptor) => {
+    fragment.appendChild(createCategorySettingRow(descriptor));
+  });
+
+  categorySettingsList.appendChild(fragment);
+}
+
+function createCategorySettingRow(descriptor) {
+  const node = categoryItemTemplate?.content?.firstElementChild
+    ? categoryItemTemplate.content.firstElementChild.cloneNode(true)
+    : document.createElement("div");
+
+  if (!node.classList.contains("category-setting")) {
+    node.className = "category-setting";
+    node.innerHTML =
+      '<div class="category-setting__inputs">\n        <label class="category-setting__label">\n          <span>Name</span>\n          <input type="text" name="label" required />\n        </label>\n        <label class="category-setting__color">\n          <span>Color</span>\n          <input type="color" name="color" value="#ff80c8" />\n        </label>\n      </div>\n      <div class="category-setting__actions">\n        <button type="button" class="category-setting__move" data-direction="up" aria-label="Move up">▲</button>\n        <button type="button" class="category-setting__move" data-direction="down" aria-label="Move down">▼</button>\n        <button type="button" class="category-setting__remove" aria-label="Remove category">Remove</button>\n      </div>';
+  }
+
+  node.dataset.categoryKey = descriptor.key || "";
+
+  const labelInput = node.querySelector('input[name="label"]');
+  const colorInput = node.querySelector('input[name="color"]');
+  const removeBtn = node.querySelector(".category-setting__remove");
+
+  if (labelInput) {
+    labelInput.value = descriptor.label || "";
+    labelInput.placeholder = descriptor.originalLabel || descriptor.label || "Category";
+  }
+
+  if (colorInput) {
+    colorInput.value = ensureHexColor(descriptor.color) || pickCategoryColor(descriptor.key || "custom");
+  }
+
+  if (descriptor.isExtra) {
+    node.dataset.extra = "true";
+    if (removeBtn) {
+      removeBtn.disabled = false;
+      removeBtn.removeAttribute("aria-hidden");
+      removeBtn.tabIndex = 0;
+      removeBtn.style.display = "";
+    }
+  } else {
+    node.dataset.fixed = "true";
+    if (removeBtn) {
+      removeBtn.disabled = true;
+      removeBtn.setAttribute("aria-hidden", "true");
+      removeBtn.tabIndex = -1;
+      removeBtn.style.display = "none";
+    }
+  }
+
+  return node;
+}
+
+function handleCategoryListClick(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const setting = target.closest(".category-setting");
+  if (!setting) {
+    return;
+  }
+
+  if (target.classList.contains("category-setting__remove")) {
+    if (setting.dataset.extra === "true") {
+      setting.remove();
+    }
+    return;
+  }
+
+  if (target.classList.contains("category-setting__move")) {
+    const direction = target.dataset.direction;
+    if (direction === "up" && setting.previousElementSibling) {
+      categorySettingsList.insertBefore(setting, setting.previousElementSibling);
+    } else if (direction === "down" && setting.nextElementSibling) {
+      categorySettingsList.insertBefore(setting.nextElementSibling, setting);
+    }
+  }
+}
+
+function addNewCategoryRow() {
+  const descriptor = {
+    key: "",
+    label: "",
+    color: pickCategoryColor(`custom-${Date.now()}`),
+    isExtra: true,
+    originalLabel: "",
+  };
+
+  const node = createCategorySettingRow(descriptor);
+  node.dataset.new = "true";
+  categorySettingsList.appendChild(node);
+
+  const labelInput = node.querySelector('input[name="label"]');
+  if (labelInput) {
+    window.setTimeout(() => {
+      labelInput.focus();
+      labelInput.select();
+    }, 20);
+  }
+}
+
+function handleCategoryFormSubmit() {
+  const rows = Array.from(categorySettingsList.querySelectorAll(".category-setting"));
+  if (!rows.length) {
+    categorySettings = [];
+    saveCategorySettings();
+    updateCategoryBar();
+    applyFilters();
+    closeCategoryModal();
+    return;
+  }
+
+  const nextSettings = [];
+  const existingKeys = new Set();
+
+  rows.forEach((row, index) => {
+    const labelInput = row.querySelector('input[name="label"]');
+    const colorInput = row.querySelector('input[name="color"]');
+    const isExtra = row.dataset.extra === "true";
+    const labelValue = labelInput?.value.trim() || `Category ${index + 1}`;
+    let key = row.dataset.categoryKey;
+
+    if (!key || isExtra) {
+      key = generateCategoryKey(labelValue, existingKeys);
+      row.dataset.categoryKey = key;
+    }
+
+    existingKeys.add(key);
+    const color = ensureHexColor(colorInput?.value) || pickCategoryColor(key);
+
+    nextSettings.push({
+      key,
+      label: labelValue,
+      color,
+      isExtra,
+    });
+  });
+
+  categorySettings = nextSettings;
+  saveCategorySettings();
+  updateCategoryBar();
+  applyFilters();
+  closeCategoryModal();
+}
+
 function setBookmarks(next, { persist } = { persist: true }) {
   bookmarks = [...next];
+  categoryInfo = collectCategoryInfo();
   if (persist) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
@@ -247,38 +881,58 @@ function updateSearchValue(nextValue, caretPosition) {
 }
 
 function updateCategoryBar() {
-  const fragment = document.createDocumentFragment();
-  const categories = Array.from(
-    new Set(bookmarks.map((item) => item.category || "Unsorted"))
-  )
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  const descriptors = computeCategoryDescriptors();
+  const availableKeys = new Set(descriptors.map((descriptor) => descriptor.key));
 
-  const allCategories = ["All", ...categories];
-  if (!allCategories.some((category) => category.toLowerCase() === activeCategory)) {
+  if (activeCategory !== "all" && !availableKeys.has(activeCategory)) {
     activeCategory = "all";
   }
-  categoryBar.innerHTML = "";
 
-  allCategories.forEach((category) => {
-    const pill = document.createElement("button");
-    const normalized = category.toLowerCase();
-    pill.type = "button";
-    pill.className = "filter-pill";
-    pill.dataset.category = normalized;
-    pill.textContent = category;
-    if (normalized === activeCategory) {
-      pill.classList.add("active");
-    }
-    pill.addEventListener("click", () => {
-      activeCategory = normalized;
-      Array.from(categoryBar.children).forEach((node) => node.classList.toggle("active", node.dataset.category === normalized));
-      applyFilters();
-    });
-    fragment.appendChild(pill);
+  categoryBar.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+
+  const allDescriptor = {
+    key: "all",
+    label: "All",
+    color: pickCategoryColor("all"),
+  };
+  fragment.appendChild(createCategoryPill(allDescriptor));
+
+  descriptors.forEach((descriptor) => {
+    fragment.appendChild(createCategoryPill(descriptor));
   });
 
   categoryBar.appendChild(fragment);
+  syncActiveCategoryVisuals();
+}
+
+function createCategoryPill(descriptor) {
+  const pill = document.createElement("button");
+  pill.type = "button";
+  pill.className = "filter-pill";
+  pill.dataset.category = descriptor.key;
+  pill.textContent = descriptor.label;
+  applyCategoryStylesToPill(pill, descriptor.color);
+  pill.addEventListener("click", () => {
+    setActiveCategory(descriptor.key);
+  });
+  return pill;
+}
+
+function setActiveCategory(nextKey) {
+  activeCategory = nextKey;
+  syncActiveCategoryVisuals();
+  applyFilters();
+}
+
+function syncActiveCategoryVisuals() {
+  const pills = categoryBar.querySelectorAll(".filter-pill");
+  pills.forEach((pill) => {
+    const key = pill.dataset.category;
+    const isActive = key === activeCategory || (activeCategory === "all" && key === "all");
+    pill.classList.toggle("active", isActive);
+    pill.setAttribute("aria-pressed", String(isActive));
+  });
 }
 
 function updateSuggestions() {
@@ -295,13 +949,15 @@ function updateSuggestions() {
 function applyFilters() {
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filtered = bookmarks.filter((bookmark) => {
-    const matchesCategory =
-      activeCategory === "all" || bookmark.category?.toLowerCase() === activeCategory;
+    const categoryKey = normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
+      DEFAULT_CATEGORY_SLUG;
+    const matchesCategory = activeCategory === "all" || categoryKey === activeCategory;
     if (!matchesCategory) return false;
 
     if (!normalizedSearch) return true;
 
-    const haystack = `${bookmark.name} ${bookmark.category ?? ""}`.toLowerCase();
+    const categoryLabel = getCategoryLabel(categoryKey, bookmark.category ?? DEFAULT_CATEGORY_LABEL);
+    const haystack = `${bookmark.name} ${bookmark.category ?? ""} ${categoryLabel}`.toLowerCase();
     return haystack.includes(normalizedSearch);
   });
 
@@ -329,7 +985,11 @@ function renderBookmarks(collection) {
     applyBookmarkImage(imageEl, bookmark);
     imageEl.alt = bookmark.name;
     titleEl.textContent = bookmark.name;
-    categoryEl.textContent = bookmark.category || "Unsorted";
+    const categoryKey = normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
+      DEFAULT_CATEGORY_SLUG;
+    const displayLabel = getCategoryLabel(categoryKey, bookmark.category || DEFAULT_CATEGORY_LABEL);
+    categoryEl.textContent = displayLabel;
+    applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
     const openBookmark = () => {
       window.open(bookmark.url, "_blank", "noopener,noreferrer");
@@ -468,6 +1128,7 @@ async function initAxolotlMascot() {
 
     if (frames.length === 0) {
       axolotlFigure.classList.add("axolotl--fallback");
+      axolotlFigure.style.backgroundImage = `url('${DEFAULT_AXOLOTL_IMAGE}')`;
     } else if (frames.length === 1) {
       axolotlFigure.style.backgroundImage = `url('${frames[0]}')`;
     } else {
@@ -531,6 +1192,7 @@ async function initAxolotlMascot() {
   } catch (error) {
     console.warn("Axolotl mascot could not be initialized", error);
     axolotlFigure.classList.add("axolotl--fallback");
+    axolotlFigure.style.backgroundImage = `url('${DEFAULT_AXOLOTL_IMAGE}')`;
   }
 }
 
@@ -701,39 +1363,6 @@ function applyBookmarkImage(imageEl, bookmark) {
 
   imageEl.addEventListener("error", handleError, { once: true });
   imageEl.src = primarySource;
-}
-
-function createFallbackImage(bookmark) {
-  const title = bookmark.name?.trim() || "?";
-  const initials = title
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  const displayInitials = initials || "☆";
-  const palette = pickFallbackPalette(title + (bookmark.category ?? ""));
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Bookmark placeholder">
-      <defs>
-        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="${palette.background}" />
-          <stop offset="100%" stop-color="${palette.shadow}" />
-        </linearGradient>
-        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="${palette.shadow}" flood-opacity="0.65" />
-        </filter>
-      </defs>
-      <rect width="160" height="160" rx="36" fill="url(#grad)" />
-      <g filter="url(#shadow)">
-        <circle cx="50" cy="42" r="10" fill="rgba(255, 255, 255, 0.7)" />
-        <circle cx="108" cy="34" r="14" fill="rgba(255, 255, 255, 0.4)" />
-        <circle cx="124" cy="110" r="12" fill="rgba(255, 255, 255, 0.4)" />
-      </g>
-      <text x="50%" y="55%" text-anchor="middle" font-size="64" font-family="'Bigbesty', 'Papernotes', 'Comic Sans MS', 'Segoe UI', sans-serif" fill="${palette.accent}" dominant-baseline="middle">${displayInitials}</text>
-    </svg>`;
-
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 function createAxolotlFrameAnimator(target, frames, interval = 120) {
