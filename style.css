@@ -85,7 +85,8 @@ body {
 }
 
 .axolotl-sprite {
-  transform: scaleX(var(--axolotl-direction, 1));
+  transform: rotate(var(--axolotl-rotation, 0deg));
+  transform-origin: center;
   transition: transform 1.2s ease;
 }
 
