@@ -1114,6 +1114,50 @@ function ensureAxolotlInitialized() {
   return initAxolotlMascot();
 }
 
+function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
+  const showHeading = preferences.showHeading !== false;
+  const showAxolotl = preferences.showAxolotl !== false;
+
+  if (heroHeading) {
+    heroHeading.hidden = !showHeading;
+  }
+
+  if (syncInputs) {
+    if (toggleHeadingInput) {
+      toggleHeadingInput.checked = showHeading;
+    }
+    if (toggleAxolotlInput) {
+      toggleAxolotlInput.checked = showAxolotl;
+    }
+  }
+
+  if (axolotlLayer) {
+    axolotlLayer.hidden = !showAxolotl;
+  }
+
+  if (showAxolotl) {
+    if (!lazyAxolotl) {
+      ensureAxolotlInitialized();
+    }
+  } else {
+    axolotlController?.disable?.();
+  }
+}
+
+function ensureAxolotlInitialized() {
+  if (preferences.showAxolotl === false) {
+    axolotlController?.disable?.();
+    return;
+  }
+
+  if (axolotlInitialized) {
+    axolotlController?.enable?.();
+    return;
+  }
+
+  return initAxolotlMascot();
+}
+
 function setupKeyboard() {
   const keyLayout = [
     ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
