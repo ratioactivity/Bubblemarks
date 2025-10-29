@@ -7,6 +7,41 @@ const FALLBACK_PALETTES = [
   { background: "#e8fff6", accent: "#6ad6a6", shadow: "#c2f7da" },
 ];
 
+const prefersReducedMotion = (() => {
+  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+    return window.matchMedia("(prefers-reduced-motion: reduce)");
+  }
+  return {
+    matches: false,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+  };
+})();
+const AXOLOTL_MANIFEST_URL = "assets/axolotl/manifest.json";
+const AXOLOTL_FRAME_EXTENSIONS = ["png", "webp", "gif"];
+const AXOLOTL_FRAME_PATTERNS = [
+  (index, extension) =>
+    `assets/axolotl/frame-${String(index).padStart(2, "0")}.${extension}`,
+  (index, extension) => `assets/axolotl/frame${index}.${extension}`,
+  (index, extension) =>
+    `assets/axolotl/axolotl-${String(index).padStart(2, "0")}.${extension}`,
+  (index, extension) => `assets/axolotl/axolotl${index}.${extension}`,
+  (index, extension) =>
+    `assets/axolotl/swim-${String(index).padStart(2, "0")}.${extension}`,
+  (index, extension) => `assets/axolotl/swim${index}.${extension}`,
+];
+const AXOLOTL_SINGLE_ASSETS = [
+  "assets/axolotl/axolotl.gif",
+  "assets/axolotl/axolotl.png",
+  "assets/axolotl/axolotl.webp",
+  "assets/axolotl/swim.gif",
+  "assets/axolotl/swim.png",
+  "assets/axolotl/swim.webp",
+];
+const AXOLOTL_FRAME_LIMIT = 30;
+
 let bookmarks = [];
 let defaultBookmarks = [];
 let activeCategory = "all";
@@ -24,11 +59,15 @@ const exportBtn = document.getElementById("export-btn");
 const restoreBtn = document.getElementById("restore-btn");
 const importInput = document.getElementById("import-input");
 const template = document.getElementById("bookmark-card-template");
+const axolotlPath = document.getElementById("axolotl-path");
+const axolotlSprite = document.getElementById("axolotl-sprite");
+const axolotlFigure = document.getElementById("axolotl-figure");
 
 window.addEventListener("DOMContentLoaded", async () => {
   setupSearch();
   setupKeyboard();
   setupDataTools();
+  initAxolotlMascot();
   await hydrateData();
 });
 
@@ -393,6 +432,380 @@ function showEmptyState(message) {
 
 function hideEmptyState() {
   emptyState.hidden = true;
+}
+
+async function initAxolotlMascot() {
+  if (!axolotlPath || !axolotlSprite || !axolotlFigure) {
+    return;
+  }
+
+  try {
+    const frames = await discoverAxolotlFrames();
+    let stopFrameAnimation = null;
+
+    const stopFrameAnimationIfNeeded = () => {
+      if (typeof stopFrameAnimation === "function") {
+        stopFrameAnimation();
+        stopFrameAnimation = null;
+      }
+    };
+
+    const startFrameAnimation = () => {
+      stopFrameAnimationIfNeeded();
+      if (frames.length > 1) {
+        stopFrameAnimation = createAxolotlFrameAnimator(axolotlFigure, frames, 130);
+      }
+    };
+
+    const syncFramesWithMotionPreference = () => {
+      if (frames.length <= 1) return;
+      if (prefersReducedMotion.matches) {
+        stopFrameAnimationIfNeeded();
+      } else if (!stopFrameAnimation) {
+        startFrameAnimation();
+      }
+    };
+
+    if (frames.length === 0) {
+      axolotlFigure.classList.add("axolotl--fallback");
+    } else if (frames.length === 1) {
+      axolotlFigure.style.backgroundImage = `url('${frames[0]}')`;
+    } else {
+      startFrameAnimation();
+    }
+
+    let stopSwimming = null;
+
+    const settleMascot = () => {
+      const width = window.innerWidth || document.documentElement.clientWidth || 0;
+      const height = window.innerHeight || document.documentElement.clientHeight || 0;
+      const targetX = clamp(width * 0.72, 80, Math.max(width - 110, 80));
+      const targetY = clamp(height * 0.68, 90, Math.max(height - 150, 90));
+      axolotlPath.style.transitionDuration = "0ms";
+      axolotlPath.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`;
+      axolotlSprite.style.setProperty("--axolotl-direction", "1");
+    };
+
+    const stopSwim = () => {
+      if (typeof stopSwimming === "function") {
+        stopSwimming();
+        stopSwimming = null;
+      }
+    };
+
+    const startSwim = () => {
+      stopSwimming = startAxolotlSwim(axolotlPath, axolotlSprite);
+    };
+
+    const handleMotionPreference = () => {
+      if (prefersReducedMotion.matches) {
+        stopSwim();
+        settleMascot();
+      } else if (!stopSwimming) {
+        startSwim();
+      }
+    };
+
+    handleMotionPreference();
+    syncFramesWithMotionPreference();
+
+    addMotionPreferenceListener(() => {
+      handleMotionPreference();
+      syncFramesWithMotionPreference();
+    });
+
+    window.addEventListener("resize", () => {
+      if (prefersReducedMotion.matches) {
+        settleMascot();
+      }
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        stopSwim();
+      } else if (!prefersReducedMotion.matches && !stopSwimming) {
+        startSwim();
+      }
+    });
+
+  } catch (error) {
+    console.warn("Axolotl mascot could not be initialized", error);
+    axolotlFigure.classList.add("axolotl--fallback");
+  }
+}
+
+function startAxolotlSwim(pathEl, spriteEl) {
+  let swimTimer = null;
+  let currentX = 0;
+  let currentY = 0;
+
+  const applyTransform = (x, y, duration) => {
+    pathEl.style.setProperty("--axolotl-duration", `${duration}ms`);
+    pathEl.style.transitionDuration = `${duration}ms`;
+    pathEl.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  };
+
+  const choosePoint = () => {
+    const width = window.innerWidth || document.documentElement.clientWidth || 0;
+    const height = window.innerHeight || document.documentElement.clientHeight || 0;
+    const marginX = Math.max(width * 0.18, 140);
+    const marginY = Math.max(height * 0.22, 160);
+    const safeWidth = Math.max(width - marginX, 0);
+    const safeHeight = Math.max(height - marginY, 0);
+    const x = safeWidth > 0 ? marginX / 2 + Math.random() * safeWidth : width / 2;
+    const y = safeHeight > 0 ? marginY / 2 + Math.random() * safeHeight : height / 2;
+    const duration = 9000 + Math.random() * 7000;
+    return { x, y, duration };
+  };
+
+  const swim = () => {
+    const { x, y, duration } = choosePoint();
+    spriteEl.style.setProperty("--axolotl-direction", x < currentX ? "-1" : "1");
+    applyTransform(x, y, duration);
+    currentX = x;
+    currentY = y;
+    swimTimer = window.setTimeout(swim, duration);
+  };
+
+  const handleResize = () => {
+    if (swimTimer === null) return;
+    const width = window.innerWidth || document.documentElement.clientWidth || 0;
+    const height = window.innerHeight || document.documentElement.clientHeight || 0;
+    const marginX = Math.max(width * 0.18, 140);
+    const marginY = Math.max(height * 0.22, 160);
+    const clampedX = clamp(currentX, marginX / 2, Math.max(width - marginX / 2, marginX / 2));
+    const clampedY = clamp(currentY, marginY / 2, Math.max(height - marginY / 2, marginY / 2));
+    applyTransform(clampedX, clampedY, 0);
+    currentX = clampedX;
+    currentY = clampedY;
+  };
+
+  window.addEventListener("resize", handleResize);
+
+  const first = choosePoint();
+  currentX = first.x;
+  currentY = first.y;
+  spriteEl.style.setProperty("--axolotl-direction", Math.random() > 0.5 ? "1" : "-1");
+  applyTransform(first.x, first.y, 0);
+  swimTimer = window.setTimeout(swim, 1200 + Math.random() * 1800);
+
+  return () => {
+    if (swimTimer !== null) {
+      clearTimeout(swimTimer);
+    }
+    swimTimer = null;
+    window.removeEventListener("resize", handleResize);
+  };
+}
+
+async function discoverAxolotlFrames() {
+  const manifestFrames = await loadAxolotlManifest();
+  if (manifestFrames.length) {
+    return manifestFrames;
+  }
+
+  for (const single of AXOLOTL_SINGLE_ASSETS) {
+    if (await imageExists(single)) {
+      return [single];
+    }
+  }
+
+  const tested = new Map();
+  const checkCandidate = async (candidate) => {
+    if (tested.has(candidate)) {
+      return tested.get(candidate);
+    }
+    const exists = await imageExists(candidate);
+    tested.set(candidate, exists);
+    return exists;
+  };
+
+  for (const extension of AXOLOTL_FRAME_EXTENSIONS) {
+    for (const pattern of AXOLOTL_FRAME_PATTERNS) {
+      const frames = [];
+      for (let index = 1; index <= AXOLOTL_FRAME_LIMIT; index += 1) {
+        const candidate = pattern(index, extension);
+        // Avoid duplicated checks for the same source across patterns
+        if (await checkCandidate(candidate)) {
+          frames.push(candidate);
+        } else if (index === 1) {
+          frames.length = 0;
+          break;
+        } else {
+          break;
+        }
+      }
+
+      if (frames.length) {
+        return frames;
+      }
+    }
+  }
+
+  return [];
+}
+
+async function loadAxolotlManifest() {
+  try {
+    const response = await fetch(AXOLOTL_MANIFEST_URL, { cache: "no-store" });
+    if (!response.ok) {
+      return [];
+    }
+    const payload = await response.json();
+    const entries = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.frames)
+      ? payload.frames
+      : [];
+    return entries
+      .map((entry) => normalizeAxolotlFramePath(entry))
+      .filter(Boolean);
+  } catch (error) {
+    return [];
+  }
+}
+
+function normalizeAxolotlFramePath(entry) {
+  if (typeof entry !== "string" || !entry.trim()) {
+    return null;
+  }
+  const trimmed = entry.trim();
+  if (/^https?:/i.test(trimmed)) {
+    return trimmed;
+  }
+  return `assets/axolotl/${trimmed.replace(/^\/+/, "")}`;
+}
+
+function imageExists(source) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = source;
+  });
+
+  grid.appendChild(fragment);
+}
+
+function applyBookmarkImage(imageEl, bookmark) {
+  imageEl.classList.remove("is-fallback");
+  imageEl.referrerPolicy = "no-referrer";
+  imageEl.decoding = "async";
+  const primarySource = bookmark.image || buildFaviconUrl(bookmark.url);
+
+  const handleError = () => {
+    imageEl.src = createFallbackImage(bookmark);
+    imageEl.classList.add("is-fallback");
+  };
+
+  imageEl.addEventListener("error", handleError, { once: true });
+  imageEl.src = primarySource;
+}
+
+function createFallbackImage(bookmark) {
+  const title = bookmark.name?.trim() || "?";
+  const initials = title
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const displayInitials = initials || "☆";
+  const palette = pickFallbackPalette(title + (bookmark.category ?? ""));
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Bookmark placeholder">
+      <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${palette.background}" />
+          <stop offset="100%" stop-color="${palette.shadow}" />
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="${palette.shadow}" flood-opacity="0.65" />
+        </filter>
+      </defs>
+      <rect width="160" height="160" rx="36" fill="url(#grad)" />
+      <g filter="url(#shadow)">
+        <circle cx="50" cy="42" r="10" fill="rgba(255, 255, 255, 0.7)" />
+        <circle cx="108" cy="34" r="14" fill="rgba(255, 255, 255, 0.4)" />
+        <circle cx="124" cy="110" r="12" fill="rgba(255, 255, 255, 0.4)" />
+      </g>
+      <text x="50%" y="55%" text-anchor="middle" font-size="64" font-family="'Bigbesty', 'Papernotes', 'Comic Sans MS', 'Segoe UI', sans-serif" fill="${palette.accent}" dominant-baseline="middle">${displayInitials}</text>
+    </svg>`;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function createAxolotlFrameAnimator(target, frames, interval = 120) {
+  if (!target || !frames.length) {
+    return () => {};
+  }
+
+  let frameIndex = 0;
+  let timerId = null;
+
+  const applyFrame = () => {
+    target.style.backgroundImage = `url('${frames[frameIndex]}')`;
+  };
+
+  const step = () => {
+    frameIndex = (frameIndex + 1) % frames.length;
+    applyFrame();
+    timerId = window.setTimeout(step, interval);
+  };
+
+  applyFrame();
+
+  if (frames.length > 1) {
+    timerId = window.setTimeout(step, interval);
+  }
+
+  const handleVisibility = () => {
+    if (document.hidden) {
+      if (timerId) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+    } else if (!timerId && frames.length > 1) {
+      timerId = window.setTimeout(step, interval);
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibility);
+
+  return () => {
+    if (timerId) {
+      clearTimeout(timerId);
+      timerId = null;
+    }
+    document.removeEventListener("visibilitychange", handleVisibility);
+  };
+}
+
+function addMotionPreferenceListener(listener) {
+  if (typeof prefersReducedMotion.addEventListener === "function") {
+    prefersReducedMotion.addEventListener("change", listener);
+  } else if (typeof prefersReducedMotion.addListener === "function") {
+    prefersReducedMotion.addListener(listener);
+  }
+}
+
+function removeMotionPreferenceListener(listener) {
+  if (typeof prefersReducedMotion.removeEventListener === "function") {
+    prefersReducedMotion.removeEventListener("change", listener);
+  } else if (typeof prefersReducedMotion.removeListener === "function") {
+    prefersReducedMotion.removeListener(listener);
+  }
+}
+
+function clamp(value, min, max) {
+  if (Number.isNaN(value) || Number.isNaN(min) || Number.isNaN(max)) {
+    return value;
+  }
+  if (min > max) {
+    return Math.min(Math.max(value, max), min);
+  }
+  return Math.min(Math.max(value, min), max);
 }
 
 function setupDataTools() {
