@@ -1968,6 +1968,23 @@ function imageExists(source) {
     img.onerror = () => resolve(false);
     img.src = source;
   });
+
+  grid.appendChild(fragment);
+}
+
+function applyBookmarkImage(imageEl, bookmark) {
+  imageEl.classList.remove("is-fallback");
+  imageEl.referrerPolicy = "no-referrer";
+  imageEl.decoding = "async";
+  const primarySource = bookmark.image || buildFaviconUrl(bookmark.url);
+
+  const handleError = () => {
+    imageEl.src = createFallbackImage(bookmark);
+    imageEl.classList.add("is-fallback");
+  };
+
+  imageEl.addEventListener("error", handleError, { once: true });
+  imageEl.src = primarySource;
 }
 
 function createAxolotlFrameAnimator(target, frames, interval = 120) {
