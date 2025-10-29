@@ -99,8 +99,59 @@ const AXOLOTL_SINGLE_ASSETS = [
   "assets/axolotl/idle.gif",
   "assets/axolotl/idle.png",
   "assets/axolotl/idle.webp",
+  "assets/axolotl/floating.gif",
+  "assets/axolotl/floating.png",
+  "assets/axolotl/floating.webp",
+  "assets/axolotl/resting.gif",
+  "assets/axolotl/resting.png",
+  "assets/axolotl/resting.webp",
+  "assets/axolotl/swimming.gif",
+  "assets/axolotl/swimming.png",
+  "assets/axolotl/swimming.webp",
 ];
 const AXOLOTL_FRAME_LIMIT = 30;
+const AXOLOTL_STATE_NAMES = [
+  "resting",
+  "getup",
+  "floating",
+  "swimmode",
+  "swimming",
+];
+const AXOLOTL_STATE_FRAME_PATTERNS = [
+  (state, index, extension) =>
+    `assets/axolotl/${state}-${String(index).padStart(2, "0")}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}_${String(index).padStart(2, "0")}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}${String(index).padStart(2, "0")}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}-${index}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}_${index}.${extension}`,
+  (state, index, extension) => `assets/axolotl/${state}${index}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${state}-${String(index).padStart(2, "0")}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${state}_${String(index).padStart(2, "0")}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${state}${String(index).padStart(2, "0")}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${state}-${index}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${state}_${index}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${state}${index}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${String(index).padStart(2, "0")}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${index}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/frame-${String(index).padStart(2, "0")}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/frame_${String(index).padStart(2, "0")}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/frame${String(index).padStart(2, "0")}.${extension}`,
+];
 
 let bookmarks = [];
 let defaultBookmarks = [];
@@ -1100,8 +1151,10 @@ async function initAxolotlMascot() {
   }
 
   try {
-    const frames = await discoverAxolotlFrames();
+    const discovery = await discoverAxolotlFrames();
     let stopFrameAnimation = null;
+    let stateAnimator = null;
+    let stopSwimming = null;
 
     const stopFrameAnimationIfNeeded = () => {
       if (typeof stopFrameAnimation === "function") {
@@ -1109,6 +1162,219 @@ async function initAxolotlMascot() {
         stopFrameAnimation = null;
       }
     };
+
+    const destroyStateAnimatorIfNeeded = () => {
+      if (stateAnimator) {
+        stateAnimator.destroy();
+        stateAnimator = null;
+      }
+    };
+
+    const settleMascot = () => {
+      const width = window.innerWidth || document.documentElement.clientWidth || 0;
+      const height = window.innerHeight || document.documentElement.clientHeight || 0;
+      const targetX = clamp(width * 0.72, 80, Math.max(width - 110, 80));
+      const targetY = clamp(height * 0.68, 90, Math.max(height - 150, 90));
+      axolotlPath.style.transitionDuration = "0ms";
+      axolotlPath.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`;
+      axolotlSprite.style.setProperty("--axolotl-direction", "1");
+    };
+
+    const stopSwim = () => {
+      if (typeof stopSwimming === "function") {
+        stopSwimming();
+        stopSwimming = null;
+      }
+    };
+
+    if (discovery.mode === "states") {
+      axolotlFigure.classList.remove("axolotl--fallback");
+      stateAnimator = createAxolotlStateAnimator(axolotlFigure, discovery.states);
+
+      if (!stateAnimator.hasAny()) {
+        destroyStateAnimatorIfNeeded();
+        axolotlFigure.classList.add("axolotl--fallback");
+        axolotlFigure.style.backgroundImage = `url('${DEFAULT_AXOLOTL_IMAGE}')`;
+        return;
+      }
+
+      const findAvailableState = (candidates) =>
+        candidates.find((name) => stateAnimator.hasState(name)) || null;
+
+      const restState = findAvailableState(["resting", "floating", "swimming"]);
+      const floatState = findAvailableState(["floating", "resting", "swimming"]);
+      const swimState = findAvailableState(["swimming", "floating", "resting"]);
+      const prepState = stateAnimator.hasState("swimmode") ? "swimmode" : null;
+      const wakeState = stateAnimator.hasState("getup") ? "getup" : null;
+
+      const stateTimers = new Set();
+      const clearStateTimers = () => {
+        stateTimers.forEach((id) => window.clearTimeout(id));
+        stateTimers.clear();
+      };
+      const scheduleStateTimer = (fn, delay) => {
+        const id = window.setTimeout(() => {
+          stateTimers.delete(id);
+          fn();
+        }, delay);
+        stateTimers.add(id);
+        return id;
+      };
+
+      const showStill = () => {
+        clearStateTimers();
+        if (restState && stateAnimator.showState(restState)) {
+          return;
+        }
+        if (floatState && stateAnimator.showState(floatState)) {
+          return;
+        }
+        if (swimState) {
+          stateAnimator.showState(swimState);
+        }
+      };
+
+      const playFloatingLoop = () => {
+        clearStateTimers();
+        if (floatState && stateAnimator.playLoop(floatState, floatState === "floating" ? 190 : 210)) {
+          return;
+        }
+        if (restState) {
+          stateAnimator.playLoop(restState, 240);
+        } else if (swimState) {
+          stateAnimator.playLoop(swimState, 150);
+        }
+      };
+
+      const scheduleRestingCycle = () => {
+        if (!restState || restState === floatState) {
+          return;
+        }
+        scheduleStateTimer(() => {
+          if (!restState) return;
+          stateAnimator.playLoop(restState, 260);
+          if (wakeState) {
+            scheduleStateTimer(() => {
+              stateAnimator.playOnce(wakeState, {
+                interval: 150,
+                holdLast: true,
+                onComplete: () => {
+                  playFloatingLoop();
+                },
+              });
+            }, 2800);
+          } else if (floatState) {
+            scheduleStateTimer(() => {
+              playFloatingLoop();
+            }, 3200);
+          }
+        }, 9000);
+      };
+
+      const playIdleCycle = () => {
+        clearStateTimers();
+        if (restState && restState !== floatState) {
+          stateAnimator.playLoop(restState, 260);
+          if (wakeState) {
+            scheduleStateTimer(() => {
+              stateAnimator.playOnce(wakeState, {
+                interval: 150,
+                holdLast: true,
+                onComplete: () => {
+                  playFloatingLoop();
+                  scheduleRestingCycle();
+                },
+              });
+            }, 3200);
+          } else {
+            scheduleStateTimer(() => {
+              playFloatingLoop();
+              scheduleRestingCycle();
+            }, 3200);
+          }
+        } else {
+          playFloatingLoop();
+          scheduleRestingCycle();
+        }
+      };
+
+      const transitionToSwim = () => {
+        clearStateTimers();
+        if (prepState) {
+          stateAnimator.playOnce(prepState, {
+            interval: 130,
+            onComplete: () => {
+              if (swimState) {
+                stateAnimator.playLoop(swimState, 110);
+              } else {
+                playFloatingLoop();
+              }
+            },
+          });
+        } else if (swimState) {
+          stateAnimator.playLoop(swimState, 110);
+        } else {
+          playFloatingLoop();
+        }
+      };
+
+      const settleAfterSwim = () => {
+        playFloatingLoop();
+        scheduleRestingCycle();
+      };
+
+      const startSwim = () => {
+        stopSwim();
+        stopSwimming = startAxolotlSwim(axolotlPath, axolotlSprite, {
+          onSwimStart: transitionToSwim,
+          onSwimStop: settleAfterSwim,
+        });
+      };
+
+      const handleMotionPreference = () => {
+        if (prefersReducedMotion.matches) {
+          stopSwim();
+          settleMascot();
+          showStill();
+        } else {
+          if (!stopSwimming) {
+            startSwim();
+          }
+          playIdleCycle();
+        }
+      };
+
+      handleMotionPreference();
+
+      addMotionPreferenceListener(() => {
+        handleMotionPreference();
+      });
+
+      window.addEventListener("resize", () => {
+        if (prefersReducedMotion.matches) {
+          settleMascot();
+          showStill();
+        }
+      });
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          stopSwim();
+          showStill();
+        } else if (!prefersReducedMotion.matches) {
+          if (!stopSwimming) {
+            startSwim();
+          }
+          playIdleCycle();
+        }
+      });
+
+      return;
+    }
+
+    destroyStateAnimatorIfNeeded();
+
+    const frames = discovery.frames || [];
 
     const startFrameAnimation = () => {
       stopFrameAnimationIfNeeded();
@@ -1130,32 +1396,22 @@ async function initAxolotlMascot() {
       axolotlFigure.classList.add("axolotl--fallback");
       axolotlFigure.style.backgroundImage = `url('${DEFAULT_AXOLOTL_IMAGE}')`;
     } else if (frames.length === 1) {
+      axolotlFigure.classList.remove("axolotl--fallback");
       axolotlFigure.style.backgroundImage = `url('${frames[0]}')`;
     } else {
+      axolotlFigure.classList.remove("axolotl--fallback");
       startFrameAnimation();
     }
 
-    let stopSwimming = null;
-
-    const settleMascot = () => {
-      const width = window.innerWidth || document.documentElement.clientWidth || 0;
-      const height = window.innerHeight || document.documentElement.clientHeight || 0;
-      const targetX = clamp(width * 0.72, 80, Math.max(width - 110, 80));
-      const targetY = clamp(height * 0.68, 90, Math.max(height - 150, 90));
-      axolotlPath.style.transitionDuration = "0ms";
-      axolotlPath.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`;
-      axolotlSprite.style.setProperty("--axolotl-direction", "1");
-    };
-
-    const stopSwim = () => {
-      if (typeof stopSwimming === "function") {
-        stopSwimming();
-        stopSwimming = null;
-      }
-    };
-
     const startSwim = () => {
-      stopSwimming = startAxolotlSwim(axolotlPath, axolotlSprite);
+      stopSwim();
+      stopSwimming = startAxolotlSwim(axolotlPath, axolotlSprite, {
+        onSwimStop: () => {
+          if (prefersReducedMotion.matches) {
+            settleMascot();
+          }
+        },
+      });
     };
 
     const handleMotionPreference = () => {
@@ -1165,14 +1421,13 @@ async function initAxolotlMascot() {
       } else if (!stopSwimming) {
         startSwim();
       }
+      syncFramesWithMotionPreference();
     };
 
     handleMotionPreference();
-    syncFramesWithMotionPreference();
 
     addMotionPreferenceListener(() => {
       handleMotionPreference();
-      syncFramesWithMotionPreference();
     });
 
     window.addEventListener("resize", () => {
@@ -1188,7 +1443,6 @@ async function initAxolotlMascot() {
         startSwim();
       }
     });
-
   } catch (error) {
     console.warn("Axolotl mascot could not be initialized", error);
     axolotlFigure.classList.add("axolotl--fallback");
@@ -1196,15 +1450,37 @@ async function initAxolotlMascot() {
   }
 }
 
-function startAxolotlSwim(pathEl, spriteEl) {
+function startAxolotlSwim(pathEl, spriteEl, callbacks = {}) {
+  const { onSwimStart, onSwimStop } = callbacks || {};
   let swimTimer = null;
   let currentX = 0;
   let currentY = 0;
+  let awaitingTransition = false;
+
+  const handleTransitionEnd = (event) => {
+    if (event?.target !== pathEl || event.propertyName !== "transform") {
+      return;
+    }
+    if (awaitingTransition) {
+      awaitingTransition = false;
+      if (typeof onSwimStop === "function") {
+        onSwimStop();
+      }
+    }
+  };
+
+  pathEl.addEventListener("transitionend", handleTransitionEnd);
 
   const applyTransform = (x, y, duration) => {
     pathEl.style.setProperty("--axolotl-duration", `${duration}ms`);
     pathEl.style.transitionDuration = `${duration}ms`;
     pathEl.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    if (awaitingTransition && duration <= 0) {
+      awaitingTransition = false;
+      if (typeof onSwimStop === "function") {
+        onSwimStop();
+      }
+    }
   };
 
   const choosePoint = () => {
@@ -1223,6 +1499,10 @@ function startAxolotlSwim(pathEl, spriteEl) {
   const swim = () => {
     const { x, y, duration } = choosePoint();
     spriteEl.style.setProperty("--axolotl-direction", x < currentX ? "-1" : "1");
+    awaitingTransition = duration > 0;
+    if (awaitingTransition && typeof onSwimStart === "function") {
+      onSwimStart();
+    }
     applyTransform(x, y, duration);
     currentX = x;
     currentY = y;
@@ -1257,38 +1537,142 @@ function startAxolotlSwim(pathEl, spriteEl) {
     }
     swimTimer = null;
     window.removeEventListener("resize", handleResize);
+    pathEl.removeEventListener("transitionend", handleTransitionEnd);
+    if (awaitingTransition) {
+      awaitingTransition = false;
+      if (typeof onSwimStop === "function") {
+        onSwimStop();
+      }
+    }
   };
 }
 
 async function discoverAxolotlFrames() {
-  const manifestFrames = await loadAxolotlManifest();
-  if (manifestFrames.length) {
-    return manifestFrames;
-  }
-
-  for (const single of AXOLOTL_SINGLE_ASSETS) {
-    if (await imageExists(single)) {
-      return [single];
-    }
+  const manifest = await loadAxolotlManifest();
+  if (manifest) {
+    return manifest;
   }
 
   const tested = new Map();
-  const checkCandidate = async (candidate) => {
-    if (tested.has(candidate)) {
-      return tested.get(candidate);
-    }
-    const exists = await imageExists(candidate);
-    tested.set(candidate, exists);
-    return exists;
-  };
 
+  const stateFrames = await discoverAxolotlStateFrames(tested);
+  if (stateFrames) {
+    return { mode: "states", states: stateFrames };
+  }
+
+  const single = await discoverAxolotlSingleFrame(tested);
+  if (single.length) {
+    return { mode: "frames", frames: single };
+  }
+
+  const sequential = await discoverAxolotlSequentialFrames(tested);
+  if (sequential.length) {
+    return { mode: "frames", frames: sequential };
+  }
+
+  return { mode: "frames", frames: [] };
+}
+
+async function loadAxolotlManifest() {
+  try {
+    const response = await fetch(AXOLOTL_MANIFEST_URL, { cache: "no-store" });
+    if (!response.ok) {
+      return null;
+    }
+    const payload = await response.json();
+    return normalizeAxolotlManifest(payload);
+  } catch (error) {
+    return null;
+  }
+}
+
+function normalizeAxolotlManifest(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  if (Array.isArray(payload)) {
+    const frames = payload
+      .map((entry) => normalizeAxolotlFramePath(entry))
+      .filter(Boolean);
+    return frames.length ? { mode: "frames", frames } : null;
+  }
+
+  if (Array.isArray(payload?.frames)) {
+    const frames = payload.frames
+      .map((entry) => normalizeAxolotlFramePath(entry))
+      .filter(Boolean);
+    return frames.length ? { mode: "frames", frames } : null;
+  }
+
+  const stateSource = extractStateMap(payload);
+  if (stateSource) {
+    const states = {};
+    let total = 0;
+    for (const name of AXOLOTL_STATE_NAMES) {
+      if (!Array.isArray(stateSource[name])) {
+        continue;
+      }
+      const frames = stateSource[name]
+        .map((entry) => normalizeAxolotlFramePath(entry))
+        .filter(Boolean);
+      if (frames.length) {
+        states[name] = frames;
+        total += frames.length;
+      }
+    }
+    if (total) {
+      return { mode: "states", states };
+    }
+  }
+
+  if (Array.isArray(payload?.sequence)) {
+    const frames = payload.sequence
+      .map((entry) => normalizeAxolotlFramePath(entry))
+      .filter(Boolean);
+    return frames.length ? { mode: "frames", frames } : null;
+  }
+
+  return null;
+}
+
+function extractStateMap(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  if (payload.states && typeof payload.states === "object") {
+    return payload.states;
+  }
+
+  let found = false;
+  const direct = {};
+  for (const name of AXOLOTL_STATE_NAMES) {
+    if (Array.isArray(payload[name])) {
+      direct[name] = payload[name];
+      found = true;
+    }
+  }
+
+  return found ? direct : null;
+}
+
+async function discoverAxolotlSingleFrame(tested) {
+  for (const single of AXOLOTL_SINGLE_ASSETS) {
+    if (await checkAxolotlCandidate(single, tested)) {
+      return [single];
+    }
+  }
+  return [];
+}
+
+async function discoverAxolotlSequentialFrames(tested) {
   for (const extension of AXOLOTL_FRAME_EXTENSIONS) {
     for (const pattern of AXOLOTL_FRAME_PATTERNS) {
       const frames = [];
       for (let index = 1; index <= AXOLOTL_FRAME_LIMIT; index += 1) {
         const candidate = pattern(index, extension);
-        // Avoid duplicated checks for the same source across patterns
-        if (await checkCandidate(candidate)) {
+        if (await checkAxolotlCandidate(candidate, tested)) {
           frames.push(candidate);
         } else if (index === 1) {
           frames.length = 0;
@@ -1297,7 +1681,6 @@ async function discoverAxolotlFrames() {
           break;
         }
       }
-
       if (frames.length) {
         return frames;
       }
@@ -1307,24 +1690,54 @@ async function discoverAxolotlFrames() {
   return [];
 }
 
-async function loadAxolotlManifest() {
-  try {
-    const response = await fetch(AXOLOTL_MANIFEST_URL, { cache: "no-store" });
-    if (!response.ok) {
-      return [];
+async function discoverAxolotlStateFrames(tested) {
+  const discovered = {};
+  let total = 0;
+
+  for (const state of AXOLOTL_STATE_NAMES) {
+    let frames = [];
+
+    for (const extension of AXOLOTL_FRAME_EXTENSIONS) {
+      for (const pattern of AXOLOTL_STATE_FRAME_PATTERNS) {
+        const candidates = [];
+        for (let index = 1; index <= AXOLOTL_FRAME_LIMIT; index += 1) {
+          const candidate = pattern(state, index, extension);
+          if (await checkAxolotlCandidate(candidate, tested)) {
+            candidates.push(candidate);
+          } else if (index === 1) {
+            candidates.length = 0;
+            break;
+          } else {
+            break;
+          }
+        }
+
+        if (candidates.length) {
+          frames = candidates;
+          break;
+        }
+      }
+      if (frames.length) {
+        break;
+      }
     }
-    const payload = await response.json();
-    const entries = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.frames)
-      ? payload.frames
-      : [];
-    return entries
-      .map((entry) => normalizeAxolotlFramePath(entry))
-      .filter(Boolean);
-  } catch (error) {
-    return [];
+
+    if (frames.length) {
+      discovered[state] = frames;
+      total += frames.length;
+    }
   }
+
+  return total ? discovered : null;
+}
+
+async function checkAxolotlCandidate(candidate, tested) {
+  if (tested.has(candidate)) {
+    return tested.get(candidate);
+  }
+  const exists = await imageExists(candidate);
+  tested.set(candidate, exists);
+  return exists;
 }
 
 function normalizeAxolotlFramePath(entry) {
@@ -1335,7 +1748,11 @@ function normalizeAxolotlFramePath(entry) {
   if (/^https?:/i.test(trimmed)) {
     return trimmed;
   }
-  return `assets/axolotl/${trimmed.replace(/^\/+/, "")}`;
+  const sanitized = trimmed.replace(/^\/+/, "");
+  if (/^assets\//i.test(sanitized)) {
+    return sanitized;
+  }
+  return `assets/axolotl/${sanitized}`;
 }
 
 function imageExists(source) {
@@ -1346,23 +1763,6 @@ function imageExists(source) {
     img.onerror = () => resolve(false);
     img.src = source;
   });
-
-  grid.appendChild(fragment);
-}
-
-function applyBookmarkImage(imageEl, bookmark) {
-  imageEl.classList.remove("is-fallback");
-  imageEl.referrerPolicy = "no-referrer";
-  imageEl.decoding = "async";
-  const primarySource = bookmark.image || buildFaviconUrl(bookmark.url);
-
-  const handleError = () => {
-    imageEl.src = createFallbackImage(bookmark);
-    imageEl.classList.add("is-fallback");
-  };
-
-  imageEl.addEventListener("error", handleError, { once: true });
-  imageEl.src = primarySource;
 }
 
 function createAxolotlFrameAnimator(target, frames, interval = 120) {
@@ -1408,6 +1808,168 @@ function createAxolotlFrameAnimator(target, frames, interval = 120) {
       timerId = null;
     }
     document.removeEventListener("visibilitychange", handleVisibility);
+  };
+}
+
+function createAxolotlStateAnimator(target, states, defaultInterval = 160) {
+  const normalized = {};
+  for (const [name, frames] of Object.entries(states || {})) {
+    if (Array.isArray(frames) && frames.length) {
+      normalized[name] = [...frames];
+    }
+  }
+
+  let timerId = null;
+  let current = null;
+  let visibilityPaused = false;
+
+  const clearTimer = () => {
+    if (timerId) {
+      clearTimeout(timerId);
+      timerId = null;
+    }
+  };
+
+  const applyFrame = (frames, index) => {
+    if (!target || !frames.length) {
+      return;
+    }
+    const frame = frames[Math.max(0, Math.min(index, frames.length - 1))];
+    target.style.backgroundImage = `url('${frame}')`;
+  };
+
+  const scheduleNext = () => {
+    if (!current || document.hidden) {
+      visibilityPaused = !!current;
+      return;
+    }
+    clearTimer();
+    timerId = window.setTimeout(step, current.interval);
+  };
+
+  const finalize = () => {
+    const complete = current?.onComplete;
+    current = null;
+    clearTimer();
+    if (typeof complete === "function") {
+      complete();
+    }
+  };
+
+  const step = () => {
+    if (!current) {
+      return;
+    }
+    const frames = current.frames;
+    if (!frames.length) {
+      finalize();
+      return;
+    }
+
+    current.index += 1;
+
+    if (current.index >= frames.length) {
+      if (current.loop) {
+        current.index = 0;
+      } else {
+        if (current.holdLast) {
+          current.index = frames.length - 1;
+          applyFrame(frames, current.index);
+        }
+        finalize();
+        return;
+      }
+    }
+
+    applyFrame(frames, current.index);
+    scheduleNext();
+  };
+
+  const playState = (stateName, options = {}) => {
+    const frames = normalized[stateName];
+    if (!frames || !frames.length) {
+      return false;
+    }
+
+    const {
+      loop = false,
+      interval = defaultInterval,
+      holdLast = false,
+      onComplete,
+    } = options;
+
+    clearTimer();
+    current = {
+      stateName,
+      frames,
+      loop,
+      holdLast,
+      onComplete,
+      interval,
+      index: 0,
+    };
+
+    applyFrame(frames, 0);
+
+    if (frames.length > 1) {
+      scheduleNext();
+    } else if (!loop) {
+      const complete = current.onComplete;
+      current = null;
+      if (typeof complete === "function") {
+        window.setTimeout(complete, interval);
+      }
+    }
+
+    return true;
+  };
+
+  const showState = (stateName) => {
+    const frames = normalized[stateName];
+    if (!frames || !frames.length) {
+      return false;
+    }
+    clearTimer();
+    current = null;
+    applyFrame(frames, 0);
+    return true;
+  };
+
+  const stop = () => {
+    current = null;
+    clearTimer();
+  };
+
+  const handleVisibility = () => {
+    if (document.hidden) {
+      if (timerId) {
+        clearTimer();
+        visibilityPaused = true;
+      }
+    } else if (visibilityPaused) {
+      visibilityPaused = false;
+      if (current && (current.loop || current.index < current.frames.length - 1)) {
+        scheduleNext();
+      }
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibility);
+
+  return {
+    playLoop: (stateName, interval = defaultInterval) =>
+      playState(stateName, { loop: true, interval }),
+    playOnce: (stateName, options = {}) =>
+      playState(stateName, { loop: false, ...options }),
+    showState,
+    stop,
+    destroy: () => {
+      stop();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    },
+    hasState: (stateName) => Array.isArray(normalized[stateName]) && normalized[stateName].length > 0,
+    hasAny: () => Object.values(normalized).some((frames) => frames.length > 0),
+    getCurrentState: () => current?.stateName || null,
   };
 }
 
