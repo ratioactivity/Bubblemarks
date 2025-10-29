@@ -13,10 +13,6 @@
   --shadow-card: 0 14px 30px rgba(179, 197, 255, 0.35);
   --soft-radius: 26px;
   --modal-backdrop: rgba(84, 62, 103, 0.35);
-  --star-ribbon-image: url("assets/stars.gif");
-  --starlet-1-image: url("assets/singlestar1.gif");
-  --starlet-2-image: url("assets/singlestar2.gif");
-  --starlet-3-image: url("assets/singlestar3.gif");
 }
 
 @font-face {
@@ -86,32 +82,33 @@ body {
   position: relative;
   overflow: hidden;
   border-radius: clamp(20px, 8vw, 60px);
-  background-image: var(--star-ribbon-image),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 201, 244, 0.45));
-  background-size: cover, 120% 120%;
-  background-repeat: repeat-y, no-repeat;
-  background-position: center;
-  opacity: 0.75;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.75),
+    rgba(255, 201, 244, 0.45)
+  );
+  opacity: 0.85;
   filter: drop-shadow(0 20px 45px rgba(255, 165, 231, 0.35));
   animation: ribbon-sway 28s ease-in-out infinite;
 }
 
-.star-ribbon::after {
-  content: "";
+.star-ribbon__media {
   position: absolute;
+  inset: 0;
+  width: 130%;
+  height: 130%;
   left: 50%;
-  top: 8%;
-  width: 120%;
-  height: clamp(60px, 10vw, 110px);
-  background-image: inherit;
-  background-size: 140% 140%;
-  background-repeat: inherit;
-  background-position: center;
-  border-radius: inherit;
-  opacity: 0.65;
-  transform: translate(-50%, -50%) rotate(90deg);
-  filter: blur(0.5px);
+  top: 50%;
+  transform: translate(-50%, -50%) scale(1.05) scaleX(var(--ribbon-direction, 1));
+  object-fit: cover;
+  mix-blend-mode: screen;
+  opacity: 0.9;
   pointer-events: none;
+}
+
+.star-ribbon__media--horizontal {
+  transform: translate(-50%, -50%) rotate(90deg) scale(1.05);
+  opacity: 0.65;
 }
 
 .star-ribbon--left {
@@ -134,31 +131,48 @@ body {
   position: absolute;
   width: clamp(48px, 8vw, 80px);
   aspect-ratio: 1;
-  background-image: radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.85), rgba(255, 189, 249, 0)),
-    var(--sparkle-image, radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(255, 205, 245, 0.4)));
-  background-size: cover, contain;
-  background-repeat: no-repeat;
-  background-position: center;
   filter: drop-shadow(0 8px 18px rgba(180, 160, 255, 0.45));
   animation: sparkle-drift 20s ease-in-out infinite;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 0;
+}
+
+.star-sparkle::after {
+  content: "";
+  position: absolute;
+  inset: -5%;
+  background: radial-gradient(
+    circle at 40% 40%,
+    rgba(255, 255, 255, 0.85),
+    rgba(255, 189, 249, 0)
+  );
+  border-radius: 50%;
+  z-index: -1;
+}
+
+.star-sparkle img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .star-sparkle--one {
-  --sparkle-image: var(--starlet-1-image);
   top: 12%;
   left: 12%;
   animation-delay: -6s;
 }
 
 .star-sparkle--two {
-  --sparkle-image: var(--starlet-2-image);
   bottom: 18%;
   right: 18%;
   animation-delay: -12s;
 }
 
 .star-sparkle--three {
-  --sparkle-image: var(--starlet-3-image);
   top: 65%;
   right: 8%;
   width: clamp(38px, 7vw, 68px);
@@ -558,6 +572,69 @@ body {
 
 .data-tools {
   display: flex;
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  padding: 0.3rem 0.3rem 0.3rem 1rem;
+  border: 2px solid rgba(255, 194, 220, 0.7);
+  box-shadow: inset 0 2px 6px rgba(255, 204, 229, 0.4);
+}
+
+#search {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: clamp(1.05rem, 3vw, 1.3rem);
+  font-family: "Papernotes", "Comic Sans MS", "Segoe UI", sans-serif;
+  color: var(--text-main);
+  padding: 0.6rem 0.2rem;
+  outline: none;
+}
+
+#search::placeholder {
+  color: rgba(85, 65, 95, 0.5);
+}
+
+.clear-search {
+  border: none;
+  background: linear-gradient(135deg, #ffd6ff, #c7f0ff);
+  color: var(--accent);
+  font-family: "Bigbesty", cursive;
+  border-radius: 999px;
+  padding: 0 1rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 6px 15px rgba(255, 163, 224, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.clear-search:hover,
+.clear-search:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(255, 163, 224, 0.6);
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(85, 65, 95, 0.6);
+}
+
+.keyboard {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: center;
+  padding: clamp(0.6rem, 2vw, 1rem);
+  border-radius: var(--soft-radius);
+  background: var(--keyboard-bg);
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5), 0 14px 26px rgba(187, 205, 255, 0.3);
+}
+
+.keyboard-row {
+  display: flex;
+  gap: clamp(0.35rem, 2vw, 0.75rem);
+  justify-content: center;
   flex-wrap: wrap;
   gap: 0.8rem;
   justify-content: center;
