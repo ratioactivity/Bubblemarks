@@ -9,6 +9,15 @@ const FALLBACK_PALETTES = [
 const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
+const DEFAULT_CATEGORY_SETTINGS = [
+  { key: "ai", label: "AI", color: "#ff80c8" },
+  { key: "av", label: "AV", color: "#92a9ff" },
+  { key: "shop", label: "Shop", color: "#ffc778" },
+  { key: "tools", label: "Tools", color: "#6ad6a6" },
+  { key: "games", label: "Games", color: "#b592ff" },
+  { key: "work", label: "Work", color: "#ff9dbb" },
+  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" },
+];
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
 const DEFAULT_AXOLOTL_IMAGE = (() => {
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -393,16 +402,33 @@ function sanitizeBookmarks(entries) {
     .filter((entry) => entry.name && entry.url);
 }
 
+function getDefaultCategorySettings() {
+  return DEFAULT_CATEGORY_SETTINGS.map((entry) => ({
+    key: entry.key,
+    label: entry.label,
+    color: entry.color,
+    isExtra: entry.isExtra ?? false,
+  }));
+}
+
 function loadCategorySettings() {
+  const defaults = getDefaultCategorySettings();
+
   if (typeof localStorage === "undefined") {
-    return [];
+    return defaults;
   }
 
   try {
     const raw = localStorage.getItem(CATEGORY_STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(defaults));
+      return defaults;
+    }
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) {
+      localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(defaults));
+      return defaults;
+    }
 
     const deduped = [];
     const seen = new Set();
@@ -416,10 +442,15 @@ function loadCategorySettings() {
       deduped.push(normalized);
     });
 
+    if (!deduped.length) {
+      localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(defaults));
+      return defaults;
+    }
+
     return deduped;
   } catch (error) {
     console.warn("Unable to load category settings", error);
-    return [];
+    return defaults;
   }
 }
 
@@ -432,6 +463,17 @@ function saveCategorySettings() {
     localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(categorySettings));
   } catch (error) {
     console.warn("Unable to save category preferences", error);
+  }
+}
+
+function resetCategorySettingsToDefaults() {
+  categorySettings = getDefaultCategorySettings();
+  saveCategorySettings();
+  updateCategoryBar();
+  applyFilters();
+
+  if (categoryModal && !categoryModal.hidden) {
+    renderCategorySettingsEditor();
   }
 }
 
@@ -1058,6 +1100,13 @@ function setupSearch() {
     applyFilters();
     searchInput.focus();
   });
+
+  clearSearchBtn.addEventListener("click", () => {
+    searchTerm = "";
+    searchInput.value = "";
+    applyFilters();
+    searchInput.focus();
+  });
 }
 
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
@@ -1133,6 +1182,60 @@ function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
 
   if (axolotlLayer) {
     axolotlLayer.hidden = !showAxolotl;
+  }
+
+  if (showAxolotl) {
+    if (!lazyAxolotl) {
+      ensureAxolotlInitialized();
+    }
+  } else {
+    axolotlController?.disable?.();
+  }
+}
+
+function ensureAxolotlInitialized() {
+  if (preferences.showAxolotl === false) {
+    axolotlController?.disable?.();
+    return;
+  }
+
+  if (axolotlInitialized) {
+    axolotlController?.enable?.();
+    return;
+  }
+
+  return initAxolotlMascot();
+}
+
+function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
+  const showHeading = preferences.showHeading !== false;
+  const showAxolotl = preferences.showAxolotl !== false;
+  const cardSize = normalizeCardSize(preferences.cardSize);
+
+  preferences.cardSize = cardSize;
+
+  if (heroHeading) {
+    heroHeading.hidden = !showHeading;
+  }
+
+  if (syncInputs) {
+    if (toggleHeadingInput) {
+      toggleHeadingInput.checked = showHeading;
+    }
+    if (toggleAxolotlInput) {
+      toggleAxolotlInput.checked = showAxolotl;
+    }
+    if (cardSizeInput) {
+      cardSizeInput.value = String(cardSizeToIndex(cardSize));
+    }
+  }
+
+  if (axolotlLayer) {
+    axolotlLayer.hidden = !showAxolotl;
+  }
+
+  if (document.body) {
+    document.body.setAttribute("data-card-size", cardSize);
   }
 
   if (showAxolotl) {
@@ -1595,6 +1698,9 @@ async function initAxolotlMascot() {
       let stopFrameAnimation = null;
       let stateAnimator = null;
       let stopSwimming = null;
+      let isSwimming = false;
+      let swimTransitionPromise = null;
+      let clearStateTimersRef = () => {};
 
       const stopFrameAnimationIfNeeded = () => {
         if (typeof stopFrameAnimation === "function") {
@@ -1626,6 +1732,9 @@ async function initAxolotlMascot() {
           stopSwimming();
           stopSwimming = null;
         }
+        isSwimming = false;
+        swimTransitionPromise = null;
+        clearStateTimersRef();
       };
 
       if (discovery.mode === "states") {
@@ -1671,7 +1780,13 @@ async function initAxolotlMascot() {
           return id;
         };
 
+        clearStateTimersRef = clearStateTimers;
+
+        isSwimming = false;
+        swimTransitionPromise = null;
+
         const showStill = () => {
+          isSwimming = false;
           clearStateTimers();
           if (restState && stateAnimator.showState(restState)) {
             return;
@@ -1686,6 +1801,9 @@ async function initAxolotlMascot() {
 
         const playFloatingLoop = () => {
           clearStateTimers();
+          if (isSwimming) {
+            return;
+          }
           if (
             floatState &&
             stateAnimator.playLoop(floatState, floatState === "floating" ? 240 : 260)
@@ -1700,24 +1818,27 @@ async function initAxolotlMascot() {
         };
 
         const scheduleRestingCycle = () => {
-          if (!restState || restState === floatState) {
+          if (!restState || restState === floatState || isSwimming) {
             return;
           }
           scheduleStateTimer(() => {
-            if (!restState) return;
+            if (!restState || isSwimming) return;
             stateAnimator.playLoop(restState, 320);
             if (wakeState) {
               scheduleStateTimer(() => {
+                if (isSwimming) return;
                 stateAnimator.playOnce(wakeState, {
                   interval: 200,
                   holdLast: true,
                   onComplete: () => {
+                    if (isSwimming) return;
                     playFloatingLoop();
                   },
                 });
               }, 3200);
             } else if (floatState) {
               scheduleStateTimer(() => {
+                if (isSwimming) return;
                 playFloatingLoop();
               }, 3600);
             }
@@ -1725,15 +1846,20 @@ async function initAxolotlMascot() {
         };
 
         const playIdleCycle = () => {
+          if (isSwimming) {
+            return;
+          }
           clearStateTimers();
           if (restState && restState !== floatState) {
             stateAnimator.playLoop(restState, 320);
             if (wakeState) {
               scheduleStateTimer(() => {
+                if (isSwimming) return;
                 stateAnimator.playOnce(wakeState, {
                   interval: 200,
                   holdLast: true,
                   onComplete: () => {
+                    if (isSwimming) return;
                     playFloatingLoop();
                     scheduleRestingCycle();
                   },
@@ -1741,6 +1867,7 @@ async function initAxolotlMascot() {
               }, 3600);
             } else {
               scheduleStateTimer(() => {
+                if (isSwimming) return;
                 playFloatingLoop();
                 scheduleRestingCycle();
               }, 4000);
@@ -1751,110 +1878,64 @@ async function initAxolotlMascot() {
           }
         };
 
+        const playOnceAndWait = (stateName, options = {}) => {
+          if (!stateName || !stateAnimator.hasState(stateName)) {
+            return Promise.resolve(false);
+          }
+          return stateAnimator.playOnceAsync(stateName, options);
+        };
+
         const transitionToSwim = () => {
+          if (isSwimming) {
+            return Promise.resolve();
+          }
+          if (swimTransitionPromise) {
+            return swimTransitionPromise;
+          }
+
           clearStateTimers();
+          isSwimming = true;
 
-          return new Promise((resolve) => {
-            let resolved = false;
-            const finish = () => {
-              if (!resolved) {
-                resolved = true;
-                resolve();
+          swimTransitionPromise = (async () => {
+            let currentState = stateAnimator.getCurrentState();
+
+            if (currentState === restState && wakeState) {
+              await playOnceAndWait(wakeState, { interval: 210, holdLast: true });
+              currentState = stateAnimator.getCurrentState();
+            }
+
+            if (floatState) {
+              if (currentState !== floatState) {
+                await playOnceAndWait(floatState, { interval: 230, holdLast: true });
+                currentState = floatState;
               }
-            };
+            }
 
-            const beginSwimLoop = () => {
-              if (swimState && stateAnimator.playLoop(swimState, 170)) {
-                finish();
-                return;
-              }
-              if (floatState && stateAnimator.playLoop(floatState, 230)) {
-                finish();
-                return;
-              }
-              if (restState && stateAnimator.playLoop(restState, 320)) {
-                finish();
-                return;
-              }
-              finish();
-            };
+            if (prepState) {
+              await playOnceAndWait(prepState, { interval: 200, holdLast: false });
+            }
 
-            const enterSwimMode = () => {
-              if (
-                prepState &&
-                stateAnimator.playOnce(prepState, {
-                  interval: 190,
-                  holdLast: false,
-                  onComplete: beginSwimLoop,
-                })
-              ) {
-                return;
-              }
-              beginSwimLoop();
-            };
+            if (swimState) {
+              stateAnimator.playLoop(swimState, 210);
+            } else if (floatState) {
+              stateAnimator.playLoop(floatState, floatState === "floating" ? 240 : 260);
+            } else if (restState) {
+              stateAnimator.playLoop(restState, 320);
+            }
+          })()
+            .catch((error) => {
+              isSwimming = false;
+              throw error;
+            })
+            .finally(() => {
+              swimTransitionPromise = null;
+            });
 
-            const enterFloating = () => {
-              if (!floatState) {
-                enterSwimMode();
-                return;
-              }
-
-              if (stateAnimator.getCurrentState() === floatState) {
-                enterSwimMode();
-                return;
-              }
-
-              if (
-                stateAnimator.playOnce(floatState, {
-                  interval: 220,
-                  holdLast: true,
-                  onComplete: enterSwimMode,
-                })
-              ) {
-                return;
-              }
-
-              enterSwimMode();
-            };
-
-            const wakeAndFloat = () => {
-              const current = stateAnimator.getCurrentState();
-
-              if (current === restState && wakeState) {
-                if (
-                  stateAnimator.playOnce(wakeState, {
-                    interval: 200,
-                    holdLast: true,
-                    onComplete: () => {
-                      enterFloating();
-                    },
-                  })
-                ) {
-                  return;
-                }
-              }
-
-              if (
-                current === restState &&
-                floatState &&
-                restState !== floatState &&
-                stateAnimator.playOnce(floatState, {
-                  interval: 220,
-                  holdLast: true,
-                  onComplete: enterSwimMode,
-                })
-              ) {
-                return;
-              }
-
-              enterFloating();
-            };
-
-            wakeAndFloat();
-          });
+          return swimTransitionPromise;
         };
 
         const settleAfterSwim = () => {
+          isSwimming = false;
           playFloatingLoop();
           scheduleRestingCycle();
         };
@@ -2536,7 +2617,24 @@ function createAxolotlStateAnimator(target, states, defaultInterval = 200) {
       interval = defaultInterval,
       holdLast = false,
       onComplete,
+      restart = false,
     } = options;
+
+    const resolvedInterval = Number.isFinite(interval) ? interval : defaultInterval;
+    const currentInterval = Number.isFinite(current?.interval)
+      ? current.interval
+      : defaultInterval;
+
+    if (
+      !restart &&
+      current &&
+      current.stateName === stateName &&
+      current.loop &&
+      loop &&
+      Math.abs(currentInterval - resolvedInterval) < 1
+    ) {
+      return true;
+    }
 
     clearTimer();
     current = {
@@ -2545,7 +2643,7 @@ function createAxolotlStateAnimator(target, states, defaultInterval = 200) {
       loop,
       holdLast,
       onComplete,
-      interval,
+      interval: resolvedInterval,
       index: 0,
     };
 
@@ -2557,7 +2655,7 @@ function createAxolotlStateAnimator(target, states, defaultInterval = 200) {
       const complete = current.onComplete;
       current = null;
       if (typeof complete === "function") {
-        window.setTimeout(complete, interval);
+        window.setTimeout(complete, resolvedInterval);
       }
     }
 
@@ -2601,6 +2699,23 @@ function createAxolotlStateAnimator(target, states, defaultInterval = 200) {
       playState(stateName, { loop: true, interval }),
     playOnce: (stateName, options = {}) =>
       playState(stateName, { loop: false, ...options }),
+    playOnceAsync: (stateName, options = {}) =>
+      new Promise((resolve) => {
+        const success = playState(stateName, {
+          loop: false,
+          ...options,
+          onComplete: () => {
+            if (typeof options.onComplete === "function") {
+              options.onComplete();
+            }
+            resolve(true);
+          },
+        });
+
+        if (!success) {
+          resolve(false);
+        }
+      }),
     showState,
     stop,
     destroy: () => {
@@ -2610,6 +2725,8 @@ function createAxolotlStateAnimator(target, states, defaultInterval = 200) {
     hasState: (stateName) => Array.isArray(normalized[stateName]) && normalized[stateName].length > 0,
     hasAny: () => Object.values(normalized).some((frames) => frames.length > 0),
     getCurrentState: () => current?.stateName || null,
+    isLooping: (stateName) =>
+      !!(current && current.loop && (!stateName || current.stateName === stateName)),
   };
 }
 
@@ -2691,5 +2808,6 @@ function setupDataTools() {
       return;
     }
     setBookmarks(defaults, { persist: true });
+    resetCategorySettingsToDefaults();
   });
 }

@@ -13,24 +13,30 @@
   --shadow-card: 0 14px 30px rgba(179, 197, 255, 0.35);
   --soft-radius: 26px;
   --modal-backdrop: rgba(84, 62, 103, 0.35);
-  --card-min-width: 200px;
-  --card-media-height: 140px;
-  --card-body-padding: 1rem 1.2rem 1.4rem;
-  --card-title-size: 1.2rem;
+  --card-min-width: 240px;
+  --card-min-height: 360px;
+  --card-media-height: 190px;
+  --card-body-padding: 1.2rem 1.5rem 1.6rem;
+  --card-title-size: 1.28rem;
+  --card-gap: clamp(1.2rem, 3vw, 2rem);
 }
 
 body[data-card-size="cozy"] {
-  --card-min-width: 180px;
-  --card-media-height: 120px;
+  --card-min-width: 170px;
+  --card-min-height: 280px;
+  --card-media-height: 130px;
   --card-body-padding: 0.85rem 1rem 1.1rem;
-  --card-title-size: 1.1rem;
+  --card-title-size: 1.12rem;
+  --card-gap: clamp(0.75rem, 2.4vw, 1.3rem);
 }
 
 body[data-card-size="roomy"] {
-  --card-min-width: 250px;
-  --card-media-height: 180px;
-  --card-body-padding: 1.2rem 1.4rem 1.6rem;
-  --card-title-size: 1.3rem;
+  --card-min-width: 320px;
+  --card-min-height: 460px;
+  --card-media-height: 250px;
+  --card-body-padding: 1.5rem 2rem 2.15rem;
+  --card-title-size: 1.42rem;
+  --card-gap: clamp(1.6rem, 3.6vw, 2.6rem);
 }
 
 @font-face {
@@ -638,7 +644,6 @@ body {
 
 .filter-bar {
   display: flex;
-  justify-content: center;
   flex-wrap: wrap;
   gap: 0.75rem;
   justify-content: center;
@@ -722,13 +727,15 @@ body {
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
-  gap: clamp(1rem, 3vw, 1.8rem);
+  gap: var(--card-gap);
 }
 
 .card {
   position: relative;
   display: grid;
   grid-template-rows: var(--card-media-height) auto;
+  min-width: var(--card-min-width);
+  min-height: var(--card-min-height);
   background: var(--card-gradient);
   border-radius: calc(var(--soft-radius) * 0.9);
   overflow: hidden;
