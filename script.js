@@ -62,7 +62,14 @@ const prefersReducedMotion = (() => {
   };
 })();
 const AXOLOTL_MANIFEST_URL = "assets/axolotl/manifest.json";
-const AXOLOTL_FRAME_EXTENSIONS = ["png", "webp", "gif"];
+const AXOLOTL_FRAME_EXTENSIONS = [
+  "png",
+  "webp",
+  "gif",
+  "PNG",
+  "WEBP",
+  "GIF",
+];
 const AXOLOTL_FRAME_PATTERNS = [
   (index, extension) =>
     `assets/axolotl/frame-${String(index).padStart(2, "0")}.${extension}`,
@@ -88,6 +95,12 @@ const AXOLOTL_FRAME_PATTERNS = [
   (index, extension) =>
     `assets/axolotl/idle_${String(index).padStart(2, "0")}.${extension}`,
   (index, extension) => `assets/axolotl/idle_${index}.${extension}`,
+  (index, extension) =>
+    `assets/axolotl/frame-(${String(index).padStart(2, "0")}).${extension}`,
+  (index, extension) => `assets/axolotl/frame-(${index}).${extension}`,
+  (index, extension) =>
+    `assets/axolotl/frame (${String(index).padStart(2, "0")}).${extension}`,
+  (index, extension) => `assets/axolotl/frame (${index}).${extension}`,
 ];
 const AXOLOTL_SINGLE_ASSETS = [
   "assets/axolotl/axolotl.gif",
@@ -109,7 +122,7 @@ const AXOLOTL_SINGLE_ASSETS = [
   "assets/axolotl/swimming.png",
   "assets/axolotl/swimming.webp",
 ];
-const AXOLOTL_FRAME_LIMIT = 30;
+const AXOLOTL_FRAME_LIMIT = 90;
 const AXOLOTL_STATE_NAMES = [
   "resting",
   "getup",
@@ -151,6 +164,22 @@ const AXOLOTL_STATE_FRAME_PATTERNS = [
     `assets/axolotl/${state}/frame_${String(index).padStart(2, "0")}.${extension}`,
   (state, index, extension) =>
     `assets/axolotl/${state}/frame${String(index).padStart(2, "0")}.${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${state}-(${String(index).padStart(2, "0")}).${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${state}-(${index}).${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${state} (${String(index).padStart(2, "0")}).${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}/${state} (${index}).${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}-(${String(index).padStart(2, "0")}).${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state}-(${index}).${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state} (${String(index).padStart(2, "0")}).${extension}`,
+  (state, index, extension) =>
+    `assets/axolotl/${state} (${index}).${extension}`,
 ];
 
 let bookmarks = [];
