@@ -40,7 +40,6 @@
       </div>
       <div class="hero__content">
         <h1>Bubblemarks</h1>
-        <p class="tagline">Your pastel-perfect, keyboard-free bookmark cloud.</p>
       </div>
     </header>
 
@@ -57,33 +56,76 @@
       <div class="controls__sparkle controls__sparkle--small-two" aria-hidden="true">
         <img src="assets/singlestar3.gif" alt="" />
       </div>
-      <div class="search-block">
-        <label for="search" class="sr-only">Search bookmarks</label>
-        <div class="search-wrapper">
-          <input id="search" type="text" placeholder="Search cute stuff..." list="bookmark-suggestions" autocomplete="off" />
-          <button id="clear-search" class="clear-search" type="button" aria-label="Clear search">✧</button>
-        </div>
-        <datalist id="bookmark-suggestions"></datalist>
-        <p class="hint">Tap the rainbow keyboard or start typing to filter instantly.</p>
-      </div>
-
-      <div class="keyboard" id="keyboard" aria-label="On-screen keyboard"></div>
-
-      <div class="filter-bar" id="categories" role="tablist" aria-label="Category filters"></div>
-
-      <div class="category-actions">
-        <button id="customize-categories" type="button" class="soft-btn soft-btn--ghost">
-          Customize Categories
+      <div class="controls__tabs" role="tablist" aria-label="Control views">
+        <button
+          type="button"
+          class="controls__tab controls__tab--active"
+          id="tab-bookmarks"
+          role="tab"
+          aria-selected="true"
+          aria-controls="controls-panel-bookmarks"
+          data-controls-tab="bookmarks"
+        >
+          Bookmarks
+        </button>
+        <button
+          type="button"
+          class="controls__tab"
+          id="tab-keyboard"
+          role="tab"
+          aria-selected="false"
+          aria-controls="controls-panel-keyboard"
+          data-controls-tab="keyboard"
+          tabindex="-1"
+        >
+          Keyboard Search
         </button>
       </div>
 
-      <div class="data-tools">
-        <button id="import-btn" type="button" class="soft-btn">Import JSON</button>
-        <button id="export-btn" type="button" class="soft-btn">Export Backup</button>
-        <button id="restore-btn" type="button" class="soft-btn">Restore Defaults</button>
-        <input id="import-input" type="file" accept="application/json" hidden />
+      <div
+        id="controls-panel-bookmarks"
+        class="controls__panel controls__panel--bookmarks"
+        role="tabpanel"
+        aria-labelledby="tab-bookmarks"
+        data-controls-panel="bookmarks"
+      >
+        <div class="filter-bar" id="categories" role="tablist" aria-label="Category filters"></div>
+
+        <div class="category-actions">
+          <button id="customize-categories" type="button" class="soft-btn soft-btn--ghost">
+            Customize Categories
+          </button>
+        </div>
+
+        <div class="data-tools">
+          <button id="import-btn" type="button" class="soft-btn">Import JSON</button>
+          <button id="export-btn" type="button" class="soft-btn">Export Backup</button>
+          <button id="restore-btn" type="button" class="soft-btn">Restore Defaults</button>
+          <input id="import-input" type="file" accept="application/json" hidden />
+        </div>
+        <p class="storage-note">Bookmarks are saved locally in your browser. Export backups so your comfy cloud is always safe!</p>
       </div>
-      <p class="storage-note">Bookmarks are saved locally in your browser. Export backups so your comfy cloud is always safe!</p>
+
+      <div
+        id="controls-panel-keyboard"
+        class="controls__panel controls__panel--keyboard"
+        role="tabpanel"
+        aria-labelledby="tab-keyboard"
+        data-controls-panel="keyboard"
+        hidden
+      >
+        <div class="search-block">
+          <label for="search" class="sr-only">Search bookmarks</label>
+          <div class="search-wrapper">
+            <input id="search" type="text" placeholder="Search cute stuff..." list="bookmark-suggestions" autocomplete="off" />
+            <button id="clear-search" class="clear-search" type="button" aria-label="Clear search">✧</button>
+          </div>
+          <datalist id="bookmark-suggestions"></datalist>
+          <p class="hint">Tap the rainbow keyboard or start typing to filter instantly.</p>
+        </div>
+
+        <div class="keyboard" id="keyboard" aria-label="On-screen keyboard"></div>
+      </div>
     </section>
 
     <section id="bookmarks" class="grid" aria-live="polite" aria-busy="false"></section>

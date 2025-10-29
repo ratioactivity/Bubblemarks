@@ -436,9 +436,68 @@ body {
   margin-bottom: clamp(1.5rem, 4vw, 3rem);
 }
 
+.controls__tabs {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: clamp(0.6rem, 2vw, 1rem);
+  position: relative;
+  z-index: 1;
+}
+
+.controls__tab {
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 999px;
+  padding: 0.65rem 1.6rem;
+  background: linear-gradient(135deg, rgba(255, 223, 249, 0.92), rgba(205, 230, 255, 0.95));
+  color: var(--accent);
+  font-family: "Bigbesty", "Papernotes", cursive;
+  font-size: clamp(1.05rem, 3vw, 1.35rem);
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(190, 208, 255, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.controls__tab--active,
+.controls__tab[aria-selected="true"] {
+  background: linear-gradient(135deg, rgba(255, 185, 228, 0.98), rgba(173, 210, 255, 0.98));
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(190, 208, 255, 0.55);
+}
+
+.controls__tab:focus-visible,
+.controls__tab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(190, 208, 255, 0.55);
+  outline: none;
+}
+
+.controls__panel {
+  position: relative;
+  display: grid;
+  gap: clamp(1rem, 3vw, 1.6rem);
+}
+
+.controls__panel--bookmarks {
+  justify-items: center;
+}
+
+.controls__panel--keyboard {
+  justify-items: center;
+}
+
+.controls__panel--keyboard .search-block {
+  width: min(100%, 520px);
+}
+
+.controls__panel--keyboard .keyboard {
+  width: min(100%, 640px);
+}
+
 .search-block {
   display: grid;
   gap: 0.5rem;
+  justify-items: stretch;
 }
 
 .search-wrapper {
