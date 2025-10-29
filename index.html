@@ -40,17 +40,6 @@
       </div>
       <div class="hero__content">
         <h1 id="app-heading">Bubblemarks</h1>
-        <div class="hero__actions">
-          <button
-            type="button"
-            class="soft-btn soft-btn--ghost hero__settings-btn"
-            id="settings-btn"
-            aria-haspopup="dialog"
-            aria-controls="settings-modal"
-          >
-            Settings
-          </button>
-        </div>
       </div>
     </header>
 
@@ -222,6 +211,17 @@
             <input type="checkbox" id="toggle-axolotl" />
             <span>Show axolotl buddy</span>
           </label>
+          <div class="settings-slider">
+            <label for="card-size">Card size</label>
+            <div class="settings-slider__control">
+              <input type="range" id="card-size" min="0" max="2" step="1" />
+              <div class="settings-slider__labels" aria-hidden="true">
+                <span>Cozy</span>
+                <span>Comfy</span>
+                <span>Roomy</span>
+              </div>
+            </div>
+          </div>
         </fieldset>
         <fieldset class="settings-section">
           <legend>Data</legend>
@@ -238,6 +238,17 @@
       </form>
     </div>
   </div>
+
+  <button
+    type="button"
+    class="settings-fab"
+    id="settings-btn"
+    aria-haspopup="dialog"
+    aria-controls="settings-modal"
+  >
+    <span aria-hidden="true">⚙</span>
+    <span class="sr-only">Open settings</span>
+  </button>
 
   <script src="bubbles-background.js"></script>
   <script src="script.js"></script>

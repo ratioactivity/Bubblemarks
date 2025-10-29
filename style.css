@@ -13,6 +13,24 @@
   --shadow-card: 0 14px 30px rgba(179, 197, 255, 0.35);
   --soft-radius: 26px;
   --modal-backdrop: rgba(84, 62, 103, 0.35);
+  --card-min-width: 200px;
+  --card-media-height: 140px;
+  --card-body-padding: 1rem 1.2rem 1.4rem;
+  --card-title-size: 1.2rem;
+}
+
+body[data-card-size="cozy"] {
+  --card-min-width: 180px;
+  --card-media-height: 120px;
+  --card-body-padding: 0.85rem 1rem 1.1rem;
+  --card-title-size: 1.1rem;
+}
+
+body[data-card-size="roomy"] {
+  --card-min-width: 250px;
+  --card-media-height: 180px;
+  --card-body-padding: 1.2rem 1.4rem 1.6rem;
+  --card-title-size: 1.3rem;
 }
 
 @font-face {
@@ -703,14 +721,14 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
   gap: clamp(1rem, 3vw, 1.8rem);
 }
 
 .card {
   position: relative;
   display: grid;
-  grid-template-rows: 140px auto;
+  grid-template-rows: var(--card-media-height) auto;
   background: var(--card-gradient);
   border-radius: calc(var(--soft-radius) * 0.9);
   overflow: hidden;
@@ -767,7 +785,7 @@ body {
 }
 
 .card-body {
-  padding: 1rem 1.2rem 1.4rem;
+  padding: var(--card-body-padding);
   display: grid;
   gap: 0.45rem;
 }
@@ -788,7 +806,7 @@ body {
 .card-title {
   margin: 0;
   font-family: "Papernotes", "Segoe UI", sans-serif;
-  font-size: 1.2rem;
+  font-size: var(--card-title-size);
   color: var(--text-main);
   line-height: 1.25;
 }
@@ -1101,6 +1119,40 @@ body {
   flex: 1 1 140px;
 }
 
+.settings-slider {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.settings-slider > label {
+  font-size: 1rem;
+  color: rgba(85, 65, 95, 0.8);
+}
+
+.settings-slider__control {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(210, 200, 240, 0.5);
+  box-shadow: inset 0 2px 6px rgba(210, 200, 240, 0.3),
+    0 10px 20px rgba(180, 200, 255, 0.22);
+}
+
+.settings-slider__control input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  background: transparent;
+}
+
+.settings-slider__labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: rgba(85, 65, 95, 0.55);
+}
+
 .settings-note {
   margin: 0;
   font-size: 0.95rem;
@@ -1115,13 +1167,45 @@ body.modal-open {
   overflow: hidden;
 }
 
+.settings-fab {
+  position: fixed;
+  right: clamp(1.2rem, 4vw, 2.4rem);
+  bottom: clamp(1.2rem, 4vw, 2.4rem);
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 234, 255, 0.95), rgba(216, 237, 255, 0.9));
+  color: var(--accent);
+  font-family: "Bigbesty", "Papernotes", cursive;
+  font-size: clamp(1.3rem, 4vw, 1.6rem);
+  width: clamp(3rem, 6vw, 3.6rem);
+  height: clamp(3rem, 6vw, 3.6rem);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 18px 34px rgba(165, 185, 255, 0.4);
+  cursor: pointer;
+  z-index: 6;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settings-fab:hover,
+.settings-fab:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 24px 40px rgba(165, 185, 255, 0.5);
+  outline: none;
+}
+
 @media (max-width: 768px) {
   body {
     padding: 1.2rem;
   }
 
   .card {
-    grid-template-rows: 160px auto;
+    grid-template-rows: max(var(--card-media-height), 160px) auto;
+  }
+
+  .settings-fab {
+    right: clamp(1rem, 6vw, 1.6rem);
+    bottom: clamp(1rem, 6vw, 1.6rem);
   }
 }
 

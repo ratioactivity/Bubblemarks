@@ -131,6 +131,7 @@ const AXOLOTL_STATE_NAMES = [
   "swimmode",
   "swimming",
 ];
+const CARD_SIZE_OPTIONS = ["cozy", "comfy", "roomy"];
 const AXOLOTL_STATE_FRAME_PATTERNS = [
   (state, index, extension) =>
     `assets/axolotl/${state}-${String(index).padStart(2, "0")}.${extension}`,
@@ -219,6 +220,7 @@ const settingsForm = document.getElementById("settings-form");
 const settingsDialog = document.querySelector(".settings-modal__dialog");
 const toggleHeadingInput = document.getElementById("toggle-heading");
 const toggleAxolotlInput = document.getElementById("toggle-axolotl");
+const cardSizeInput = document.getElementById("card-size");
 const customizeCategoriesBtn = document.getElementById("customize-categories");
 const categoryModal = document.getElementById("category-modal");
 const categoryForm = document.getElementById("category-form");
@@ -433,10 +435,34 @@ function saveCategorySettings() {
   }
 }
 
+function normalizeCardSize(value) {
+  if (typeof value === "string") {
+    const trimmed = value.trim().toLowerCase();
+    if (CARD_SIZE_OPTIONS.includes(trimmed)) {
+      return trimmed;
+    }
+  }
+  return "comfy";
+}
+
+function cardSizeToIndex(size) {
+  const index = CARD_SIZE_OPTIONS.indexOf(size);
+  return index >= 0 ? index : CARD_SIZE_OPTIONS.indexOf("comfy");
+}
+
+function indexToCardSize(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "comfy";
+  }
+  return CARD_SIZE_OPTIONS[numeric] || "comfy";
+}
+
 function getDefaultPreferences() {
   return {
     showHeading: true,
     showAxolotl: true,
+    cardSize: "comfy",
   };
 }
 
@@ -449,6 +475,7 @@ function normalizePreferences(value) {
   return {
     showHeading: value.showHeading !== false,
     showAxolotl: value.showAxolotl !== false,
+    cardSize: normalizeCardSize(value.cardSize),
   };
 }
 
@@ -1036,6 +1063,60 @@ function setupSearch() {
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
   const showHeading = preferences.showHeading !== false;
   const showAxolotl = preferences.showAxolotl !== false;
+  const cardSize = normalizeCardSize(preferences.cardSize);
+
+  preferences.cardSize = cardSize;
+
+  if (heroHeading) {
+    heroHeading.hidden = !showHeading;
+  }
+
+  if (syncInputs) {
+    if (toggleHeadingInput) {
+      toggleHeadingInput.checked = showHeading;
+    }
+    if (toggleAxolotlInput) {
+      toggleAxolotlInput.checked = showAxolotl;
+    }
+    if (cardSizeInput) {
+      cardSizeInput.value = String(cardSizeToIndex(cardSize));
+    }
+  }
+
+  if (axolotlLayer) {
+    axolotlLayer.hidden = !showAxolotl;
+  }
+
+  if (document.body) {
+    document.body.setAttribute("data-card-size", cardSize);
+  }
+
+  if (showAxolotl) {
+    if (!lazyAxolotl) {
+      ensureAxolotlInitialized();
+    }
+  } else {
+    axolotlController?.disable?.();
+  }
+}
+
+function ensureAxolotlInitialized() {
+  if (preferences.showAxolotl === false) {
+    axolotlController?.disable?.();
+    return;
+  }
+
+  if (axolotlInitialized) {
+    axolotlController?.enable?.();
+    return;
+  }
+
+  return initAxolotlMascot();
+}
+
+function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
+  const showHeading = preferences.showHeading !== false;
+  const showAxolotl = preferences.showAxolotl !== false;
 
   if (heroHeading) {
     heroHeading.hidden = !showHeading;
@@ -1228,6 +1309,15 @@ function setupSettingsMenu() {
   if (toggleAxolotlInput) {
     toggleAxolotlInput.addEventListener("change", (event) => {
       preferences.showAxolotl = event.target.checked;
+      savePreferences();
+      applyPreferences({ syncInputs: false });
+    });
+  }
+
+  if (cardSizeInput) {
+    cardSizeInput.addEventListener("input", (event) => {
+      const nextSize = indexToCardSize(event.target.value);
+      preferences.cardSize = nextSize;
       savePreferences();
       applyPreferences({ syncInputs: false });
     });
@@ -1946,6 +2036,24 @@ function startAxolotlSwim(pathEl, spriteEl, callbacks = {}) {
   let currentX = 0;
   let currentY = 0;
   let awaitingTransition = false;
+  const restWindow = { min: 1600, max: 3200 };
+
+  const clearSwimTimer = () => {
+    if (swimTimer !== null) {
+      clearTimeout(swimTimer);
+      swimTimer = null;
+    }
+  };
+
+  const queueNextSwim = (delay) => {
+    const range = restWindow.max - restWindow.min;
+    const baseDelay =
+      typeof delay === "number"
+        ? delay
+        : restWindow.min + Math.random() * (range > 0 ? range : 0);
+    clearSwimTimer();
+    swimTimer = window.setTimeout(swim, Math.max(0, baseDelay));
+  };
 
   const handleTransitionEnd = (event) => {
     if (event?.target !== pathEl || event.propertyName !== "transform") {
@@ -1954,9 +2062,12 @@ function startAxolotlSwim(pathEl, spriteEl, callbacks = {}) {
     if (awaitingTransition) {
       awaitingTransition = false;
       spriteEl.style.setProperty("--axolotl-tilt", "0deg");
-      if (typeof onSwimStop === "function") {
-        onSwimStop();
-      }
+      const stopResult = typeof onSwimStop === "function" ? onSwimStop() : null;
+      Promise.resolve(stopResult)
+        .catch(() => {})
+        .finally(() => {
+          queueNextSwim();
+        });
     }
   };
 
@@ -1988,6 +2099,7 @@ function startAxolotlSwim(pathEl, spriteEl, callbacks = {}) {
   };
 
   const swim = () => {
+    clearSwimTimer();
     const { x, y, duration } = choosePoint();
     spriteEl.style.setProperty("--axolotl-flip", "0deg");
     const tiltRange = 8;
@@ -2002,7 +2114,9 @@ function startAxolotlSwim(pathEl, spriteEl, callbacks = {}) {
       applyTransform(x, y, duration);
       currentX = x;
       currentY = y;
-      swimTimer = window.setTimeout(swim, duration);
+      if (!hasDuration) {
+        queueNextSwim();
+      }
     };
 
     const response =
@@ -2018,7 +2132,7 @@ function startAxolotlSwim(pathEl, spriteEl, callbacks = {}) {
   };
 
   const handleResize = () => {
-    if (swimTimer === null) return;
+    if (swimTimer === null && !awaitingTransition) return;
     const width = window.innerWidth || document.documentElement.clientWidth || 0;
     const height = window.innerHeight || document.documentElement.clientHeight || 0;
     const marginX = Math.max(width * 0.18, 140);
@@ -2038,21 +2152,17 @@ function startAxolotlSwim(pathEl, spriteEl, callbacks = {}) {
   spriteEl.style.setProperty("--axolotl-flip", "0deg");
   spriteEl.style.setProperty("--axolotl-tilt", "0deg");
   applyTransform(first.x, first.y, 0);
-  swimTimer = window.setTimeout(swim, 1200 + Math.random() * 1800);
+  queueNextSwim(1200 + Math.random() * 1800);
 
   return () => {
-    if (swimTimer !== null) {
-      clearTimeout(swimTimer);
-    }
-    swimTimer = null;
+    clearSwimTimer();
     window.removeEventListener("resize", handleResize);
     pathEl.removeEventListener("transitionend", handleTransitionEnd);
     if (awaitingTransition) {
       awaitingTransition = false;
       spriteEl.style.setProperty("--axolotl-tilt", "0deg");
-      if (typeof onSwimStop === "function") {
-        onSwimStop();
-      }
+      const stopResult = typeof onSwimStop === "function" ? onSwimStop() : null;
+      Promise.resolve(stopResult).catch(() => {});
     }
   };
 }
