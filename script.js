@@ -1302,6 +1302,67 @@ function setupSearch() {
     applyFilters();
     searchInput.focus();
   });
+
+  clearSearchBtn.addEventListener("click", () => {
+    searchTerm = "";
+    searchInput.value = "";
+    applyFilters();
+    searchInput.focus();
+  });
+}
+
+function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
+  const showHeading = preferences.showHeading !== false;
+  const showAxolotl = preferences.showAxolotl !== false;
+  const cardSize = normalizeCardSize(preferences.cardSize);
+
+  preferences.cardSize = cardSize;
+
+  if (heroHeading) {
+    heroHeading.hidden = !showHeading;
+  }
+
+  if (syncInputs) {
+    if (toggleHeadingInput) {
+      toggleHeadingInput.checked = showHeading;
+    }
+    if (toggleAxolotlInput) {
+      toggleAxolotlInput.checked = showAxolotl;
+    }
+    if (cardSizeInput) {
+      cardSizeInput.value = String(cardSizeToIndex(cardSize));
+    }
+  }
+
+  if (axolotlLayer) {
+    axolotlLayer.hidden = !showAxolotl;
+  }
+
+  if (document.body) {
+    document.body.setAttribute("data-card-size", cardSize);
+  }
+
+  if (showAxolotl) {
+    if (!lazyAxolotl) {
+      ensureAxolotlInitialized();
+    }
+  } else {
+    axolotlController?.disable?.();
+  }
+}
+
+function ensureAxolotlInitialized() {
+  if (preferences.showAxolotl === false) {
+    axolotlController?.disable?.();
+    return;
+  }
+
+  if (axolotlInitialized) {
+    axolotlController?.enable?.();
+    return;
+  }
+
+  return initAxolotlMascot();
 }
 
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
@@ -1400,6 +1461,61 @@ function setupKeyboard() {
 
     keyboardContainer.appendChild(row);
   });
+
+  grid.appendChild(fragment);
+}
+
+function applyBookmarkImage(imageEl, bookmark) {
+  imageEl.classList.remove("is-fallback");
+  imageEl.referrerPolicy = "no-referrer";
+  imageEl.decoding = "async";
+  const primarySource = bookmark.image || buildFaviconUrl(bookmark.url);
+
+  const handleError = () => {
+    imageEl.src = createFallbackImage(bookmark);
+    imageEl.classList.add("is-fallback");
+  };
+
+  imageEl.addEventListener("error", handleError, { once: true });
+  imageEl.src = primarySource;
+}
+
+function createFallbackImage(bookmark) {
+  const title = bookmark.name?.trim() || "?";
+  const initials = title
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const displayInitials = initials || "☆";
+  const palette = pickFallbackPalette(title + (bookmark.category ?? ""));
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Bookmark placeholder">
+      <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${palette.background}" />
+          <stop offset="100%" stop-color="${palette.shadow}" />
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="${palette.shadow}" flood-opacity="0.65" />
+        </filter>
+      </defs>
+      <rect width="160" height="160" rx="36" fill="url(#grad)" />
+      <g filter="url(#shadow)">
+        <circle cx="50" cy="42" r="10" fill="rgba(255, 255, 255, 0.7)" />
+        <circle cx="108" cy="34" r="14" fill="rgba(255, 255, 255, 0.4)" />
+        <circle cx="124" cy="110" r="12" fill="rgba(255, 255, 255, 0.4)" />
+      </g>
+      <text x="50%" y="55%" text-anchor="middle" font-size="64" font-family="'Bigbesty', 'Papernotes', 'Comic Sans MS', 'Segoe UI', sans-serif" fill="${palette.accent}" dominant-baseline="middle">${displayInitials}</text>
+    </svg>`;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function pickFallbackPalette(seed) {
+  const index = Math.abs(hashString(seed)) % FALLBACK_PALETTES.length;
+  return FALLBACK_PALETTES[index];
 }
 
 function setupSettingsMenu() {
