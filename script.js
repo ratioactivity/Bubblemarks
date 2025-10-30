@@ -247,6 +247,23 @@ const categoryItemTemplate = document.getElementById("category-item-template");
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
+function replaceChildrenSafe(target, nodes) {
+  if (!target) {
+    return;
+  }
+
+  const list = Array.isArray(nodes)
+    ? nodes.filter(Boolean)
+    : Array.from(nodes || []).filter(Boolean);
+
+  if (typeof target.replaceChildren === "function") {
+    target.replaceChildren(...list);
+  } else {
+    target.innerHTML = "";
+    list.forEach((node) => target.appendChild(node));
+  }
+}
+
 if (!grid) {
   console.error("Missing #bookmarks element in DOM");
 }
@@ -1114,20 +1131,14 @@ function handleCategoryModalKeydown(event) {
   }
 }
 
-function renderCategorySettingsEditor() {
-  if (!categorySettingsList) {
-    return;
+  function renderCategorySettingsEditor() {
+    if (!categorySettingsList) {
+      return;
+    }
+    const descriptors = computeCategoryDescriptors();
+    const rows = descriptors.map((descriptor) => createCategorySettingRow(descriptor));
+    replaceChildrenSafe(categorySettingsList, rows);
   }
-  categorySettingsList.innerHTML = "";
-  const descriptors = computeCategoryDescriptors();
-  const fragment = document.createDocumentFragment();
-
-  descriptors.forEach((descriptor) => {
-    fragment.appendChild(createCategorySettingRow(descriptor));
-  });
-
-  categorySettingsList.appendChild(fragment);
-}
 
 function createCategorySettingRow(descriptor) {
   const node = categoryItemTemplate?.content?.firstElementChild
@@ -1383,6 +1394,60 @@ function ensureAxolotlInitialized() {
   return initAxolotlMascot();
 }
 
+function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
+  const showHeading = preferences.showHeading !== false;
+  const showAxolotl = preferences.showAxolotl !== false;
+  const cardSize = normalizeCardSize(preferences.cardSize);
+
+  preferences.cardSize = cardSize;
+
+  if (heroHeading) {
+    heroHeading.hidden = !showHeading;
+  }
+
+  if (syncInputs) {
+    if (toggleHeadingInput) {
+      toggleHeadingInput.checked = showHeading;
+    }
+    if (toggleAxolotlInput) {
+      toggleAxolotlInput.checked = showAxolotl;
+    }
+    if (cardSizeInput) {
+      cardSizeInput.value = String(cardSizeToIndex(cardSize));
+    }
+  }
+
+  if (axolotlLayer) {
+    axolotlLayer.hidden = !showAxolotl;
+  }
+
+  if (document.body) {
+    document.body.setAttribute("data-card-size", cardSize);
+  }
+
+  if (showAxolotl) {
+    if (!lazyAxolotl) {
+      ensureAxolotlInitialized();
+    }
+  } else {
+    axolotlController?.disable?.();
+  }
+}
+
+function ensureAxolotlInitialized() {
+  if (preferences.showAxolotl === false) {
+    axolotlController?.disable?.();
+    return;
+  }
+
+  if (axolotlInitialized) {
+    axolotlController?.enable?.();
+    return;
+  }
+
+  return initAxolotlMascot();
+}
+
 function setupKeyboard() {
   if (!keyboardContainer) {
     console.error("Cannot set up on-screen keyboard without #keyboard element");
@@ -1435,371 +1500,6 @@ function preloadImages(sources = []) {
   }
   const tasks = sources.map((source) => probeImage(source));
   return Promise.all(tasks).then(() => {});
-}
-
-function createAxolotlFrameDisplay(container) {
-  if (!container) {
-    return {
-      showFrame: () => Promise.resolve(),
-      useFallback: () => {},
-      clearFallback: () => {},
-    };
-  }
-
-  const front = container.querySelector(".axolotl-frame--front");
-  const back = container.querySelector(".axolotl-frame--back");
-
-  if (!front || !back) {
-    return {
-      showFrame: (url) => {
-        container.style.backgroundImage = url ? `url('${url}')` : "";
-        return Promise.resolve();
-      },
-      useFallback: (url) => {
-        container.style.backgroundImage = url ? `url('${url}')` : "";
-      },
-      clearFallback: () => {
-        container.style.backgroundImage = "";
-      },
-    };
-  }
-
-  let visibleEl = front;
-  let hiddenEl = back;
-  let queue = Promise.resolve();
-
-  visibleEl.classList.add("is-visible");
-  hiddenEl.classList.remove("is-visible");
-
-  const loadInto = (el, url) =>
-    new Promise((resolve) => {
-      if (!url) {
-        el.style.backgroundImage = "";
-        delete el.dataset.src;
-        resolve();
-        return;
-      }
-
-      if (el.dataset.src === url) {
-        resolve();
-        return;
-      }
-
-      const img = new Image();
-      img.decoding = "async";
-      img.onload = () => {
-        el.dataset.src = url;
-        el.style.backgroundImage = `url('${url}')`;
-        resolve();
-      };
-      img.onerror = () => resolve();
-      img.src = url;
-    });
-
-  const enqueue = (task) => {
-    queue = queue.then(() => task()).catch(() => {});
-    return queue;
-  };
-
-  const performSwap = async (url) => {
-    await loadInto(hiddenEl, url);
-    const previousVisible = visibleEl;
-    previousVisible.classList.remove("is-visible");
-    hiddenEl.classList.add("is-visible");
-    visibleEl = hiddenEl;
-    hiddenEl = previousVisible;
-    container.style.backgroundImage = "";
-  };
-
-  const showFrame = (url, { immediate = false } = {}) => {
-    if (immediate) {
-      const immediateTask = performSwap(url);
-      queue = immediateTask.then(() => {}).catch(() => {});
-      return immediateTask;
-    }
-    return enqueue(() => performSwap(url));
-  };
-
-  const useFallback = (url) => {
-    queue = Promise.resolve();
-    front.classList.remove("is-visible");
-    back.classList.remove("is-visible");
-    delete front.dataset.src;
-    delete back.dataset.src;
-    visibleEl = front;
-    hiddenEl = back;
-    container.style.backgroundImage = url ? `url('${url}')` : "";
-  };
-
-  const clearFallback = () => {
-    container.style.backgroundImage = "";
-    if (!front.classList.contains("is-visible") && !back.classList.contains("is-visible")) {
-      visibleEl = front;
-      hiddenEl = back;
-      visibleEl.classList.add("is-visible");
-      hiddenEl.classList.remove("is-visible");
-    }
-  };
-
-  return { showFrame, useFallback, clearFallback };
-}
-
-function createAxolotlFrameAnimator(target, frames, interval = 160, display = null) {
-  if ((!target && !display) || !frames.length) {
-    return () => {};
-  }
-
-  const frameDisplay = display || createAxolotlFrameDisplay(target);
-  let frameIndex = 0;
-  let timerId = null;
-
-  const showCurrentFrame = (immediate = false) => {
-    const frame = frames[frameIndex];
-    if (!frame) {
-      return;
-    }
-    if (frameDisplay && typeof frameDisplay.showFrame === "function") {
-      frameDisplay.showFrame(frame, { immediate }).catch(() => {});
-    } else if (target) {
-      target.style.backgroundImage = `url('${frame}')`;
-    }
-  };
-
-  const step = () => {
-    frameIndex = (frameIndex + 1) % frames.length;
-    showCurrentFrame();
-    timerId = window.setTimeout(step, interval);
-  };
-
-  showCurrentFrame(true);
-
-  if (frames.length > 1) {
-    timerId = window.setTimeout(step, interval);
-  }
-
-  const handleVisibility = () => {
-    if (document.hidden) {
-      if (timerId) {
-        clearTimeout(timerId);
-        timerId = null;
-      }
-    } else if (!timerId && frames.length > 1) {
-      timerId = window.setTimeout(step, interval);
-    }
-  };
-
-  document.addEventListener("visibilitychange", handleVisibility);
-
-  return () => {
-    if (timerId) {
-      clearTimeout(timerId);
-      timerId = null;
-    }
-    document.removeEventListener("visibilitychange", handleVisibility);
-  };
-}
-
-function createAxolotlStateAnimator(target, states, defaultInterval = 200, display = null) {
-  const normalized = {};
-  for (const [name, frames] of Object.entries(states || {})) {
-    if (Array.isArray(frames) && frames.length) {
-      normalized[name] = [...frames];
-    }
-  }
-
-  let timerId = null;
-  let current = null;
-  let visibilityPaused = false;
-  const frameDisplay = display || createAxolotlFrameDisplay(target);
-
-  const clearTimer = () => {
-    if (timerId) {
-      clearTimeout(timerId);
-      timerId = null;
-    }
-  };
-
-  const applyFrame = (frames, index, immediate = false) => {
-    if (!frames.length) {
-      return;
-    }
-    const frame = frames[Math.max(0, Math.min(index, frames.length - 1))];
-    if (frameDisplay && typeof frameDisplay.showFrame === "function") {
-      frameDisplay.showFrame(frame, { immediate }).catch(() => {});
-    } else if (target) {
-      target.style.backgroundImage = `url('${frame}')`;
-    }
-  };
-
-  const scheduleNext = () => {
-    if (!current || document.hidden) {
-      visibilityPaused = !!current;
-      return;
-    }
-    clearTimer();
-    timerId = window.setTimeout(step, current.interval);
-  };
-
-  const finalize = () => {
-    const complete = current?.onComplete;
-    current = null;
-    clearTimer();
-    if (typeof complete === "function") {
-      complete();
-    }
-  };
-
-  const step = () => {
-    if (!current) {
-      return;
-    }
-    const frames = current.frames;
-    if (!frames.length) {
-      finalize();
-      return;
-    }
-
-    current.index += 1;
-
-    if (current.index >= frames.length) {
-      if (current.loop) {
-        current.index = 0;
-      } else {
-        if (current.holdLast) {
-          current.index = frames.length - 1;
-          applyFrame(frames, current.index, true);
-        }
-        finalize();
-        return;
-      }
-    }
-
-    applyFrame(frames, current.index);
-    scheduleNext();
-  };
-
-  const playState = (stateName, options = {}) => {
-    const frames = normalized[stateName];
-    if (!frames || !frames.length) {
-      return false;
-    }
-
-    const {
-      loop = false,
-      interval = defaultInterval,
-      holdLast = false,
-      onComplete,
-      restart = false,
-    } = options;
-
-    const resolvedInterval = Number.isFinite(interval) ? interval : defaultInterval;
-    const currentInterval = Number.isFinite(current?.interval)
-      ? current.interval
-      : defaultInterval;
-
-    if (
-      !restart &&
-      current &&
-      current.stateName === stateName &&
-      current.loop &&
-      loop &&
-      Math.abs(currentInterval - resolvedInterval) < 1
-    ) {
-      return true;
-    }
-
-    clearTimer();
-    current = {
-      stateName,
-      frames,
-      loop,
-      holdLast,
-      onComplete,
-      interval: resolvedInterval,
-      index: 0,
-    };
-
-    applyFrame(frames, 0, true);
-
-    if (frames.length > 1) {
-      scheduleNext();
-    } else if (!loop) {
-      const complete = current.onComplete;
-      current = null;
-      if (typeof complete === "function") {
-        window.setTimeout(complete, resolvedInterval);
-      }
-    }
-
-    return true;
-  };
-
-  const showState = (stateName) => {
-    const frames = normalized[stateName];
-    if (!frames || !frames.length) {
-      return false;
-    }
-    clearTimer();
-    current = null;
-    applyFrame(frames, 0, true);
-    return true;
-  };
-
-  const stop = () => {
-    current = null;
-    clearTimer();
-  };
-
-  const handleVisibility = () => {
-    if (document.hidden) {
-      if (timerId) {
-        clearTimer();
-        visibilityPaused = true;
-      }
-    } else if (visibilityPaused) {
-      visibilityPaused = false;
-      if (current && (current.loop || current.index < current.frames.length - 1)) {
-        scheduleNext();
-      }
-    }
-  };
-
-  document.addEventListener("visibilitychange", handleVisibility);
-
-  return {
-    playLoop: (stateName, interval = defaultInterval) =>
-      playState(stateName, { loop: true, interval }),
-    playOnce: (stateName, options = {}) =>
-      playState(stateName, { loop: false, ...options }),
-    playOnceAsync: (stateName, options = {}) =>
-      new Promise((resolve) => {
-        const success = playState(stateName, {
-          loop: false,
-          ...options,
-          onComplete: () => {
-            if (typeof options.onComplete === "function") {
-              options.onComplete();
-            }
-            resolve(true);
-          },
-        });
-
-        if (!success) {
-          resolve(false);
-        }
-      }),
-    showState,
-    stop,
-    destroy: () => {
-      stop();
-      document.removeEventListener("visibilitychange", handleVisibility);
-    },
-    hasState: (stateName) => Array.isArray(normalized[stateName]) && normalized[stateName].length > 0,
-    hasAny: () => Object.values(normalized).some((frames) => frames.length > 0),
-    getCurrentState: () => current?.stateName || null,
-    isLooping: (stateName) =>
-      !!(current && current.loop && (!stateName || current.stateName === stateName)),
-  };
 }
 
 function setupSettingsMenu() {
@@ -1963,37 +1663,34 @@ function updateSearchValue(nextValue, caretPosition) {
   applyFilters();
 }
 
-function renderBookmarkCategoryOptions(preferredKey, descriptors) {
-  if (!bookmarkCategorySelect) {
-    return;
-  }
+  function renderBookmarkCategoryOptions(preferredKey, descriptors) {
+    if (!bookmarkCategorySelect) {
+      return;
+    }
 
-  const options = Array.isArray(descriptors) ? descriptors : computeCategoryDescriptors();
+    const options = Array.isArray(descriptors) ? descriptors : computeCategoryDescriptors();
 
-  const fragment = document.createDocumentFragment();
-  options.forEach((descriptor) => {
-    const option = document.createElement("option");
-    option.value = descriptor.key;
-    option.textContent = descriptor.label;
-    fragment.appendChild(option);
-  });
+    const optionNodes = options.map((descriptor) => {
+      const option = document.createElement("option");
+      option.value = descriptor.key;
+      option.textContent = descriptor.label;
+      return option;
+    });
 
-  bookmarkCategorySelect.innerHTML = "";
+    if (!optionNodes.length) {
+      const fallbackOption = document.createElement("option");
+      fallbackOption.value = DEFAULT_CATEGORY_SLUG;
+      fallbackOption.textContent = DEFAULT_CATEGORY_LABEL;
+      replaceChildrenSafe(bookmarkCategorySelect, [fallbackOption]);
+      bookmarkCategorySelect.value = DEFAULT_CATEGORY_SLUG;
+      return;
+    }
 
-  if (!fragment.childNodes.length) {
-    const fallbackOption = document.createElement("option");
-    fallbackOption.value = DEFAULT_CATEGORY_SLUG;
-    fallbackOption.textContent = DEFAULT_CATEGORY_LABEL;
-    bookmarkCategorySelect.appendChild(fallbackOption);
-    bookmarkCategorySelect.value = DEFAULT_CATEGORY_SLUG;
-    return;
-  }
+    replaceChildrenSafe(bookmarkCategorySelect, optionNodes);
 
-  bookmarkCategorySelect.appendChild(fragment);
-
-  const existingValues = Array.from(bookmarkCategorySelect.options).map((option) => option.value);
-  const normalizedPreferred = normalizeCategoryKey(preferredKey || "");
-  let selection = existingValues[0];
+    const existingValues = Array.from(bookmarkCategorySelect.options).map((option) => option.value);
+    const normalizedPreferred = normalizeCategoryKey(preferredKey || "");
+    let selection = existingValues[0];
 
   if (normalizedPreferred && existingValues.includes(normalizedPreferred)) {
     selection = normalizedPreferred;
@@ -2013,28 +1710,21 @@ function updateCategoryBar() {
   const descriptors = computeCategoryDescriptors();
   const availableKeys = new Set(descriptors.map((descriptor) => descriptor.key));
 
-  if (activeCategory !== "all" && !availableKeys.has(activeCategory)) {
-    activeCategory = "all";
+    if (activeCategory !== "all" && !availableKeys.has(activeCategory)) {
+      activeCategory = "all";
+    }
+
+    const allDescriptor = {
+      key: "all",
+      label: "All",
+      color: pickCategoryColor("all"),
+    };
+
+    const pills = [createCategoryPill(allDescriptor), ...descriptors.map((descriptor) => createCategoryPill(descriptor))];
+    replaceChildrenSafe(categoryBar, pills);
+    syncActiveCategoryVisuals();
+    renderBookmarkCategoryOptions(bookmarkCategorySelect?.value || activeCategory, descriptors);
   }
-
-  categoryBar.innerHTML = "";
-  const fragment = document.createDocumentFragment();
-
-  const allDescriptor = {
-    key: "all",
-    label: "All",
-    color: pickCategoryColor("all"),
-  };
-  fragment.appendChild(createCategoryPill(allDescriptor));
-
-  descriptors.forEach((descriptor) => {
-    fragment.appendChild(createCategoryPill(descriptor));
-  });
-
-  categoryBar.appendChild(fragment);
-  syncActiveCategoryVisuals();
-  renderBookmarkCategoryOptions(bookmarkCategorySelect?.value || activeCategory, descriptors);
-}
 
 function createCategoryPill(descriptor) {
   const pill = document.createElement("button");
@@ -2065,18 +1755,21 @@ function syncActiveCategoryVisuals() {
   });
 }
 
-function updateSuggestions() {
-  datalist.innerHTML = "";
-  const fragment = document.createDocumentFragment();
-  bookmarks.forEach((bookmark) => {
-    const option = document.createElement("option");
-    option.value = bookmark.name;
-    fragment.appendChild(option);
-  });
-  datalist.appendChild(fragment);
-}
+  function updateSuggestions() {
+    if (!datalist) {
+      return;
+    }
 
-function applyFilters() {
+    const options = bookmarks.map((bookmark) => {
+      const option = document.createElement("option");
+      option.value = bookmark.name;
+      return option;
+    });
+
+    replaceChildrenSafe(datalist, options);
+  }
+
+  function applyFilters() {
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filtered = bookmarks.filter((bookmark) => {
     const categoryKey = normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
@@ -2094,30 +1787,31 @@ function applyFilters() {
   renderBookmarks(filtered);
 }
 
-function renderBookmarks(collection) {
-  if (!grid) {
-    console.error("Cannot render bookmarks without #bookmarks element");
-    return;
-  }
+  function renderBookmarks(collection) {
+    if (!grid) {
+      console.error("Cannot render bookmarks without #bookmarks element");
+      return;
+    }
 
-  grid.innerHTML = "";
+    if (!template?.content?.firstElementChild) {
+      console.error("Missing bookmark card template");
+      return;
+    }
 
-  if (!collection.length) {
-    showEmptyState("No bookmarks match that vibe yet. Try a different search or category!");
-    return;
-  }
+    if (!collection.length) {
+      showEmptyState("No bookmarks match that vibe yet. Try a different search or category!");
+      return;
+    }
 
-  hideEmptyState();
+    hideEmptyState();
 
-  const fragment = document.createDocumentFragment();
+    const cards = collection.map((bookmark) => {
+      const card = template.content.firstElementChild.cloneNode(true);
+      const imageEl = card.querySelector(".card-image");
+      const titleEl = card.querySelector(".card-title");
+      const categoryEl = card.querySelector(".card-category");
 
-  collection.forEach((bookmark) => {
-    const card = template.content.firstElementChild.cloneNode(true);
-    const imageEl = card.querySelector(".card-image");
-    const titleEl = card.querySelector(".card-title");
-    const categoryEl = card.querySelector(".card-category");
-
-    applyBookmarkImage(imageEl, bookmark);
+      applyBookmarkImage(imageEl, bookmark);
     imageEl.alt = bookmark.name;
     titleEl.textContent = bookmark.name;
     const categoryKey = normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
@@ -2131,18 +1825,18 @@ function renderBookmarks(collection) {
     };
 
     card.addEventListener("click", openBookmark);
-    card.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        openBookmark();
-      }
+      card.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openBookmark();
+        }
+      });
+
+      return card;
     });
 
-    fragment.appendChild(card);
-  });
-
-  grid.appendChild(fragment);
-}
+    replaceChildrenSafe(grid, cards);
+  }
 
 function applyBookmarkImage(imageEl, bookmark) {
   imageEl.classList.remove("is-fallback");
