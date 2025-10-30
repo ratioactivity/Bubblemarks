@@ -19,6 +19,45 @@ const DEFAULT_CATEGORY_SETTINGS = [
   { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" },
 ];
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
+
+const EMBEDDED_DEFAULT_BOOKMARKS = Object.freeze([
+  {
+    name: "ChatGPT",
+    url: "https://chat.openai.com/",
+    category: "AI",
+    image: "https://cdn.openai.com/chatgpt/images/apple-touch-icon.png",
+  },
+  {
+    name: "Notion Inspiration",
+    url: "https://www.notion.so/templates",
+    category: "Work",
+    image: "https://www.notion.so/front-static/pages/product/notion-og.png",
+  },
+  {
+    name: "Etsy Finds",
+    url: "https://www.etsy.com/",
+    category: "Shop",
+    image: "https://www.etsy.com/images/apple-touch-icon.png",
+  },
+  {
+    name: "Itch.io Cozy Games",
+    url: "https://itch.io/games/tag-cozy",
+    category: "Games",
+    image: "https://static.itch.io/images/itchio-textless-white.svg",
+  },
+  {
+    name: "A Soft Murmur",
+    url: "https://asoftmurmur.com/",
+    category: "AV",
+    image: "https://asoftmurmur.com/assets/images/icons/apple-touch-icon-180x180.png",
+  },
+  {
+    name: "Pinterest Pastels",
+    url: "https://www.pinterest.com/search/pins/?q=pastel%20aesthetic",
+    category: "Tools",
+    image: "https://s.pinimg.com/webapp/favicon-4ff5b062.png",
+  },
+]);
 const DEFAULT_AXOLOTL_IMAGE = (() => {
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="240" height="140" viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg">
@@ -453,12 +492,22 @@ async function loadDefaultBookmarks() {
       throw new Error(`Failed to fetch default bookmarks: ${response.status}`);
     }
     const data = await response.json();
-    defaultBookmarks = sanitizeBookmarks(data);
-    return [...defaultBookmarks];
+    const sanitized = sanitizeBookmarks(data);
+    if (sanitized.length) {
+      defaultBookmarks = sanitized;
+      return [...defaultBookmarks];
+    }
   } catch (error) {
     console.warn("Could not load default bookmarks", error);
-    return [];
   }
+
+  const embedded = getEmbeddedDefaultBookmarks();
+  if (embedded.length) {
+    defaultBookmarks = embedded;
+    return [...defaultBookmarks];
+  }
+
+  return [];
 }
 
 function sanitizeBookmarks(entries) {
@@ -472,6 +521,10 @@ function sanitizeBookmarks(entries) {
       image: entry.image ? String(entry.image).trim() : "",
     }))
     .filter((entry) => entry.name && entry.url);
+}
+
+function getEmbeddedDefaultBookmarks() {
+  return sanitizeBookmarks(EMBEDDED_DEFAULT_BOOKMARKS);
 }
 
 function getDefaultCategorySettings() {
