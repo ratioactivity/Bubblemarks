@@ -1,5 +1,5 @@
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
-const DEFAULT_SOURCE = "bookmarks.json";
+const DEFAULT_SOURCE = "https://ratioactivity.github.io/Bubblemarks/bookmarks.json";
 const FALLBACK_PALETTES = [
   { background: "#ffe9f6", accent: "#ff80c8", shadow: "#ffc3e4" },
   { background: "#e7f1ff", accent: "#92a9ff", shadow: "#cdd8ff" },
@@ -1412,16 +1412,64 @@ function ensureAxolotlInitialized() {
 }
 
 function setupKeyboard() {
+  const keyboardContainer = document.getElementById("keyboard");
   if (!keyboardContainer) {
     console.error("Cannot set up on-screen keyboard without #keyboard element");
     return;
   }
+
+  // Define the keyboard layout (same as your version)
   const keyLayout = [
     ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
     ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
     ["Z", "X", "C", "V", "B", "N", "M"],
     ["space", "backspace", "clear"],
   ];
+
+  keyboardContainer.innerHTML = ""; // clear any old buttons
+
+  // Create rows
+  keyLayout.forEach((rowKeys) => {
+    const row = document.createElement("div");
+    row.className = "keyboard-row";
+
+    rowKeys.forEach((key) => {
+      const button = document.createElement("button");
+      button.className = "key";
+      button.textContent =
+        key === "space"
+          ? "␣"
+          : key === "backspace"
+          ? "⌫"
+          : key === "clear"
+          ? "✧"
+          : key;
+
+      // Attach click behavior for each key
+      button.addEventListener("click", () => {
+        const search = document.getElementById("search");
+        if (!search) return;
+
+        if (key === "backspace") {
+          search.value = search.value.slice(0, -1);
+        } else if (key === "clear") {
+          search.value = "";
+        } else if (key === "space") {
+          search.value += " ";
+        } else {
+          search.value += key;
+        }
+
+        // Fire 'input' event so live search updates
+        search.dispatchEvent(new Event("input"));
+      });
+
+      row.appendChild(button);
+    });
+
+    keyboardContainer.appendChild(row);
+  });
+}
 
   keyLayout.forEach((rowKeys) => {
     const row = document.createElement("div");
