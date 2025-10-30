@@ -13,42 +13,42 @@
   --shadow-card: 0 14px 30px rgba(179, 197, 255, 0.35);
   --soft-radius: 26px;
   --modal-backdrop: rgba(84, 62, 103, 0.35);
-  --card-min-height: 168px;
-  --card-media-height: 82px;
-  --card-body-padding: 0.6rem 0.8rem 0.68rem;
-  --card-title-size: 0.98rem;
-  --card-body-gap: 0.26rem;
-  --card-gap: clamp(0.6rem, 1.6vw, 0.9rem);
-  --card-category-size: 0.8rem;
-  --card-category-padding: 0.18rem 0.52rem;
+  --card-min-height: 142px;
+  --card-media-height: 64px;
+  --card-body-padding: 0.5rem 0.68rem 0.56rem;
+  --card-title-size: 0.94rem;
+  --card-body-gap: 0.22rem;
+  --card-gap: clamp(0.56rem, 1.6vw, 0.82rem);
+  --card-category-size: 0.76rem;
+  --card-category-padding: 0.16rem 0.48rem;
   --grid-columns: 6;
-  --grid-max-width: 1020px;
+  --grid-max-width: 1200px;
 }
 
 body[data-card-size="cozy"] {
-  --card-min-height: 150px;
-  --card-media-height: 70px;
-  --card-body-padding: 0.52rem 0.7rem 0.6rem;
-  --card-title-size: 0.92rem;
-  --card-body-gap: 0.22rem;
-  --card-gap: clamp(0.5rem, 1.4vw, 0.75rem);
-  --card-category-size: 0.74rem;
-  --card-category-padding: 0.16rem 0.46rem;
+  --card-min-height: 128px;
+  --card-media-height: 54px;
+  --card-body-padding: 0.42rem 0.6rem 0.5rem;
+  --card-title-size: 0.9rem;
+  --card-body-gap: 0.18rem;
+  --card-gap: clamp(0.48rem, 1.3vw, 0.68rem);
+  --card-category-size: 0.7rem;
+  --card-category-padding: 0.14rem 0.42rem;
   --grid-columns: 8;
-  --grid-max-width: 1120px;
+  --grid-max-width: 1320px;
 }
 
 body[data-card-size="roomy"] {
-  --card-min-height: 184px;
-  --card-media-height: 94px;
-  --card-body-padding: 0.7rem 0.95rem 0.78rem;
-  --card-title-size: 1.06rem;
-  --card-body-gap: 0.28rem;
-  --card-gap: clamp(0.7rem, 1.8vw, 1rem);
-  --card-category-size: 0.84rem;
-  --card-category-padding: 0.2rem 0.58rem;
+  --card-min-height: 156px;
+  --card-media-height: 72px;
+  --card-body-padding: 0.56rem 0.85rem 0.64rem;
+  --card-title-size: 1rem;
+  --card-body-gap: 0.24rem;
+  --card-gap: clamp(0.62rem, 1.6vw, 0.88rem);
+  --card-category-size: 0.82rem;
+  --card-category-padding: 0.18rem 0.5rem;
   --grid-columns: 5;
-  --grid-max-width: 940px;
+  --grid-max-width: 1080px;
 }
 
 @font-face {
@@ -450,7 +450,7 @@ body {
 .app-shell {
   position: relative;
   z-index: 1;
-  width: min(1100px, 100%);
+  width: min(1320px, 100%);
   background: var(--surface);
   backdrop-filter: blur(28px);
   border-radius: calc(var(--soft-radius) * 1.2);
