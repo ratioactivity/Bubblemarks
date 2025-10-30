@@ -1,14 +1,38 @@
 [
   {
-    "name": "Ebay",
-    "url": "https://ebay.com",
-    "category": "Shop",
-    "image": "images/ebay.png"
+    "name": "ChatGPT",
+    "url": "https://chat.openai.com/",
+    "category": "AI",
+    "image": "https://cdn.openai.com/chatgpt/images/apple-touch-icon.png"
   },
   {
-    "name": "ChatGPT 5o",
-    "url": "https://chat.openai.com/?mo_=gpt-5",
-    "category": "AI",
-    "image": "images/gpt5.png"
+    "name": "Notion Inspiration",
+    "url": "https://www.notion.so/templates",
+    "category": "Work",
+    "image": "https://www.notion.so/front-static/pages/product/notion-og.png"
+  },
+  {
+    "name": "Etsy Finds",
+    "url": "https://www.etsy.com/",
+    "category": "Shop",
+    "image": "https://www.etsy.com/images/apple-touch-icon.png"
+  },
+  {
+    "name": "Itch.io Cozy Games",
+    "url": "https://itch.io/games/tag-cozy",
+    "category": "Games",
+    "image": "https://static.itch.io/images/itchio-textless-white.svg"
+  },
+  {
+    "name": "A Soft Murmur",
+    "url": "https://asoftmurmur.com/",
+    "category": "AV",
+    "image": "https://asoftmurmur.com/assets/images/icons/apple-touch-icon-180x180.png"
+  },
+  {
+    "name": "Pinterest Pastels",
+    "url": "https://www.pinterest.com/search/pins/?q=pastel%20aesthetic",
+    "category": "Tools",
+    "image": "https://s.pinimg.com/webapp/favicon-4ff5b062.png"
   }
 ]
