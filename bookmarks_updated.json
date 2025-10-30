@@ -1,0 +1,200 @@
+[
+  {
+    "name": "Hulu",
+    "url": "https://www.hulu.com",
+    "category": "A/V",
+    "image": ""
+  },
+  {
+    "name": "Prime Video",
+    "url": "https://www.amazon.com/Amazon-Video/b/?&node=2858778011&ref=dvm_MLP_ROWNA_US_1&rs=140-5036548-8732934:C",
+    "category": "A/V",
+    "image": ""
+  },
+  {
+    "name": "HBO Max",
+    "url": "https://www.hbomax.com/#",
+    "category": "A/V",
+    "image": ""
+  },
+  {
+    "name": "ChatGPT 4o",
+    "url": "https://chatgpt.com/?model=gpt-4o",
+    "category": "AI",
+    "image": ""
+  },
+  {
+    "name": "ChatGPT 5o",
+    "url": "https://chatgpt.com/?model=gpt-5",
+    "category": "AI",
+    "image": ""
+  },
+  {
+    "name": "Google Drive",
+    "url": "https://drive.google.com/drive/u/0/home",
+    "category": "Google",
+    "image": ""
+  },
+  {
+    "name": "Font Generator",
+    "url": "https://codepen.io/dhglxaqq-the-builder/pen/yLdGrqK",
+    "category": "Tools",
+    "image": ""
+  },
+  {
+    "name": "Otter Cam",
+    "url": "https://www.montereybayaquarium.org/animals/live-cams/sea-otter-cam",
+    "category": "A/V",
+    "image": ""
+  },
+  {
+    "name": "Pinterest",
+    "url": "https://www.pinterest.com/",
+    "category": "Tools",
+    "image": ""
+  },
+  {
+    "name": "Chase",
+    "url": "https://www.chase.com/",
+    "category": "Shopping",
+    "image": ""
+  },
+  {
+    "name": "Discover",
+    "url": "https://www.discover.com/",
+    "category": "Shopping",
+    "image": ""
+  },
+  {
+    "name": "Image Upscaler",
+    "url": "https://imgupscaler.com/",
+    "category": "Tools",
+    "image": ""
+  },
+  {
+    "name": "Background Remover",
+    "url": "https://www.remove.bg/",
+    "category": "Tools",
+    "image": ""
+  },
+  {
+    "name": "Google Home",
+    "url": "https://home.google.com/u/0/home/1-e329dd0e8f07b1267872ec64c1a0c4d18454946b2e6d274e7dfc1afd912ec965/cameras/grid",
+    "category": "Google",
+    "image": ""
+  },
+  {
+    "name": "Doordash",
+    "url": "https://www.doordash.com/",
+    "category": "Tools",
+    "image": ""
+  },
+  {
+    "name": "YouTube",
+    "url": "https://www.youtube.com/",
+    "category": "A/V",
+    "image": ""
+  },
+  {
+    "name": "Etsy",
+    "url": "https://www.etsy.com/",
+    "category": "Tools",
+    "image": ""
+  },
+  {
+    "name": "Twitch",
+    "url": "https://www.twitch.tv/",
+    "category": "A/V",
+    "image": ""
+  },
+  {
+    "name": "Jacob\u2019s Twitch",
+    "url": "https://www.twitch.tv/jaketheallosaurian",
+    "category": "A/V",
+    "image": ""
+  },
+  {
+    "name": "Starz",
+    "url": "https://www.starz.com/us/en/",
+    "category": "A/V",
+    "image": ""
+  },
+  {
+    "name": "Quotev",
+    "url": "https://www.quotev.com/",
+    "category": "Tools",
+    "image": ""
+  },
+  {
+    "name": "Github",
+    "url": "https://github.com",
+    "category": "Tools",
+    "image": ""
+  },
+  {
+    "name": "Orca Acoustics",
+    "url": "https://www.orcabehaviorinstitute.org/orca-acoustics",
+    "category": "A/V",
+    "image": ""
+  },
+  {
+    "name": "Ebay",
+    "url": "ebay.com",
+    "category": "Tools",
+    "image": ""
+  },
+  {
+    "name": "Codex",
+    "url": "https://chatgpt.com/codex",
+    "category": "AI",
+    "image": ""
+  },
+  {
+    "name": "itch.io",
+    "url": "https://itch.io",
+    "category": "Games",
+    "image": ""
+  },
+  {
+    "name": "GX Games",
+    "url": "https://gx.games",
+    "category": "Games",
+    "image": ""
+  },
+  {
+    "name": "Vaquita Valiente",
+    "url": "https://gx.games/games/388dbv/vaquita-valiente",
+    "category": "Games",
+    "image": ""
+  },
+  {
+    "name": "Papa\u2019s Sushiria",
+    "url": "https://www.coolmathgames.com/0-papas-sushiria",
+    "category": "Games",
+    "image": ""
+  },
+  {
+    "name": "New Bookmark",
+    "url": "https://adarkroom.doublespeakgames.com",
+    "category": "Games",
+    "image": ""
+  },
+  {
+    "name": "2048",
+    "url": "https://play2048.co",
+    "category": "Games",
+    "image": ""
+  },
+  {
+    "name": "Netflix",
+    "url": "netflix.com",
+    "category": "A/V",
+    "image": ""
+  },
+  {
+    "name": "Paramount+",
+    "url": "https://www.paramountplus.com",
+    "category": "A/V",
+    "image": ""
+  }
+]
