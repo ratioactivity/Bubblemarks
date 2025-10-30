@@ -858,7 +858,11 @@ body {
   border: 1px solid var(--category-chip-border, rgba(255, 255, 255, 0.4));
   background: var(--category-chip-bg, rgba(255, 255, 255, 0.8));
   color: var(--category-chip-text, rgba(85, 65, 95, 0.7));
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 6px 16px rgba(85, 65, 95, 0.12);
 }
 
 .card-title {

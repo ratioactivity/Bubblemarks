@@ -428,6 +428,48 @@ function getDefaultCategorySettings() {
   }));
 }
 
+function mergeCategorySettingsWithDefaults(current) {
+  const defaults = getDefaultCategorySettings();
+  const normalizedCurrent = Array.isArray(current)
+    ? current
+        .map((entry) => normalizeCategorySetting(entry))
+        .filter(Boolean)
+    : [];
+
+  const currentMap = new Map(normalizedCurrent.map((entry) => [entry.key, entry]));
+  const defaultKeys = new Set(defaults.map((entry) => entry.key));
+  const merged = defaults.map((entry) => {
+    const existing = currentMap.get(entry.key);
+    if (!existing) {
+      return { ...entry };
+    }
+
+    const existingLabel = typeof existing.label === "string" ? existing.label.trim() : "";
+
+    return {
+      key: entry.key,
+      label: existingLabel || entry.label,
+      color: ensureHexColor(existing.color) || entry.color,
+      isExtra: false,
+    };
+  });
+
+  normalizedCurrent.forEach((entry) => {
+    if (!defaultKeys.has(entry.key)) {
+      const existingLabel = typeof entry.label === "string" ? entry.label.trim() : "";
+
+      merged.push({
+        key: entry.key,
+        label: existingLabel || prettifyCategoryKey(entry.key),
+        color: ensureHexColor(entry.color) || pickCategoryColor(entry.key),
+        isExtra: Boolean(entry.isExtra),
+      });
+    }
+  });
+
+  return merged;
+}
+
 function loadCategorySettings() {
   const defaults = getDefaultCategorySettings();
 
@@ -464,7 +506,16 @@ function loadCategorySettings() {
       return defaults;
     }
 
-    return deduped;
+    const merged = mergeCategorySettingsWithDefaults(deduped);
+    if (typeof localStorage !== "undefined") {
+      const stored = JSON.stringify(deduped);
+      const desired = JSON.stringify(merged);
+      if (stored !== desired) {
+        localStorage.setItem(CATEGORY_STORAGE_KEY, desired);
+      }
+    }
+
+    return merged;
   } catch (error) {
     console.warn("Unable to load category settings", error);
     return defaults;
@@ -811,9 +862,9 @@ function applyCategoryStylesToBadge(element, color) {
   if (!base) {
     return;
   }
-  const background = toRgba(mixWithWhite(base, 0.82), 0.55);
-  const border = toRgba(mixWithWhite(base, 0.55), 0.75);
-  const textColor = getContrastColor(rgbToHex(mixWithWhite(base, 0.15)));
+  const background = toRgba(mixWithWhite(base, 0.35), 0.88);
+  const border = toRgba(mixWithWhite(base, 0.18), 0.94);
+  const textColor = getContrastColor(rgbToHex(mixWithWhite(base, 0.05)));
 
   element.style.setProperty("--category-chip-bg", background);
   element.style.setProperty("--category-chip-border", border);
@@ -1344,6 +1395,80 @@ function setupKeyboard() {
 
     keyboardContainer.appendChild(row);
   });
+
+  grid.appendChild(fragment);
+}
+
+function applyBookmarkImage(imageEl, bookmark) {
+  imageEl.classList.remove("is-fallback");
+  imageEl.referrerPolicy = "no-referrer";
+  imageEl.decoding = "async";
+  const primarySource = bookmark.image || buildFaviconUrl(bookmark.url);
+
+  const handleError = () => {
+    imageEl.src = createFallbackImage(bookmark);
+    imageEl.classList.add("is-fallback");
+  };
+
+  imageEl.addEventListener("error", handleError, { once: true });
+  imageEl.src = primarySource;
+}
+
+function createFallbackImage(bookmark) {
+  const title = bookmark.name?.trim() || "?";
+  const initials = title
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const displayInitials = initials || "☆";
+  const palette = pickFallbackPalette(title + (bookmark.category ?? ""));
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Bookmark placeholder">
+      <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${palette.background}" />
+          <stop offset="100%" stop-color="${palette.shadow}" />
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="${palette.shadow}" flood-opacity="0.65" />
+        </filter>
+      </defs>
+      <rect width="160" height="160" rx="36" fill="url(#grad)" />
+      <g filter="url(#shadow)">
+        <circle cx="50" cy="42" r="10" fill="rgba(255, 255, 255, 0.7)" />
+        <circle cx="108" cy="34" r="14" fill="rgba(255, 255, 255, 0.4)" />
+        <circle cx="124" cy="110" r="12" fill="rgba(255, 255, 255, 0.4)" />
+      </g>
+      <text x="50%" y="55%" text-anchor="middle" font-size="64" font-family="'Bigbesty', 'Papernotes', 'Comic Sans MS', 'Segoe UI', sans-serif" fill="${palette.accent}" dominant-baseline="middle">${displayInitials}</text>
+    </svg>`;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function pickFallbackPalette(seed) {
+  const index = Math.abs(hashString(seed)) % FALLBACK_PALETTES.length;
+  return FALLBACK_PALETTES[index];
+}
+
+function hashString(value) {
+  let hash = 0;
+  const stringValue = String(value);
+  for (let i = 0; i < stringValue.length; i += 1) {
+    hash = (hash << 5) - hash + stringValue.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash;
+}
+
+function buildFaviconUrl(url) {
+  try {
+    const domain = new URL(url).origin;
+    return `https://www.google.com/s2/favicons?sz=256&domain=${encodeURIComponent(domain)}`;
+  } catch (error) {
+    return "https://www.google.com/s2/favicons?sz=256&domain=https://example.com";
+  }
 }
 
 function setupSettingsMenu() {
