@@ -1313,6 +1313,85 @@ function setupSearch() {
     applyFilters();
     searchInput.focus();
   });
+
+  bookmarkCategorySelect.innerHTML = "";
+
+  if (!fragment.childNodes.length) {
+    const fallbackOption = document.createElement("option");
+    fallbackOption.value = DEFAULT_CATEGORY_SLUG;
+    fallbackOption.textContent = DEFAULT_CATEGORY_LABEL;
+    bookmarkCategorySelect.appendChild(fallbackOption);
+    bookmarkCategorySelect.value = DEFAULT_CATEGORY_SLUG;
+    return;
+  }
+
+  bookmarkCategorySelect.appendChild(fragment);
+
+  const existingValues = Array.from(bookmarkCategorySelect.options).map((option) => option.value);
+  const normalizedPreferred = normalizeCategoryKey(preferredKey || "");
+  let selection = existingValues[0];
+
+  if (normalizedPreferred && existingValues.includes(normalizedPreferred)) {
+    selection = normalizedPreferred;
+  } else if (activeCategory !== "all" && existingValues.includes(activeCategory)) {
+    selection = activeCategory;
+  }
+
+  bookmarkCategorySelect.value = selection;
+}
+
+function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
+  const showHeading = preferences.showHeading !== false;
+  const showAxolotl = preferences.showAxolotl !== false;
+  const cardSize = normalizeCardSize(preferences.cardSize);
+
+  preferences.cardSize = cardSize;
+
+  if (heroHeading) {
+    heroHeading.hidden = !showHeading;
+  }
+
+  if (syncInputs) {
+    if (toggleHeadingInput) {
+      toggleHeadingInput.checked = showHeading;
+    }
+    if (toggleAxolotlInput) {
+      toggleAxolotlInput.checked = showAxolotl;
+    }
+    if (cardSizeInput) {
+      cardSizeInput.value = String(cardSizeToIndex(cardSize));
+    }
+  }
+
+  if (axolotlLayer) {
+    axolotlLayer.hidden = !showAxolotl;
+  }
+
+  if (document.body) {
+    document.body.setAttribute("data-card-size", cardSize);
+  }
+
+  if (showAxolotl) {
+    if (!lazyAxolotl) {
+      ensureAxolotlInitialized();
+    }
+  } else {
+    axolotlController?.disable?.();
+  }
+}
+
+function ensureAxolotlInitialized() {
+  if (preferences.showAxolotl === false) {
+    axolotlController?.disable?.();
+    return;
+  }
+
+  if (axolotlInitialized) {
+    axolotlController?.enable?.();
+    return;
+  }
+
+  return initAxolotlMascot();
 }
 
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
@@ -1411,6 +1490,16 @@ function setupKeyboard() {
 
     keyboardContainer.appendChild(row);
   });
+  imageProbeCache.set(source, promise);
+  return promise;
+}
+
+function preloadImages(sources = []) {
+  if (!Array.isArray(sources) || !sources.length) {
+    return Promise.resolve();
+  }
+  const tasks = sources.map((source) => probeImage(source));
+  return Promise.all(tasks).then(() => {});
 }
 
 function setupSettingsMenu() {
