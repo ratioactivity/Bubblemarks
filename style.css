@@ -53,14 +53,16 @@ body[data-card-size="roomy"] {
 
 @font-face {
   font-family: "Bigbesty";
-  src: local("Bigbesty"), url("fonts/Bigbesty.woff2") format("woff2"),
+  src:
+    url("fonts/Bigbesty.woff2") format("woff2"),
     url("fonts/Bigbesty.ttf") format("truetype");
   font-display: swap;
 }
 
 @font-face {
   font-family: "Papernotes";
-  src: local("Papernotes"), url("fonts/Papernotes.woff2") format("woff2"),
+  src:
+    url("fonts/Papernotes.woff2") format("woff2"),
     url("fonts/Papernotes.ttf") format("truetype");
   font-display: swap;
 }
