@@ -95,6 +95,7 @@
         <div class="filter-bar" id="categories" role="tablist" aria-label="Category filters"></div>
 
         <div class="category-actions">
+          <button id="add-bookmark" type="button" class="soft-btn">Add New Bookmark</button>
           <button id="customize-categories" type="button" class="soft-btn soft-btn--ghost">
             Customize Categories
           </button>
@@ -121,7 +122,7 @@
             <button id="clear-search" class="clear-search" type="button" aria-label="Clear search">✧</button>
           </div>
           <datalist id="bookmark-suggestions"></datalist>
-          <p class="hint">Tap the keyboard or start typing to filter instantly.</p>
+          <p class="hint">Tap the rainbow keyboard or start typing to filter instantly.</p>
         </div>
 
         <div class="keyboard" id="keyboard" aria-label="On-screen keyboard"></div>
@@ -141,6 +142,63 @@
       </div>
     </article>
   </template>
+
+  <div
+    id="bookmark-modal"
+    class="bookmark-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="bookmark-modal-title"
+    hidden
+  >
+    <div class="bookmark-modal__backdrop" data-bookmark-dismiss="true"></div>
+    <div class="bookmark-modal__dialog" tabindex="-1">
+      <div class="bookmark-modal__header">
+        <h2 id="bookmark-modal-title">Add New Bookmark</h2>
+        <button
+          type="button"
+          class="bookmark-modal__close"
+          data-bookmark-dismiss="true"
+          aria-label="Close add bookmark form"
+        >
+          ✕
+        </button>
+      </div>
+      <form id="bookmark-form" class="bookmark-form">
+        <p class="bookmark-form__hint">
+          Drop in a name, link, vibe category, and optional header image to add a fresh bubble to your cloud.
+        </p>
+        <label class="bookmark-form__field" for="bookmark-name">
+          <span>Bookmark name</span>
+          <input id="bookmark-name" name="name" type="text" required />
+        </label>
+        <label class="bookmark-form__field" for="bookmark-url">
+          <span>Link</span>
+          <input id="bookmark-url" name="url" type="url" required placeholder="https://" />
+        </label>
+        <label class="bookmark-form__field" for="bookmark-category">
+          <span>Category</span>
+          <select id="bookmark-category" name="category" required></select>
+        </label>
+        <label class="bookmark-form__field" for="bookmark-image">
+          <span>Header image link (optional)</span>
+          <input
+            id="bookmark-image"
+            name="image"
+            type="url"
+            placeholder="https://example.com/pastel.png"
+            inputmode="url"
+          />
+        </label>
+        <div class="bookmark-form__actions">
+          <button type="button" class="soft-btn soft-btn--ghost" data-bookmark-dismiss="true">
+            Cancel
+          </button>
+          <button type="submit" class="soft-btn">Save Bookmark</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <div id="category-modal" class="category-modal" role="dialog" aria-modal="true" aria-labelledby="category-modal-title" hidden>
     <div class="category-modal__backdrop" data-modal-dismiss="true"></div>

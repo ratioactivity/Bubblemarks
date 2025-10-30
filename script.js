@@ -218,6 +218,13 @@ const exportBtn = document.getElementById("export-btn");
 const restoreBtn = document.getElementById("restore-btn");
 const importInput = document.getElementById("import-input");
 const template = document.getElementById("bookmark-card-template");
+const addBookmarkBtn = document.getElementById("add-bookmark");
+const bookmarkModal = document.getElementById("bookmark-modal");
+const bookmarkForm = document.getElementById("bookmark-form");
+const bookmarkNameInput = document.getElementById("bookmark-name");
+const bookmarkUrlInput = document.getElementById("bookmark-url");
+const bookmarkImageInput = document.getElementById("bookmark-image");
+const bookmarkCategorySelect = document.getElementById("bookmark-category");
 const axolotlLayer = document.querySelector(".axolotl-layer");
 const axolotlPath = document.getElementById("axolotl-path");
 const axolotlSprite = document.getElementById("axolotl-sprite");
@@ -258,6 +265,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   setupSettingsMenu();
   setupDataTools();
   setupCategoryCustomization();
+  setupBookmarkCreation();
 
   applyPreferences({ lazyAxolotl: true });
 
@@ -873,6 +881,135 @@ function srgbComponent(value) {
   return ((channel + 0.055) / 1.055) ** 2.4;
 }
 
+function setupBookmarkCreation() {
+  if (!addBookmarkBtn || !bookmarkModal || !bookmarkForm) {
+    return;
+  }
+
+  const focusableSelector = [
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(", ");
+
+  const getFocusableElements = () =>
+    Array.from(bookmarkModal.querySelectorAll(focusableSelector)).filter((element) => {
+      if (element.hasAttribute("hidden")) return false;
+      if (element.getAttribute("aria-hidden") === "true") return false;
+      if (element.tabIndex < 0) return false;
+      const style = window.getComputedStyle(element);
+      if (style.display === "none" || style.visibility === "hidden") {
+        return false;
+      }
+      return true;
+    });
+
+  const closeBookmarkModal = ({ restoreFocus = true } = {}) => {
+    bookmarkModal.hidden = true;
+    document.body.classList.remove("modal-open");
+    bookmarkForm.reset();
+    if (restoreFocus) {
+      window.setTimeout(() => {
+        addBookmarkBtn?.focus();
+      }, 20);
+    }
+  };
+
+  const openBookmarkModal = () => {
+    bookmarkForm.reset();
+    const preferredKey = activeCategory !== "all" ? activeCategory : bookmarkCategorySelect?.value;
+    renderBookmarkCategoryOptions(preferredKey);
+    bookmarkModal.hidden = false;
+    document.body.classList.add("modal-open");
+    window.setTimeout(() => {
+      bookmarkNameInput?.focus({ preventScroll: true });
+    }, 20);
+  };
+
+  addBookmarkBtn.addEventListener("click", () => {
+    openBookmarkModal();
+  });
+
+  bookmarkModal.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target && target.dataset && target.dataset.bookmarkDismiss === "true") {
+      closeBookmarkModal();
+    }
+  });
+
+  bookmarkModal.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeBookmarkModal();
+      return;
+    }
+
+    if (event.key === "Tab") {
+      const focusable = getFocusableElements();
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey) {
+        if (document.activeElement === first || !bookmarkModal.contains(document.activeElement)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  });
+
+  bookmarkForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const formData = new FormData(bookmarkForm);
+    const nameValue = String(formData.get("name") ?? "").trim();
+    const urlValue = String(formData.get("url") ?? "").trim();
+    const imageValue = String(formData.get("image") ?? "").trim();
+    const categoryKey = normalizeCategoryKey(String(formData.get("category") ?? DEFAULT_CATEGORY_SLUG));
+
+    const categoryLabel = getCategoryLabel(
+      categoryKey,
+      prettifyCategoryKey(categoryKey || DEFAULT_CATEGORY_SLUG)
+    );
+
+    const sanitized = sanitizeBookmarks([
+      {
+        name: nameValue,
+        url: urlValue,
+        category: categoryLabel,
+        image: imageValue,
+      },
+    ]);
+
+    if (!sanitized.length) {
+      alert("Please add a name and link so we can save your bookmark.");
+      return;
+    }
+
+    const [bookmark] = sanitized;
+    const nextCategoryKey = categoryKey || DEFAULT_CATEGORY_SLUG;
+    setBookmarks([bookmark, ...bookmarks], { persist: true });
+    setActiveCategory(nextCategoryKey);
+    closeBookmarkModal({ restoreFocus: false });
+    window.requestAnimationFrame(() => {
+      const firstCard = grid?.querySelector(".card");
+      if (firstCard) {
+        firstCard.focus();
+      }
+    });
+  });
+}
+
 function setupCategoryCustomization() {
   if (!customizeCategoriesBtn || !categoryModal || !categoryForm || !categorySettingsList) {
     return;
@@ -1370,6 +1507,47 @@ function updateSearchValue(nextValue, caretPosition) {
   applyFilters();
 }
 
+function renderBookmarkCategoryOptions(preferredKey, descriptors) {
+  if (!bookmarkCategorySelect) {
+    return;
+  }
+
+  const options = Array.isArray(descriptors) ? descriptors : computeCategoryDescriptors();
+
+  const fragment = document.createDocumentFragment();
+  options.forEach((descriptor) => {
+    const option = document.createElement("option");
+    option.value = descriptor.key;
+    option.textContent = descriptor.label;
+    fragment.appendChild(option);
+  });
+
+  bookmarkCategorySelect.innerHTML = "";
+
+  if (!fragment.childNodes.length) {
+    const fallbackOption = document.createElement("option");
+    fallbackOption.value = DEFAULT_CATEGORY_SLUG;
+    fallbackOption.textContent = DEFAULT_CATEGORY_LABEL;
+    bookmarkCategorySelect.appendChild(fallbackOption);
+    bookmarkCategorySelect.value = DEFAULT_CATEGORY_SLUG;
+    return;
+  }
+
+  bookmarkCategorySelect.appendChild(fragment);
+
+  const existingValues = Array.from(bookmarkCategorySelect.options).map((option) => option.value);
+  const normalizedPreferred = normalizeCategoryKey(preferredKey || "");
+  let selection = existingValues[0];
+
+  if (normalizedPreferred && existingValues.includes(normalizedPreferred)) {
+    selection = normalizedPreferred;
+  } else if (activeCategory !== "all" && existingValues.includes(activeCategory)) {
+    selection = activeCategory;
+  }
+
+  bookmarkCategorySelect.value = selection;
+}
+
 function updateCategoryBar() {
   const descriptors = computeCategoryDescriptors();
   const availableKeys = new Set(descriptors.map((descriptor) => descriptor.key));
@@ -1394,6 +1572,7 @@ function updateCategoryBar() {
 
   categoryBar.appendChild(fragment);
   syncActiveCategoryVisuals();
+  renderBookmarkCategoryOptions(bookmarkCategorySelect?.value || activeCategory, descriptors);
 }
 
 function createCategoryPill(descriptor) {
