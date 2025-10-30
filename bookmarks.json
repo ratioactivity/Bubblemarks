@@ -6,33 +6,33 @@
     "image": "https://cdn.openai.com/chatgpt/images/apple-touch-icon.png"
   },
   {
-    "name": "Notion Inspiration",
-    "url": "https://www.notion.so/templates",
-    "category": "Work",
-    "image": "https://www.notion.so/front-static/pages/product/notion-og.png"
+    "name": "Notion Home",
+    "url": "https://www.notion.so/Home-ff42302797964ca0aa31c9d81ab26979",
+    "category": "Main",
+    "image": "https://www.canva.com/design/DAG3STDb9hc/u2925XLa64CGiHwokvpHWg/view?utm_content=DAG3STDb9hc&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=he7a53bd5c8"
   },
   {
-    "name": "Etsy Finds",
-    "url": "https://www.etsy.com/",
-    "category": "Shop",
-    "image": "https://www.etsy.com/images/apple-touch-icon.png"
+    "name": "2048",
+    "url": "play2048.co",
+    "category": "Games",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/2048_logo.svg/1200px-2048_logo.svg.png"
   },
   {
-    "name": "Itch.io Cozy Games",
-    "url": "https://itch.io/games/tag-cozy",
+    "name": "Itch.io Games",
+    "url": "https://itch.io/games/",
     "category": "Games",
     "image": "https://static.itch.io/images/itchio-textless-white.svg"
   },
   {
-    "name": "A Soft Murmur",
-    "url": "https://asoftmurmur.com/",
-    "category": "AV",
-    "image": "https://asoftmurmur.com/assets/images/icons/apple-touch-icon-180x180.png"
+    "name": "Background Remover",
+    "url": "remove.bg",
+    "category": "Tools",
+    "image": "https://www.toolpilot.ai/cdn/shop/files/removebg.jpg?v=1688392321"
   },
   {
-    "name": "Pinterest Pastels",
-    "url": "https://www.pinterest.com/search/pins/?q=pastel%20aesthetic",
+    "name": "Pinterest",
+    "url": "https://www.pinterest.com",
     "category": "Tools",
-    "image": "https://s.pinimg.com/webapp/favicon-4ff5b062.png"
+    "image": "https://www.notion.so/image/https%3A%2F%2Fassets.turbologo.com%2Fblog%2Fen%2F2021%2F11%2F14085702%2FPinterest-Logo-2016-1.png?table=block&id=27186c3b-b6b9-8013-9068-cf2493f653eb&spaceId=855704af-3325-4727-a2cf-32fb169ca1a2&width=50&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&cache=v2"
   }
 ]
