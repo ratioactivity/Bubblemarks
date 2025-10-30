@@ -1101,6 +1101,9 @@ function setupSearch() {
     applyFilters();
     searchInput.focus();
   });
+
+  categoryBar.appendChild(fragment);
+  syncActiveCategoryVisuals();
 }
 
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
