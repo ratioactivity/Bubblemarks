@@ -206,44 +206,44 @@ let axolotlInitialized = false;
 let axolotlController = { enable: () => {}, disable: () => {} };
 let axolotlInitPromise = null;
 
-const grid = document.getElementById("bookmarks");
-const emptyState = document.getElementById("empty-state");
-const keyboardContainer = document.getElementById("keyboard");
-const categoryBar = document.getElementById("categories");
-const searchInput = document.getElementById("search");
-const clearSearchBtn = document.getElementById("clear-search");
-const datalist = document.getElementById("bookmark-suggestions");
-const importBtn = document.getElementById("import-btn");
-const exportBtn = document.getElementById("export-btn");
-const restoreBtn = document.getElementById("restore-btn");
-const importInput = document.getElementById("import-input");
-const template = document.getElementById("bookmark-card-template");
-const addBookmarkBtn = document.getElementById("add-bookmark");
-const bookmarkModal = document.getElementById("bookmark-modal");
-const bookmarkForm = document.getElementById("bookmark-form");
-const bookmarkNameInput = document.getElementById("bookmark-name");
-const bookmarkUrlInput = document.getElementById("bookmark-url");
-const bookmarkImageInput = document.getElementById("bookmark-image");
-const bookmarkCategorySelect = document.getElementById("bookmark-category");
-const axolotlLayer = document.querySelector(".axolotl-layer");
-const axolotlPath = document.getElementById("axolotl-path");
-const axolotlSprite = document.getElementById("axolotl-sprite");
-const axolotlFigure = document.getElementById("axolotl-figure");
-const axolotlFrameDisplay = createAxolotlFrameDisplay(axolotlFigure);
-const heroHeading = document.getElementById("app-heading");
-const settingsBtn = document.getElementById("settings-btn");
-const settingsModal = document.getElementById("settings-modal");
-const settingsForm = document.getElementById("settings-form");
-const settingsDialog = document.querySelector(".settings-modal__dialog");
-const toggleHeadingInput = document.getElementById("toggle-heading");
-const toggleAxolotlInput = document.getElementById("toggle-axolotl");
-const cardSizeInput = document.getElementById("card-size");
-const customizeCategoriesBtn = document.getElementById("customize-categories");
-const categoryModal = document.getElementById("category-modal");
-const categoryForm = document.getElementById("category-form");
-const categorySettingsList = document.getElementById("category-settings-list");
-const addCategoryBtn = document.getElementById("add-category");
-const categoryItemTemplate = document.getElementById("category-item-template");
+let grid;
+let emptyState;
+let keyboardContainer;
+let categoryBar;
+let searchInput;
+let clearSearchBtn;
+let datalist;
+let importBtn;
+let exportBtn;
+let restoreBtn;
+let importInput;
+let template;
+let addBookmarkBtn;
+let bookmarkModal;
+let bookmarkForm;
+let bookmarkNameInput;
+let bookmarkUrlInput;
+let bookmarkImageInput;
+let bookmarkCategorySelect;
+let axolotlLayer;
+let axolotlPath;
+let axolotlSprite;
+let axolotlFigure;
+let axolotlFrameDisplay;
+let heroHeading;
+let settingsBtn;
+let settingsModal;
+let settingsForm;
+let settingsDialog;
+let toggleHeadingInput;
+let toggleAxolotlInput;
+let cardSizeInput;
+let customizeCategoriesBtn;
+let categoryModal;
+let categoryForm;
+let categorySettingsList;
+let addCategoryBtn;
+let categoryItemTemplate;
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
@@ -264,15 +264,51 @@ function replaceChildrenSafe(target, nodes) {
   }
 }
 
-if (!grid) {
-  console.error("Missing #bookmarks element in DOM");
-}
-
-if (!keyboardContainer) {
-  console.error("Missing #keyboard element in DOM");
-}
-
 window.addEventListener("DOMContentLoaded", async () => {
+  grid = document.getElementById("bookmarks");
+  emptyState = document.getElementById("empty-state");
+  keyboardContainer = document.getElementById("keyboard");
+  categoryBar = document.getElementById("categories");
+  searchInput = document.getElementById("search");
+  clearSearchBtn = document.getElementById("clear-search");
+  datalist = document.getElementById("bookmark-suggestions");
+  importBtn = document.getElementById("import-btn");
+  exportBtn = document.getElementById("export-btn");
+  restoreBtn = document.getElementById("restore-btn");
+  importInput = document.getElementById("import-input");
+  template = document.getElementById("bookmark-card-template");
+  addBookmarkBtn = document.getElementById("add-bookmark");
+  bookmarkModal = document.getElementById("bookmark-modal");
+  bookmarkForm = document.getElementById("bookmark-form");
+  bookmarkNameInput = document.getElementById("bookmark-name");
+  bookmarkUrlInput = document.getElementById("bookmark-url");
+  bookmarkImageInput = document.getElementById("bookmark-image");
+  bookmarkCategorySelect = document.getElementById("bookmark-category");
+  axolotlLayer = document.querySelector(".axolotl-layer");
+  axolotlPath = document.getElementById("axolotl-path");
+  axolotlSprite = document.getElementById("axolotl-sprite");
+  axolotlFigure = document.getElementById("axolotl-figure");
+  axolotlFrameDisplay = axolotlFigure
+    ? createAxolotlFrameDisplay(axolotlFigure)
+    : null;
+  heroHeading = document.getElementById("app-heading");
+  settingsBtn = document.getElementById("settings-btn");
+  settingsModal = document.getElementById("settings-modal");
+  settingsForm = document.getElementById("settings-form");
+  settingsDialog = document.querySelector(".settings-modal__dialog");
+  toggleHeadingInput = document.getElementById("toggle-heading");
+  toggleAxolotlInput = document.getElementById("toggle-axolotl");
+  cardSizeInput = document.getElementById("card-size");
+  customizeCategoriesBtn = document.getElementById("customize-categories");
+  categoryModal = document.getElementById("category-modal");
+  categoryForm = document.getElementById("category-form");
+  categorySettingsList = document.getElementById("category-settings-list");
+  addCategoryBtn = document.getElementById("add-category");
+  categoryItemTemplate = document.getElementById("category-item-template");
+
+  if (!grid) console.error("Missing #bookmarks element in DOM");
+  if (!keyboardContainer) console.error("Missing #keyboard element in DOM");
+
   preferences = loadPreferences();
   applyPreferences({ syncInputs: false, lazyAxolotl: true });
 
@@ -321,6 +357,8 @@ async function hydrateData() {
   } finally {
     setLoading(false);
   }
+
+  renderBookmarks(bookmarks);
 }
 
 function setupControlTabs() {
@@ -1282,7 +1320,7 @@ function handleCategoryFormSubmit() {
 }
 
 function setBookmarks(next, { persist } = { persist: true }) {
-  bookmarks = [...next];
+  bookmarks = sanitizeBookmarks(next);
   categoryInfo = collectCategoryInfo();
   if (persist) {
     try {
@@ -1293,7 +1331,11 @@ function setBookmarks(next, { persist } = { persist: true }) {
   }
   updateCategoryBar();
   updateSuggestions();
-  applyFilters();
+  if (searchTerm.trim() || activeCategory !== "all") {
+    applyFilters();
+  } else {
+    renderBookmarks(bookmarks);
+  }
 }
 
 function setupSearch() {
@@ -1313,85 +1355,6 @@ function setupSearch() {
     applyFilters();
     searchInput.focus();
   });
-
-  bookmarkCategorySelect.innerHTML = "";
-
-  if (!fragment.childNodes.length) {
-    const fallbackOption = document.createElement("option");
-    fallbackOption.value = DEFAULT_CATEGORY_SLUG;
-    fallbackOption.textContent = DEFAULT_CATEGORY_LABEL;
-    bookmarkCategorySelect.appendChild(fallbackOption);
-    bookmarkCategorySelect.value = DEFAULT_CATEGORY_SLUG;
-    return;
-  }
-
-  bookmarkCategorySelect.appendChild(fragment);
-
-  const existingValues = Array.from(bookmarkCategorySelect.options).map((option) => option.value);
-  const normalizedPreferred = normalizeCategoryKey(preferredKey || "");
-  let selection = existingValues[0];
-
-  if (normalizedPreferred && existingValues.includes(normalizedPreferred)) {
-    selection = normalizedPreferred;
-  } else if (activeCategory !== "all" && existingValues.includes(activeCategory)) {
-    selection = activeCategory;
-  }
-
-  bookmarkCategorySelect.value = selection;
-}
-
-function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
-  const showHeading = preferences.showHeading !== false;
-  const showAxolotl = preferences.showAxolotl !== false;
-  const cardSize = normalizeCardSize(preferences.cardSize);
-
-  preferences.cardSize = cardSize;
-
-  if (heroHeading) {
-    heroHeading.hidden = !showHeading;
-  }
-
-  if (syncInputs) {
-    if (toggleHeadingInput) {
-      toggleHeadingInput.checked = showHeading;
-    }
-    if (toggleAxolotlInput) {
-      toggleAxolotlInput.checked = showAxolotl;
-    }
-    if (cardSizeInput) {
-      cardSizeInput.value = String(cardSizeToIndex(cardSize));
-    }
-  }
-
-  if (axolotlLayer) {
-    axolotlLayer.hidden = !showAxolotl;
-  }
-
-  if (document.body) {
-    document.body.setAttribute("data-card-size", cardSize);
-  }
-
-  if (showAxolotl) {
-    if (!lazyAxolotl) {
-      ensureAxolotlInitialized();
-    }
-  } else {
-    axolotlController?.disable?.();
-  }
-}
-
-function ensureAxolotlInitialized() {
-  if (preferences.showAxolotl === false) {
-    axolotlController?.disable?.();
-    return;
-  }
-
-  if (axolotlInitialized) {
-    axolotlController?.enable?.();
-    return;
-  }
-
-  return initAxolotlMascot();
 }
 
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
@@ -1500,6 +1463,371 @@ function preloadImages(sources = []) {
   }
   const tasks = sources.map((source) => probeImage(source));
   return Promise.all(tasks).then(() => {});
+}
+
+function createAxolotlFrameDisplay(container) {
+  if (!container) {
+    return {
+      showFrame: () => Promise.resolve(),
+      useFallback: () => {},
+      clearFallback: () => {},
+    };
+  }
+
+  const front = container.querySelector(".axolotl-frame--front");
+  const back = container.querySelector(".axolotl-frame--back");
+
+  if (!front || !back) {
+    return {
+      showFrame: (url) => {
+        container.style.backgroundImage = url ? `url('${url}')` : "";
+        return Promise.resolve();
+      },
+      useFallback: (url) => {
+        container.style.backgroundImage = url ? `url('${url}')` : "";
+      },
+      clearFallback: () => {
+        container.style.backgroundImage = "";
+      },
+    };
+  }
+
+  let visibleEl = front;
+  let hiddenEl = back;
+  let queue = Promise.resolve();
+
+  visibleEl.classList.add("is-visible");
+  hiddenEl.classList.remove("is-visible");
+
+  const loadInto = (el, url) =>
+    new Promise((resolve) => {
+      if (!url) {
+        el.style.backgroundImage = "";
+        delete el.dataset.src;
+        resolve();
+        return;
+      }
+
+      if (el.dataset.src === url) {
+        resolve();
+        return;
+      }
+
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = () => {
+        el.dataset.src = url;
+        el.style.backgroundImage = `url('${url}')`;
+        resolve();
+      };
+      img.onerror = () => resolve();
+      img.src = url;
+    });
+
+  const enqueue = (task) => {
+    queue = queue.then(() => task()).catch(() => {});
+    return queue;
+  };
+
+  const performSwap = async (url) => {
+    await loadInto(hiddenEl, url);
+    const previousVisible = visibleEl;
+    previousVisible.classList.remove("is-visible");
+    hiddenEl.classList.add("is-visible");
+    visibleEl = hiddenEl;
+    hiddenEl = previousVisible;
+    container.style.backgroundImage = "";
+  };
+
+  const showFrame = (url, { immediate = false } = {}) => {
+    if (immediate) {
+      const immediateTask = performSwap(url);
+      queue = immediateTask.then(() => {}).catch(() => {});
+      return immediateTask;
+    }
+    return enqueue(() => performSwap(url));
+  };
+
+  const useFallback = (url) => {
+    queue = Promise.resolve();
+    front.classList.remove("is-visible");
+    back.classList.remove("is-visible");
+    delete front.dataset.src;
+    delete back.dataset.src;
+    visibleEl = front;
+    hiddenEl = back;
+    container.style.backgroundImage = url ? `url('${url}')` : "";
+  };
+
+  const clearFallback = () => {
+    container.style.backgroundImage = "";
+    if (!front.classList.contains("is-visible") && !back.classList.contains("is-visible")) {
+      visibleEl = front;
+      hiddenEl = back;
+      visibleEl.classList.add("is-visible");
+      hiddenEl.classList.remove("is-visible");
+    }
+  };
+
+  return { showFrame, useFallback, clearFallback };
+}
+
+function createAxolotlFrameAnimator(target, frames, interval = 160, display = null) {
+  if ((!target && !display) || !frames.length) {
+    return () => {};
+  }
+
+  const frameDisplay = display || createAxolotlFrameDisplay(target);
+  let frameIndex = 0;
+  let timerId = null;
+
+  const showCurrentFrame = (immediate = false) => {
+    const frame = frames[frameIndex];
+    if (!frame) {
+      return;
+    }
+    if (frameDisplay && typeof frameDisplay.showFrame === "function") {
+      frameDisplay.showFrame(frame, { immediate }).catch(() => {});
+    } else if (target) {
+      target.style.backgroundImage = `url('${frame}')`;
+    }
+  };
+
+  const step = () => {
+    frameIndex = (frameIndex + 1) % frames.length;
+    showCurrentFrame();
+    timerId = window.setTimeout(step, interval);
+  };
+
+  showCurrentFrame(true);
+
+  if (frames.length > 1) {
+    timerId = window.setTimeout(step, interval);
+  }
+
+  const handleVisibility = () => {
+    if (document.hidden) {
+      if (timerId) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+    } else if (!timerId && frames.length > 1) {
+      timerId = window.setTimeout(step, interval);
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibility);
+
+  return () => {
+    if (timerId) {
+      clearTimeout(timerId);
+      timerId = null;
+    }
+    document.removeEventListener("visibilitychange", handleVisibility);
+  };
+}
+
+function createAxolotlStateAnimator(target, states, defaultInterval = 200, display = null) {
+  const normalized = {};
+  for (const [name, frames] of Object.entries(states || {})) {
+    if (Array.isArray(frames) && frames.length) {
+      normalized[name] = [...frames];
+    }
+  }
+
+  let timerId = null;
+  let current = null;
+  let visibilityPaused = false;
+  const frameDisplay = display || createAxolotlFrameDisplay(target);
+
+  const clearTimer = () => {
+    if (timerId) {
+      clearTimeout(timerId);
+      timerId = null;
+    }
+  };
+
+  const applyFrame = (frames, index, immediate = false) => {
+    if (!frames.length) {
+      return;
+    }
+    const frame = frames[Math.max(0, Math.min(index, frames.length - 1))];
+    if (frameDisplay && typeof frameDisplay.showFrame === "function") {
+      frameDisplay.showFrame(frame, { immediate }).catch(() => {});
+    } else if (target) {
+      target.style.backgroundImage = `url('${frame}')`;
+    }
+  };
+
+  const scheduleNext = () => {
+    if (!current || document.hidden) {
+      visibilityPaused = !!current;
+      return;
+    }
+    clearTimer();
+    timerId = window.setTimeout(step, current.interval);
+  };
+
+  const finalize = () => {
+    const complete = current?.onComplete;
+    current = null;
+    clearTimer();
+    if (typeof complete === "function") {
+      complete();
+    }
+  };
+
+  const step = () => {
+    if (!current) {
+      return;
+    }
+    const frames = current.frames;
+    if (!frames.length) {
+      finalize();
+      return;
+    }
+
+    current.index += 1;
+
+    if (current.index >= frames.length) {
+      if (current.loop) {
+        current.index = 0;
+      } else {
+        if (current.holdLast) {
+          current.index = frames.length - 1;
+          applyFrame(frames, current.index, true);
+        }
+        finalize();
+        return;
+      }
+    }
+
+    applyFrame(frames, current.index);
+    scheduleNext();
+  };
+
+  const playState = (stateName, options = {}) => {
+    const frames = normalized[stateName];
+    if (!frames || !frames.length) {
+      return false;
+    }
+
+    const {
+      loop = false,
+      interval = defaultInterval,
+      holdLast = false,
+      onComplete,
+      restart = false,
+    } = options;
+
+    const resolvedInterval = Number.isFinite(interval) ? interval : defaultInterval;
+    const currentInterval = Number.isFinite(current?.interval)
+      ? current.interval
+      : defaultInterval;
+
+    if (
+      !restart &&
+      current &&
+      current.stateName === stateName &&
+      current.loop &&
+      loop &&
+      Math.abs(currentInterval - resolvedInterval) < 1
+    ) {
+      return true;
+    }
+
+    clearTimer();
+    current = {
+      stateName,
+      frames,
+      loop,
+      holdLast,
+      onComplete,
+      interval: resolvedInterval,
+      index: 0,
+    };
+
+    applyFrame(frames, 0, true);
+
+    if (frames.length > 1) {
+      scheduleNext();
+    } else if (!loop) {
+      const complete = current.onComplete;
+      current = null;
+      if (typeof complete === "function") {
+        window.setTimeout(complete, resolvedInterval);
+      }
+    }
+
+    return true;
+  };
+
+  const showState = (stateName) => {
+    const frames = normalized[stateName];
+    if (!frames || !frames.length) {
+      return false;
+    }
+    clearTimer();
+    current = null;
+    applyFrame(frames, 0, true);
+    return true;
+  };
+
+  const stop = () => {
+    current = null;
+    clearTimer();
+  };
+
+  const handleVisibility = () => {
+    if (document.hidden) {
+      if (timerId) {
+        clearTimer();
+        visibilityPaused = true;
+      }
+    } else if (visibilityPaused) {
+      visibilityPaused = false;
+      if (current && (current.loop || current.index < current.frames.length - 1)) {
+        scheduleNext();
+      }
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibility);
+
+  return {
+    playLoop: (stateName, interval = defaultInterval) =>
+      playState(stateName, { loop: true, interval }),
+    playOnce: (stateName, options = {}) =>
+      playState(stateName, { loop: false, ...options }),
+    playOnceAsync: (stateName, options = {}) =>
+      new Promise((resolve) => {
+        const success = playState(stateName, {
+          loop: false,
+          ...options,
+          onComplete: () => {
+            if (typeof options.onComplete === "function") {
+              options.onComplete();
+            }
+            resolve(true);
+          },
+        });
+
+        if (!success) {
+          resolve(false);
+        }
+      }),
+    showState,
+    stop,
+    destroy: () => {
+      stop();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    },
+    hasState: (stateName) => Array.isArray(normalized[stateName]) && normalized[stateName].length > 0,
+    hasAny: () => Object.values(normalized).some((frames) => frames.length > 0),
+    getCurrentState: () => current?.stateName || null,
+    isLooping: (stateName) =>
+      !!(current && current.loop && (!stateName || current.stateName === stateName)),
+  };
 }
 
 function setupSettingsMenu() {
