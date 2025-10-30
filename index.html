@@ -100,6 +100,10 @@
           </button>
         </div>
 
+        <section id="bookmarks" class="grid" aria-live="polite" aria-busy="false"></section>
+        <p id="empty-state" class="empty-state" hidden>
+          No bookmarks match that vibe yet. Try a different search or category!
+        </p>
       </div>
 
       <div
@@ -117,15 +121,13 @@
             <button id="clear-search" class="clear-search" type="button" aria-label="Clear search">✧</button>
           </div>
           <datalist id="bookmark-suggestions"></datalist>
-          <p class="hint">Tap the rainbow keyboard or start typing to filter instantly.</p>
+          <p class="hint">Tap the keyboard or start typing to filter instantly.</p>
         </div>
 
         <div class="keyboard" id="keyboard" aria-label="On-screen keyboard"></div>
       </div>
     </section>
 
-    <section id="bookmarks" class="grid" aria-live="polite" aria-busy="false"></section>
-    <p id="empty-state" class="empty-state" hidden>No bookmarks match that vibe yet. Try a different search or category!</p>
   </main>
 
   <template id="bookmark-card-template">

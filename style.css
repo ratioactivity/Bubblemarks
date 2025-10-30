@@ -757,13 +757,13 @@ body {
 
 .grid {
   display: grid;
-  width: min(100%, var(--grid-max-width));
+  width: 100%;
+  max-width: var(--grid-max-width, 1200px);
   margin: 0 auto;
-  justify-content: center;
   justify-items: stretch;
   align-items: stretch;
-  grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
-  gap: var(--card-gap);
+  grid-template-columns: repeat(var(--grid-columns, 6), minmax(0, 1fr));
+  gap: var(--card-gap, 1rem);
 }
 
 @media (max-width: 900px) {

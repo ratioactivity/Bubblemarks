@@ -240,6 +240,14 @@ const categoryItemTemplate = document.getElementById("category-item-template");
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
+if (!grid) {
+  console.error("Missing #bookmarks element in DOM");
+}
+
+if (!keyboardContainer) {
+  console.error("Missing #keyboard element in DOM");
+}
+
 window.addEventListener("DOMContentLoaded", async () => {
   preferences = loadPreferences();
   applyPreferences({ syncInputs: false, lazyAxolotl: true });
@@ -1101,117 +1109,6 @@ function setupSearch() {
     applyFilters();
     searchInput.focus();
   });
-
-  categoryBar.appendChild(fragment);
-  syncActiveCategoryVisuals();
-}
-
-function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
-  const showHeading = preferences.showHeading !== false;
-  const showAxolotl = preferences.showAxolotl !== false;
-  const cardSize = normalizeCardSize(preferences.cardSize);
-
-  preferences.cardSize = cardSize;
-
-  if (heroHeading) {
-    heroHeading.hidden = !showHeading;
-  }
-
-  if (syncInputs) {
-    if (toggleHeadingInput) {
-      toggleHeadingInput.checked = showHeading;
-    }
-    if (toggleAxolotlInput) {
-      toggleAxolotlInput.checked = showAxolotl;
-    }
-    if (cardSizeInput) {
-      cardSizeInput.value = String(cardSizeToIndex(cardSize));
-    }
-  }
-
-  if (axolotlLayer) {
-    axolotlLayer.hidden = !showAxolotl;
-  }
-
-  if (document.body) {
-    document.body.setAttribute("data-card-size", cardSize);
-  }
-
-  if (showAxolotl) {
-    if (!lazyAxolotl) {
-      ensureAxolotlInitialized();
-    }
-  } else {
-    axolotlController?.disable?.();
-  }
-}
-
-function ensureAxolotlInitialized() {
-  if (preferences.showAxolotl === false) {
-    axolotlController?.disable?.();
-    return;
-  }
-
-  if (axolotlInitialized) {
-    axolotlController?.enable?.();
-    return;
-  }
-
-  return initAxolotlMascot();
-}
-
-function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
-  const showHeading = preferences.showHeading !== false;
-  const showAxolotl = preferences.showAxolotl !== false;
-  const cardSize = normalizeCardSize(preferences.cardSize);
-
-  preferences.cardSize = cardSize;
-
-  if (heroHeading) {
-    heroHeading.hidden = !showHeading;
-  }
-
-  if (syncInputs) {
-    if (toggleHeadingInput) {
-      toggleHeadingInput.checked = showHeading;
-    }
-    if (toggleAxolotlInput) {
-      toggleAxolotlInput.checked = showAxolotl;
-    }
-    if (cardSizeInput) {
-      cardSizeInput.value = String(cardSizeToIndex(cardSize));
-    }
-  }
-
-  if (axolotlLayer) {
-    axolotlLayer.hidden = !showAxolotl;
-  }
-
-  if (document.body) {
-    document.body.setAttribute("data-card-size", cardSize);
-  }
-
-  if (showAxolotl) {
-    if (!lazyAxolotl) {
-      ensureAxolotlInitialized();
-    }
-  } else {
-    axolotlController?.disable?.();
-  }
-}
-
-function ensureAxolotlInitialized() {
-  if (preferences.showAxolotl === false) {
-    axolotlController?.disable?.();
-    return;
-  }
-
-  if (axolotlInitialized) {
-    axolotlController?.enable?.();
-    return;
-  }
-
-  return initAxolotlMascot();
 }
 
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
@@ -1269,6 +1166,10 @@ function ensureAxolotlInitialized() {
 }
 
 function setupKeyboard() {
+  if (!keyboardContainer) {
+    console.error("Cannot set up on-screen keyboard without #keyboard element");
+    return;
+  }
   const keyLayout = [
     ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
     ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
@@ -1554,6 +1455,11 @@ function applyFilters() {
 }
 
 function renderBookmarks(collection) {
+  if (!grid) {
+    console.error("Cannot render bookmarks without #bookmarks element");
+    return;
+  }
+
   grid.innerHTML = "";
 
   if (!collection.length) {
@@ -1671,15 +1577,19 @@ function buildFaviconUrl(url) {
 }
 
 function setLoading(isLoading) {
-  grid.setAttribute("aria-busy", String(isLoading));
+  if (grid) {
+    grid.setAttribute("aria-busy", String(isLoading));
+  }
 }
 
 function showEmptyState(message) {
+  if (!emptyState) return;
   emptyState.textContent = message;
   emptyState.hidden = false;
 }
 
 function hideEmptyState() {
+  if (!emptyState) return;
   emptyState.hidden = true;
 }
 
