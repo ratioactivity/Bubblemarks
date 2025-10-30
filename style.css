@@ -548,16 +548,16 @@ body {
 
 .controls__panel {
   position: relative;
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
   gap: clamp(1rem, 3vw, 1.6rem);
 }
 
-.controls__panel--bookmarks {
-  justify-items: center;
-}
-
+.controls__panel--bookmarks,
 .controls__panel--keyboard {
-  justify-items: center;
+  width: 100%;
 }
 
 .controls__panel--keyboard .search-block {
@@ -707,7 +707,6 @@ body {
 
 .data-tools {
   display: flex;
-  justify-content: center;
   flex-wrap: wrap;
   gap: 0.8rem;
   justify-content: center;

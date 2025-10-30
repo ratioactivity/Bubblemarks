@@ -1286,6 +1286,11 @@ function setBookmarks(next, { persist } = { persist: true }) {
 }
 
 function setupSearch() {
+  if (!searchInput || !clearSearchBtn || !datalist) {
+    console.error("Search UI is missing required elements");
+    return;
+  }
+
   searchInput.addEventListener("input", (event) => {
     searchTerm = event.target.value;
     applyFilters();
@@ -1297,6 +1302,67 @@ function setupSearch() {
     applyFilters();
     searchInput.focus();
   });
+
+  clearSearchBtn.addEventListener("click", () => {
+    searchTerm = "";
+    searchInput.value = "";
+    applyFilters();
+    searchInput.focus();
+  });
+}
+
+function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
+  const showHeading = preferences.showHeading !== false;
+  const showAxolotl = preferences.showAxolotl !== false;
+  const cardSize = normalizeCardSize(preferences.cardSize);
+
+  preferences.cardSize = cardSize;
+
+  if (heroHeading) {
+    heroHeading.hidden = !showHeading;
+  }
+
+  if (syncInputs) {
+    if (toggleHeadingInput) {
+      toggleHeadingInput.checked = showHeading;
+    }
+    if (toggleAxolotlInput) {
+      toggleAxolotlInput.checked = showAxolotl;
+    }
+    if (cardSizeInput) {
+      cardSizeInput.value = String(cardSizeToIndex(cardSize));
+    }
+  }
+
+  if (axolotlLayer) {
+    axolotlLayer.hidden = !showAxolotl;
+  }
+
+  if (document.body) {
+    document.body.setAttribute("data-card-size", cardSize);
+  }
+
+  if (showAxolotl) {
+    if (!lazyAxolotl) {
+      ensureAxolotlInitialized();
+    }
+  } else {
+    axolotlController?.disable?.();
+  }
+}
+
+function ensureAxolotlInitialized() {
+  if (preferences.showAxolotl === false) {
+    axolotlController?.disable?.();
+    return;
+  }
+
+  if (axolotlInitialized) {
+    axolotlController?.enable?.();
+    return;
+  }
+
+  return initAxolotlMascot();
 }
 
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
@@ -1450,25 +1516,6 @@ function createFallbackImage(bookmark) {
 function pickFallbackPalette(seed) {
   const index = Math.abs(hashString(seed)) % FALLBACK_PALETTES.length;
   return FALLBACK_PALETTES[index];
-}
-
-function hashString(value) {
-  let hash = 0;
-  const stringValue = String(value);
-  for (let i = 0; i < stringValue.length; i += 1) {
-    hash = (hash << 5) - hash + stringValue.charCodeAt(i);
-    hash |= 0;
-  }
-  return hash;
-}
-
-function buildFaviconUrl(url) {
-  try {
-    const domain = new URL(url).origin;
-    return `https://www.google.com/s2/favicons?sz=256&domain=${encodeURIComponent(domain)}`;
-  } catch (error) {
-    return "https://www.google.com/s2/favicons?sz=256&domain=https://example.com";
-  }
 }
 
 function setupSettingsMenu() {
@@ -1674,6 +1721,11 @@ function renderBookmarkCategoryOptions(preferredKey, descriptors) {
 }
 
 function updateCategoryBar() {
+  if (!categoryBar) {
+    console.error("Cannot render categories without #categories element");
+    return;
+  }
+
   const descriptors = computeCategoryDescriptors();
   const availableKeys = new Set(descriptors.map((descriptor) => descriptor.key));
 
@@ -3112,6 +3164,11 @@ function clamp(value, min, max) {
 }
 
 function setupDataTools() {
+  if (!importBtn || !exportBtn || !restoreBtn || !importInput) {
+    console.error("Data management controls are missing from the DOM");
+    return;
+  }
+
   importBtn.addEventListener("click", () => importInput.click());
 
   importInput.addEventListener("change", async (event) => {
