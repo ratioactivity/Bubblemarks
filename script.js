@@ -222,6 +222,7 @@ const axolotlLayer = document.querySelector(".axolotl-layer");
 const axolotlPath = document.getElementById("axolotl-path");
 const axolotlSprite = document.getElementById("axolotl-sprite");
 const axolotlFigure = document.getElementById("axolotl-figure");
+const axolotlFrameDisplay = createAxolotlFrameDisplay(axolotlFigure);
 const heroHeading = document.getElementById("app-heading");
 const settingsBtn = document.getElementById("settings-btn");
 const settingsModal = document.getElementById("settings-modal");
@@ -1261,6 +1262,60 @@ function ensureAxolotlInitialized() {
   return initAxolotlMascot();
 }
 
+function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
+  const showHeading = preferences.showHeading !== false;
+  const showAxolotl = preferences.showAxolotl !== false;
+  const cardSize = normalizeCardSize(preferences.cardSize);
+
+  preferences.cardSize = cardSize;
+
+  if (heroHeading) {
+    heroHeading.hidden = !showHeading;
+  }
+
+  if (syncInputs) {
+    if (toggleHeadingInput) {
+      toggleHeadingInput.checked = showHeading;
+    }
+    if (toggleAxolotlInput) {
+      toggleAxolotlInput.checked = showAxolotl;
+    }
+    if (cardSizeInput) {
+      cardSizeInput.value = String(cardSizeToIndex(cardSize));
+    }
+  }
+
+  if (axolotlLayer) {
+    axolotlLayer.hidden = !showAxolotl;
+  }
+
+  if (document.body) {
+    document.body.setAttribute("data-card-size", cardSize);
+  }
+
+  if (showAxolotl) {
+    if (!lazyAxolotl) {
+      ensureAxolotlInitialized();
+    }
+  } else {
+    axolotlController?.disable?.();
+  }
+}
+
+function ensureAxolotlInitialized() {
+  if (preferences.showAxolotl === false) {
+    axolotlController?.disable?.();
+    return;
+  }
+
+  if (axolotlInitialized) {
+    axolotlController?.enable?.();
+    return;
+  }
+
+  return initAxolotlMascot();
+}
+
 function setupKeyboard() {
   const keyLayout = [
     ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
@@ -1747,12 +1802,18 @@ async function initAxolotlMascot() {
         await preloadImages([...preloadTargets]);
 
         axolotlFigure.classList.remove("axolotl--fallback");
-        stateAnimator = createAxolotlStateAnimator(axolotlFigure, discovery.states);
+        axolotlFrameDisplay.clearFallback();
+        stateAnimator = createAxolotlStateAnimator(
+          axolotlFigure,
+          discovery.states,
+          undefined,
+          axolotlFrameDisplay
+        );
 
         if (!stateAnimator.hasAny()) {
           destroyStateAnimatorIfNeeded();
           axolotlFigure.classList.add("axolotl--fallback");
-          axolotlFigure.style.backgroundImage = `url('${DEFAULT_AXOLOTL_IMAGE}')`;
+          axolotlFrameDisplay.useFallback(DEFAULT_AXOLOTL_IMAGE);
           axolotlController = { enable: () => {}, disable: () => {} };
           return;
         }
@@ -2016,7 +2077,12 @@ async function initAxolotlMascot() {
       const startFrameAnimation = () => {
         stopFrameAnimationIfNeeded();
         if (frames.length > 1) {
-          stopFrameAnimation = createAxolotlFrameAnimator(axolotlFigure, frames, 180);
+          stopFrameAnimation = createAxolotlFrameAnimator(
+            axolotlFigure,
+            frames,
+            180,
+            axolotlFrameDisplay
+          );
         }
       };
 
@@ -2031,12 +2097,14 @@ async function initAxolotlMascot() {
 
       if (frames.length === 0) {
         axolotlFigure.classList.add("axolotl--fallback");
-        axolotlFigure.style.backgroundImage = `url('${DEFAULT_AXOLOTL_IMAGE}')`;
+        axolotlFrameDisplay.useFallback(DEFAULT_AXOLOTL_IMAGE);
       } else if (frames.length === 1) {
         axolotlFigure.classList.remove("axolotl--fallback");
-        axolotlFigure.style.backgroundImage = `url('${frames[0]}')`;
+        axolotlFrameDisplay.clearFallback();
+        axolotlFrameDisplay.showFrame(frames[0], { immediate: true }).catch(() => {});
       } else {
         axolotlFigure.classList.remove("axolotl--fallback");
+        axolotlFrameDisplay.clearFallback();
         startFrameAnimation();
       }
 
@@ -2100,7 +2168,7 @@ async function initAxolotlMascot() {
     } catch (error) {
       console.warn("Axolotl mascot could not be initialized", error);
       axolotlFigure.classList.add("axolotl--fallback");
-      axolotlFigure.style.backgroundImage = `url('${DEFAULT_AXOLOTL_IMAGE}')`;
+      axolotlFrameDisplay.useFallback(DEFAULT_AXOLOTL_IMAGE);
       axolotlController = { enable: () => {}, disable: () => {} };
     } finally {
       axolotlInitialized = true;
@@ -2486,25 +2554,141 @@ function preloadImages(sources = []) {
   return Promise.all(tasks).then(() => {});
 }
 
-function createAxolotlFrameAnimator(target, frames, interval = 160) {
-  if (!target || !frames.length) {
+function createAxolotlFrameDisplay(container) {
+  if (!container) {
+    return {
+      showFrame: () => Promise.resolve(),
+      useFallback: () => {},
+      clearFallback: () => {},
+    };
+  }
+
+  const front = container.querySelector(".axolotl-frame--front");
+  const back = container.querySelector(".axolotl-frame--back");
+
+  if (!front || !back) {
+    return {
+      showFrame: (url) => {
+        container.style.backgroundImage = url ? `url('${url}')` : "";
+        return Promise.resolve();
+      },
+      useFallback: (url) => {
+        container.style.backgroundImage = url ? `url('${url}')` : "";
+      },
+      clearFallback: () => {
+        container.style.backgroundImage = "";
+      },
+    };
+  }
+
+  let visibleEl = front;
+  let hiddenEl = back;
+  let queue = Promise.resolve();
+
+  visibleEl.classList.add("is-visible");
+  hiddenEl.classList.remove("is-visible");
+
+  const loadInto = (el, url) =>
+    new Promise((resolve) => {
+      if (!url) {
+        el.style.backgroundImage = "";
+        delete el.dataset.src;
+        resolve();
+        return;
+      }
+
+      if (el.dataset.src === url) {
+        resolve();
+        return;
+      }
+
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = () => {
+        el.dataset.src = url;
+        el.style.backgroundImage = `url('${url}')`;
+        resolve();
+      };
+      img.onerror = () => resolve();
+      img.src = url;
+    });
+
+  const enqueue = (task) => {
+    queue = queue.then(() => task()).catch(() => {});
+    return queue;
+  };
+
+  const performSwap = async (url) => {
+    await loadInto(hiddenEl, url);
+    const previousVisible = visibleEl;
+    previousVisible.classList.remove("is-visible");
+    hiddenEl.classList.add("is-visible");
+    visibleEl = hiddenEl;
+    hiddenEl = previousVisible;
+    container.style.backgroundImage = "";
+  };
+
+  const showFrame = (url, { immediate = false } = {}) => {
+    if (immediate) {
+      const immediateTask = performSwap(url);
+      queue = immediateTask.then(() => {}).catch(() => {});
+      return immediateTask;
+    }
+    return enqueue(() => performSwap(url));
+  };
+
+  const useFallback = (url) => {
+    queue = Promise.resolve();
+    front.classList.remove("is-visible");
+    back.classList.remove("is-visible");
+    delete front.dataset.src;
+    delete back.dataset.src;
+    visibleEl = front;
+    hiddenEl = back;
+    container.style.backgroundImage = url ? `url('${url}')` : "";
+  };
+
+  const clearFallback = () => {
+    container.style.backgroundImage = "";
+    if (!front.classList.contains("is-visible") && !back.classList.contains("is-visible")) {
+      visibleEl = front;
+      hiddenEl = back;
+      visibleEl.classList.add("is-visible");
+      hiddenEl.classList.remove("is-visible");
+    }
+  };
+
+  return { showFrame, useFallback, clearFallback };
+}
+
+function createAxolotlFrameAnimator(target, frames, interval = 160, display = null) {
+  if ((!target && !display) || !frames.length) {
     return () => {};
   }
 
+  const frameDisplay = display || createAxolotlFrameDisplay(target);
   let frameIndex = 0;
   let timerId = null;
 
-  const applyFrame = () => {
-    target.style.backgroundImage = `url('${frames[frameIndex]}')`;
+  const showCurrentFrame = (immediate = false) => {
+    const frame = frames[frameIndex];
+    if (!frame) {
+      return;
+    }
+    if (frameDisplay && typeof frameDisplay.showFrame === "function") {
+      frameDisplay.showFrame(frame, { immediate }).catch(() => {});
+    } else if (target) {
+      target.style.backgroundImage = `url('${frame}')`;
+    }
   };
 
   const step = () => {
     frameIndex = (frameIndex + 1) % frames.length;
-    applyFrame();
+    showCurrentFrame();
     timerId = window.setTimeout(step, interval);
   };
 
-  applyFrame();
+  showCurrentFrame(true);
 
   if (frames.length > 1) {
     timerId = window.setTimeout(step, interval);
@@ -2532,7 +2716,7 @@ function createAxolotlFrameAnimator(target, frames, interval = 160) {
   };
 }
 
-function createAxolotlStateAnimator(target, states, defaultInterval = 200) {
+function createAxolotlStateAnimator(target, states, defaultInterval = 200, display = null) {
   const normalized = {};
   for (const [name, frames] of Object.entries(states || {})) {
     if (Array.isArray(frames) && frames.length) {
@@ -2543,6 +2727,7 @@ function createAxolotlStateAnimator(target, states, defaultInterval = 200) {
   let timerId = null;
   let current = null;
   let visibilityPaused = false;
+  const frameDisplay = display || createAxolotlFrameDisplay(target);
 
   const clearTimer = () => {
     if (timerId) {
@@ -2551,12 +2736,16 @@ function createAxolotlStateAnimator(target, states, defaultInterval = 200) {
     }
   };
 
-  const applyFrame = (frames, index) => {
-    if (!target || !frames.length) {
+  const applyFrame = (frames, index, immediate = false) => {
+    if (!frames.length) {
       return;
     }
     const frame = frames[Math.max(0, Math.min(index, frames.length - 1))];
-    target.style.backgroundImage = `url('${frame}')`;
+    if (frameDisplay && typeof frameDisplay.showFrame === "function") {
+      frameDisplay.showFrame(frame, { immediate }).catch(() => {});
+    } else if (target) {
+      target.style.backgroundImage = `url('${frame}')`;
+    }
   };
 
   const scheduleNext = () => {
@@ -2595,7 +2784,7 @@ function createAxolotlStateAnimator(target, states, defaultInterval = 200) {
       } else {
         if (current.holdLast) {
           current.index = frames.length - 1;
-          applyFrame(frames, current.index);
+          applyFrame(frames, current.index, true);
         }
         finalize();
         return;
@@ -2647,7 +2836,7 @@ function createAxolotlStateAnimator(target, states, defaultInterval = 200) {
       index: 0,
     };
 
-    applyFrame(frames, 0);
+    applyFrame(frames, 0, true);
 
     if (frames.length > 1) {
       scheduleNext();
@@ -2669,7 +2858,7 @@ function createAxolotlStateAnimator(target, states, defaultInterval = 200) {
     }
     clearTimer();
     current = null;
-    applyFrame(frames, 0);
+    applyFrame(frames, 0, true);
     return true;
   };
 

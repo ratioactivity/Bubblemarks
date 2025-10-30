@@ -19,6 +19,7 @@
   --card-body-padding: 1.2rem 1.5rem 1.6rem;
   --card-title-size: 1.28rem;
   --card-gap: clamp(1.2rem, 3vw, 2rem);
+  --card-max-width: 360px;
 }
 
 body[data-card-size="cozy"] {
@@ -28,6 +29,7 @@ body[data-card-size="cozy"] {
   --card-body-padding: 0.85rem 1rem 1.1rem;
   --card-title-size: 1.12rem;
   --card-gap: clamp(0.75rem, 2.4vw, 1.3rem);
+  --card-max-width: 240px;
 }
 
 body[data-card-size="roomy"] {
@@ -37,6 +39,7 @@ body[data-card-size="roomy"] {
   --card-body-padding: 1.5rem 2rem 2.15rem;
   --card-title-size: 1.42rem;
   --card-gap: clamp(1.6rem, 3.6vw, 2.6rem);
+  --card-max-width: 460px;
 }
 
 @font-face {
@@ -248,6 +251,21 @@ body {
   animation: axolotl-bob 8s ease-in-out infinite;
 }
 
+.axolotl-frame {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0;
+  will-change: opacity;
+  transition: none;
+}
+
+.axolotl-frame.is-visible {
+  opacity: 1;
+}
+
 .axolotl-figure::after {
   content: "";
   position: absolute;
@@ -268,6 +286,10 @@ body {
       rgba(255, 209, 248, 0.8)), linear-gradient(135deg, rgba(255, 170, 230, 0.9), rgba(146, 169, 255, 0.85));
   background-blend-mode: screen;
   animation: axolotl-bob 8s ease-in-out infinite, axolotl-sheen 16s linear infinite;
+}
+
+.axolotl-figure.axolotl--fallback .axolotl-frame {
+  opacity: 0;
 }
 
 @keyframes axolotl-bob {
@@ -726,7 +748,10 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(var(--card-min-width), min(var(--card-max-width), 1fr))
+  );
   gap: var(--card-gap);
 }
 
@@ -736,6 +761,8 @@ body {
   grid-template-rows: var(--card-media-height) auto;
   min-width: var(--card-min-width);
   min-height: var(--card-min-height);
+  width: min(100%, var(--card-max-width));
+  max-width: var(--card-max-width);
   background: var(--card-gradient);
   border-radius: calc(var(--soft-radius) * 0.9);
   overflow: hidden;
