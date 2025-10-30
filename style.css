@@ -13,33 +13,33 @@
   --shadow-card: 0 14px 30px rgba(179, 197, 255, 0.35);
   --soft-radius: 26px;
   --modal-backdrop: rgba(84, 62, 103, 0.35);
-  --card-min-width: 240px;
-  --card-min-height: 360px;
-  --card-media-height: 190px;
-  --card-body-padding: 1.2rem 1.5rem 1.6rem;
-  --card-title-size: 1.28rem;
-  --card-gap: clamp(1.2rem, 3vw, 2rem);
-  --card-max-width: 360px;
+  --card-min-width: 190px;
+  --card-min-height: 300px;
+  --card-media-height: 150px;
+  --card-body-padding: 1rem 1.35rem 1.4rem;
+  --card-title-size: 1.18rem;
+  --card-gap: clamp(0.9rem, 2.6vw, 1.6rem);
+  --card-max-width: 220px;
 }
 
 body[data-card-size="cozy"] {
-  --card-min-width: 170px;
-  --card-min-height: 280px;
-  --card-media-height: 130px;
-  --card-body-padding: 0.85rem 1rem 1.1rem;
-  --card-title-size: 1.12rem;
-  --card-gap: clamp(0.75rem, 2.4vw, 1.3rem);
-  --card-max-width: 240px;
+  --card-min-width: 150px;
+  --card-min-height: 250px;
+  --card-media-height: 120px;
+  --card-body-padding: 0.75rem 0.95rem 1rem;
+  --card-title-size: 1.05rem;
+  --card-gap: clamp(0.6rem, 2vw, 1rem);
+  --card-max-width: 180px;
 }
 
 body[data-card-size="roomy"] {
-  --card-min-width: 320px;
-  --card-min-height: 460px;
-  --card-media-height: 250px;
-  --card-body-padding: 1.5rem 2rem 2.15rem;
-  --card-title-size: 1.42rem;
-  --card-gap: clamp(1.6rem, 3.6vw, 2.6rem);
-  --card-max-width: 460px;
+  --card-min-width: 210px;
+  --card-min-height: 340px;
+  --card-media-height: 170px;
+  --card-body-padding: 1.1rem 1.5rem 1.6rem;
+  --card-title-size: 1.28rem;
+  --card-gap: clamp(1.1rem, 3vw, 1.8rem);
+  --card-max-width: 240px;
 }
 
 @font-face {
@@ -748,10 +748,12 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(var(--card-min-width), min(var(--card-max-width), 1fr))
-  );
+  width: 100%;
+  max-width: calc(var(--card-max-width) * 5 + var(--card-gap) * 4);
+  margin: 0 auto;
+  justify-content: center;
+  justify-items: center;
+  grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
   gap: var(--card-gap);
 }
 
