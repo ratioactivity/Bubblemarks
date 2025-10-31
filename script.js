@@ -1309,6 +1309,279 @@ function setupSearch() {
     applyFilters();
     searchInput.focus();
   });
+
+  if (addCategoryBtn) {
+    addCategoryBtn.addEventListener("click", () => {
+      addNewCategoryRow();
+    });
+  }
+
+  categorySettingsList.addEventListener("click", handleCategoryListClick);
+  document.addEventListener("keydown", handleCategoryModalKeydown);
+}
+
+function openCategoryModal() {
+  renderCategorySettingsEditor();
+  categoryModal.hidden = false;
+  document.body.classList.add("modal-open");
+  const firstInput = categorySettingsList.querySelector('input[name="label"]');
+  if (firstInput) {
+    window.setTimeout(() => firstInput.focus(), 20);
+  }
+}
+
+function closeCategoryModal() {
+  categoryModal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function handleCategoryModalKeydown(event) {
+  if (event.key === "Escape" && !categoryModal.hidden) {
+    event.preventDefault();
+    closeCategoryModal();
+  }
+}
+
+  function renderCategorySettingsEditor() {
+    if (!categorySettingsList) {
+      return;
+    }
+    const descriptors = computeCategoryDescriptors();
+    const rows = descriptors.map((descriptor) => createCategorySettingRow(descriptor));
+    replaceChildrenSafe(categorySettingsList, rows);
+  }
+
+function createCategorySettingRow(descriptor) {
+  const node = categoryItemTemplate?.content?.firstElementChild
+    ? categoryItemTemplate.content.firstElementChild.cloneNode(true)
+    : document.createElement("div");
+
+  if (!node.classList.contains("category-setting")) {
+    node.className = "category-setting";
+    node.innerHTML =
+      '<div class="category-setting__inputs">\n        <label class="category-setting__label">\n          <span>Name</span>\n          <input type="text" name="label" required />\n        </label>\n        <label class="category-setting__color">\n          <span>Color</span>\n          <input type="color" name="color" value="#ff80c8" />\n        </label>\n      </div>\n      <div class="category-setting__actions">\n        <button type="button" class="category-setting__move" data-direction="up" aria-label="Move up">▲</button>\n        <button type="button" class="category-setting__move" data-direction="down" aria-label="Move down">▼</button>\n        <button type="button" class="category-setting__remove" aria-label="Remove category">Remove</button>\n      </div>';
+  }
+
+  node.dataset.categoryKey = descriptor.key || "";
+
+  const labelInput = node.querySelector('input[name="label"]');
+  const colorInput = node.querySelector('input[name="color"]');
+  const removeBtn = node.querySelector(".category-setting__remove");
+
+  if (labelInput) {
+    labelInput.value = descriptor.label || "";
+    labelInput.placeholder = descriptor.originalLabel || descriptor.label || "Category";
+  }
+
+  if (colorInput) {
+    colorInput.value = ensureHexColor(descriptor.color) || pickCategoryColor(descriptor.key || "custom");
+  }
+
+  if (descriptor.isExtra) {
+    node.dataset.extra = "true";
+    if (removeBtn) {
+      removeBtn.disabled = false;
+      removeBtn.removeAttribute("aria-hidden");
+      removeBtn.tabIndex = 0;
+      removeBtn.style.display = "";
+    }
+  } else {
+    node.dataset.fixed = "true";
+    if (removeBtn) {
+      removeBtn.disabled = true;
+      removeBtn.setAttribute("aria-hidden", "true");
+      removeBtn.tabIndex = -1;
+      removeBtn.style.display = "none";
+    }
+  }
+
+  return node;
+}
+
+function handleCategoryListClick(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const setting = target.closest(".category-setting");
+  if (!setting) {
+    return;
+  }
+
+  if (target.classList.contains("category-setting__remove")) {
+    if (setting.dataset.extra === "true") {
+      setting.remove();
+    }
+    return;
+  }
+
+  if (target.classList.contains("category-setting__move")) {
+    const direction = target.dataset.direction;
+    if (direction === "up" && setting.previousElementSibling) {
+      categorySettingsList.insertBefore(setting, setting.previousElementSibling);
+    } else if (direction === "down" && setting.nextElementSibling) {
+      categorySettingsList.insertBefore(setting.nextElementSibling, setting);
+    }
+  }
+}
+
+function addNewCategoryRow() {
+  const descriptor = {
+    key: "",
+    label: "",
+    color: pickCategoryColor(`custom-${Date.now()}`),
+    isExtra: true,
+    originalLabel: "",
+  };
+
+  const node = createCategorySettingRow(descriptor);
+  node.dataset.new = "true";
+  categorySettingsList.appendChild(node);
+
+  const labelInput = node.querySelector('input[name="label"]');
+  if (labelInput) {
+    window.setTimeout(() => {
+      labelInput.focus();
+      labelInput.select();
+    }, 20);
+  }
+}
+
+function handleCategoryFormSubmit() {
+  const rows = Array.from(categorySettingsList.querySelectorAll(".category-setting"));
+  if (!rows.length) {
+    categorySettings = [];
+    saveCategorySettings();
+    updateCategoryBar();
+    applyFilters();
+    closeCategoryModal();
+    return;
+  }
+
+  const nextSettings = [];
+  const existingKeys = new Set();
+
+  rows.forEach((row, index) => {
+    const labelInput = row.querySelector('input[name="label"]');
+    const colorInput = row.querySelector('input[name="color"]');
+    const isExtra = row.dataset.extra === "true";
+    const labelValue = labelInput?.value.trim() || `Category ${index + 1}`;
+    let key = row.dataset.categoryKey;
+
+    if (!key || isExtra) {
+      key = generateCategoryKey(labelValue, existingKeys);
+      row.dataset.categoryKey = key;
+    }
+
+    existingKeys.add(key);
+    const color = ensureHexColor(colorInput?.value) || pickCategoryColor(key);
+
+    nextSettings.push({
+      key,
+      label: labelValue,
+      color,
+      isExtra,
+    });
+  });
+
+  categorySettings = nextSettings;
+  saveCategorySettings();
+  updateCategoryBar();
+  applyFilters();
+  closeCategoryModal();
+}
+
+function setBookmarks(next, { persist } = { persist: true }) {
+  bookmarks = sanitizeBookmarks(next);
+  categoryInfo = collectCategoryInfo();
+  if (persist) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
+    } catch (error) {
+      console.warn("Unable to save bookmarks", error);
+    }
+  }
+  updateCategoryBar();
+  updateSuggestions();
+  if (searchTerm.trim() || activeCategory !== "all") {
+    applyFilters();
+  } else {
+    renderBookmarks(bookmarks);
+  }
+}
+
+function setupSearch() {
+  if (!searchInput || !clearSearchBtn || !datalist) {
+    console.error("Search UI is missing required elements");
+    return;
+  }
+
+  searchInput.addEventListener("input", (event) => {
+    searchTerm = event.target.value;
+    applyFilters();
+  });
+
+  clearSearchBtn.addEventListener("click", () => {
+    searchTerm = "";
+    searchInput.value = "";
+    applyFilters();
+    searchInput.focus();
+  });
+}
+
+function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
+  const showHeading = preferences.showHeading !== false;
+  const showAxolotl = preferences.showAxolotl !== false;
+  const cardSize = normalizeCardSize(preferences.cardSize);
+
+  preferences.cardSize = cardSize;
+
+  if (heroHeading) {
+    heroHeading.hidden = !showHeading;
+  }
+
+  if (syncInputs) {
+    if (toggleHeadingInput) {
+      toggleHeadingInput.checked = showHeading;
+    }
+    if (toggleAxolotlInput) {
+      toggleAxolotlInput.checked = showAxolotl;
+    }
+    if (cardSizeInput) {
+      cardSizeInput.value = String(cardSizeToIndex(cardSize));
+    }
+  }
+
+  if (axolotlLayer) {
+    axolotlLayer.hidden = !showAxolotl;
+  }
+
+  if (document.body) {
+    document.body.setAttribute("data-card-size", cardSize);
+  }
+
+  if (showAxolotl) {
+    if (!lazyAxolotl) {
+      ensureAxolotlInitialized();
+    }
+  } else {
+    axolotlController?.disable?.();
+  }
+}
+
+function ensureAxolotlInitialized() {
+  if (preferences.showAxolotl === false) {
+    axolotlController?.disable?.();
+    return;
+  }
+
+  if (axolotlInitialized) {
+    axolotlController?.enable?.();
+    return;
+  }
+
+  return initAxolotlMascot();
 }
 
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
@@ -1441,6 +1714,40 @@ function setupKeyboard() {
   });
 }
 
+function ensureNotionToggleHost() {
+  const existing = document.getElementById("settings");
+  if (existing) {
+    return existing;
+  }
+
+  if (!settingsForm) {
+    return null;
+  }
+
+  const displaySection = settingsForm.querySelector(".settings-section");
+  if (!displaySection) {
+    return null;
+  }
+
+  const host = document.createElement("div");
+  host.id = "settings";
+  host.className = "settings-extra";
+  displaySection.appendChild(host);
+  return host;
+}
+
+function setupNotionMode() {
+  ensureNotionToggleHost();
+  const notionToggle = document.createElement("button");
+  notionToggle.type = "button";
+  notionToggle.textContent = "Notion Mode";
+  notionToggle.classList.add("notion-toggle", "soft-btn", "soft-btn--ghost");
+  notionToggle.addEventListener("click", () => {
+    document.body.classList.toggle("notion-mode");
+  });
+  document.querySelector("#settings")?.appendChild(notionToggle);
+}
+
 function setupSettingsMenu() {
   if (typeof window === "undefined" || !settingsBtn || !settingsModal) {
     return;
@@ -1565,6 +1872,8 @@ function setupSettingsMenu() {
       applyPreferences({ syncInputs: false });
     });
   }
+
+  setupNotionMode();
 }
 
 function handleVirtualKey(key) {

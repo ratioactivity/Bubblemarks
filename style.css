@@ -1335,3 +1335,37 @@ body.modal-open {
     gap: 1.2rem;
   }
 }
+
+.settings-extra {
+  margin-top: 1rem;
+  display: flex;
+}
+
+.settings-extra .notion-toggle {
+  margin-right: auto;
+}
+
+.notion-toggle {
+  font-family: inherit;
+}
+
+body.notion-mode {
+  transform: scale(0.75);
+  transform-origin: top center;
+  overflow-x: hidden;
+}
+
+body.notion-mode #bookmarks,
+body.notion-mode #keyboard,
+body.notion-mode #categories {
+  zoom: 0.8;
+}
+
+body.notion-mode button,
+body.notion-mode .bookmark-card {
+  font-size: 0.8em;
+}
+
+body.notion-mode .category-button {
+  padding: 4px 10px;
+}
