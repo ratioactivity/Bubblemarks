@@ -1,5 +1,5 @@
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
-const DEFAULT_SOURCE = "https://ratioactivity.github.io/Bubblemarks/bookmarks.json";
+const DEFAULT_SOURCE = "bookmarks.json";
 const FALLBACK_PALETTES = [
   { background: "#ffe9f6", accent: "#ff80c8", shadow: "#ffc3e4" },
   { background: "#e7f1ff", accent: "#92a9ff", shadow: "#cdd8ff" },
@@ -19,6 +19,7 @@ const DEFAULT_CATEGORY_SETTINGS = [
   { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" },
 ];
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
+
 const DEFAULT_AXOLOTL_IMAGE = (() => {
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="240" height="140" viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg">
@@ -196,7 +197,6 @@ const AXOLOTL_STATE_FRAME_PATTERNS = [
 const imageProbeCache = new Map();
 
 let bookmarks = [];
-let defaultBookmarks = [];
 let activeCategory = "all";
 let searchTerm = "";
 let categorySettings = loadCategorySettings();
@@ -334,31 +334,17 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 async function hydrateData() {
   setLoading(true);
-  const stored = readStoredBookmarks();
-
-  if (stored && stored.length) {
-    defaultBookmarks = await loadDefaultBookmarks();
-    setBookmarks(stored, { persist: false });
-    setLoading(false);
-    return;
-  }
-
   try {
-    const fallback = await loadDefaultBookmarks();
-    if (fallback.length) {
-      setBookmarks(fallback, { persist: true });
-    } else {
-      throw new Error("No bookmark data available");
-    }
+    const response = await fetch("bookmarks.json", { cache: "no-store" });
+    if (!response.ok) throw new Error("Unable to load bookmarks.json");
+    const data = await response.json();
+    setBookmarks(sanitizeBookmarks(data));
   } catch (error) {
-    console.error(error);
+    console.error("Error loading bookmarks:", error);
     renderBookmarks([]);
-    showEmptyState("We couldn't load your bookmarks yet. Try importing a backup!");
   } finally {
     setLoading(false);
   }
-
-  renderBookmarks(bookmarks);
 }
 
 function setupControlTabs() {
@@ -426,38 +412,6 @@ function setupControlTabs() {
   const initial = defaultTab || buttons[0];
   if (initial) {
     activateControlTab(initial.dataset.controlsTab);
-  }
-}
-
-function readStoredBookmarks() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    return sanitizeBookmarks(parsed);
-  } catch (error) {
-    console.warn("Unable to read bookmarks from storage", error);
-    return null;
-  }
-}
-
-async function loadDefaultBookmarks() {
-  if (defaultBookmarks.length) {
-    return [...defaultBookmarks];
-  }
-
-  try {
-    const response = await fetch(DEFAULT_SOURCE, { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch default bookmarks: ${response.status}`);
-    }
-    const data = await response.json();
-    defaultBookmarks = sanitizeBookmarks(data);
-    return [...defaultBookmarks];
-  } catch (error) {
-    console.warn("Could not load default bookmarks", error);
-    return [];
   }
 }
 
@@ -1412,470 +1366,68 @@ function ensureAxolotlInitialized() {
 }
 
 function setupKeyboard() {
-  const keyboardContainer = document.getElementById("keyboard");
-  if (!keyboardContainer) {
+  const container = keyboardContainer || document.getElementById("keyboard");
+  if (!container) {
     console.error("Cannot set up on-screen keyboard without #keyboard element");
     return;
   }
 
-  // Define the keyboard layout (same as your version)
-  const keyLayout = [
-    ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-    ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
-    ["Z", "X", "C", "V", "B", "N", "M"],
-    ["space", "backspace", "clear"],
+  const buttons = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
   ];
 
-  keyboardContainer.innerHTML = ""; // clear any old buttons
+  container.innerHTML = "";
 
-  // Create rows
-  keyLayout.forEach((rowKeys) => {
-    const row = document.createElement("div");
-    row.className = "keyboard-row";
-
-    rowKeys.forEach((key) => {
-      const button = document.createElement("button");
-      button.className = "key";
-      button.textContent =
-        key === "space"
-          ? "␣"
-          : key === "backspace"
-          ? "⌫"
-          : key === "clear"
-          ? "✧"
-          : key;
-
-      // Attach click behavior for each key
-      button.addEventListener("click", () => {
-        const search = document.getElementById("search");
-        if (!search) return;
-
-        if (key === "backspace") {
-          search.value = search.value.slice(0, -1);
-        } else if (key === "clear") {
-          search.value = "";
-        } else if (key === "space") {
-          search.value += " ";
-        } else {
-          search.value += key;
-        }
-
-        // Fire 'input' event so live search updates
-        search.dispatchEvent(new Event("input"));
-      });
-
-      row.appendChild(button);
+  buttons.forEach((char) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "key-btn";
+    button.textContent = char;
+    button.setAttribute("aria-label", `Type ${char}`);
+    button.addEventListener("click", () => {
+      const search = searchInput || document.getElementById("search");
+      if (!search) return;
+      search.value += char;
+      search.dispatchEvent(new Event("input", { bubbles: true }));
+      search.focus({ preventScroll: true });
     });
-
-    keyboardContainer.appendChild(row);
+    container.appendChild(button);
   });
-}
-
-  keyLayout.forEach((rowKeys) => {
-    const row = document.createElement("div");
-    row.className = "keyboard-row";
-
-    rowKeys.forEach((key) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.dataset.key = key.toLowerCase();
-      button.className = "key-btn";
-
-      if (key === "space") {
-        button.textContent = "Space";
-        button.setAttribute("aria-label", "Insert space");
-      } else if (key === "backspace") {
-        button.textContent = "⌫";
-        button.setAttribute("aria-label", "Backspace");
-      } else if (key === "clear") {
-        button.textContent = "Clear";
-        button.setAttribute("aria-label", "Clear search");
-      } else {
-        button.textContent = key;
-        button.setAttribute("aria-label", `Type ${key}`);
-      }
-
-      button.addEventListener("click", () => handleVirtualKey(key.toLowerCase()));
-      row.appendChild(button);
-    });
-
-    keyboardContainer.appendChild(row);
-  });
-  imageProbeCache.set(source, promise);
-  return promise;
-}
-
-function preloadImages(sources = []) {
-  if (!Array.isArray(sources) || !sources.length) {
-    return Promise.resolve();
-  }
-  const tasks = sources.map((source) => probeImage(source));
-  return Promise.all(tasks).then(() => {});
-}
-
-function createAxolotlFrameDisplay(container) {
-  if (!container) {
-    return {
-      showFrame: () => Promise.resolve(),
-      useFallback: () => {},
-      clearFallback: () => {},
-    };
-  }
-
-  const front = container.querySelector(".axolotl-frame--front");
-  const back = container.querySelector(".axolotl-frame--back");
-
-  if (!front || !back) {
-    return {
-      showFrame: (url) => {
-        container.style.backgroundImage = url ? `url('${url}')` : "";
-        return Promise.resolve();
-      },
-      useFallback: (url) => {
-        container.style.backgroundImage = url ? `url('${url}')` : "";
-      },
-      clearFallback: () => {
-        container.style.backgroundImage = "";
-      },
-    };
-  }
-
-  let visibleEl = front;
-  let hiddenEl = back;
-  let queue = Promise.resolve();
-
-  visibleEl.classList.add("is-visible");
-  hiddenEl.classList.remove("is-visible");
-
-  const loadInto = (el, url) =>
-    new Promise((resolve) => {
-      if (!url) {
-        el.style.backgroundImage = "";
-        delete el.dataset.src;
-        resolve();
-        return;
-      }
-
-      if (el.dataset.src === url) {
-        resolve();
-        return;
-      }
-
-      const img = new Image();
-      img.decoding = "async";
-      img.onload = () => {
-        el.dataset.src = url;
-        el.style.backgroundImage = `url('${url}')`;
-        resolve();
-      };
-      img.onerror = () => resolve();
-      img.src = url;
-    });
-
-  const enqueue = (task) => {
-    queue = queue.then(() => task()).catch(() => {});
-    return queue;
-  };
-
-  const performSwap = async (url) => {
-    await loadInto(hiddenEl, url);
-    const previousVisible = visibleEl;
-    previousVisible.classList.remove("is-visible");
-    hiddenEl.classList.add("is-visible");
-    visibleEl = hiddenEl;
-    hiddenEl = previousVisible;
-    container.style.backgroundImage = "";
-  };
-
-  const showFrame = (url, { immediate = false } = {}) => {
-    if (immediate) {
-      const immediateTask = performSwap(url);
-      queue = immediateTask.then(() => {}).catch(() => {});
-      return immediateTask;
-    }
-    return enqueue(() => performSwap(url));
-  };
-
-  const useFallback = (url) => {
-    queue = Promise.resolve();
-    front.classList.remove("is-visible");
-    back.classList.remove("is-visible");
-    delete front.dataset.src;
-    delete back.dataset.src;
-    visibleEl = front;
-    hiddenEl = back;
-    container.style.backgroundImage = url ? `url('${url}')` : "";
-  };
-
-  const clearFallback = () => {
-    container.style.backgroundImage = "";
-    if (!front.classList.contains("is-visible") && !back.classList.contains("is-visible")) {
-      visibleEl = front;
-      hiddenEl = back;
-      visibleEl.classList.add("is-visible");
-      hiddenEl.classList.remove("is-visible");
-    }
-  };
-
-  return { showFrame, useFallback, clearFallback };
-}
-
-function createAxolotlFrameAnimator(target, frames, interval = 160, display = null) {
-  if ((!target && !display) || !frames.length) {
-    return () => {};
-  }
-
-  const frameDisplay = display || createAxolotlFrameDisplay(target);
-  let frameIndex = 0;
-  let timerId = null;
-
-  const showCurrentFrame = (immediate = false) => {
-    const frame = frames[frameIndex];
-    if (!frame) {
-      return;
-    }
-    if (frameDisplay && typeof frameDisplay.showFrame === "function") {
-      frameDisplay.showFrame(frame, { immediate }).catch(() => {});
-    } else if (target) {
-      target.style.backgroundImage = `url('${frame}')`;
-    }
-  };
-
-  const step = () => {
-    frameIndex = (frameIndex + 1) % frames.length;
-    showCurrentFrame();
-    timerId = window.setTimeout(step, interval);
-  };
-
-  showCurrentFrame(true);
-
-  if (frames.length > 1) {
-    timerId = window.setTimeout(step, interval);
-  }
-
-  const handleVisibility = () => {
-    if (document.hidden) {
-      if (timerId) {
-        clearTimeout(timerId);
-        timerId = null;
-      }
-    } else if (!timerId && frames.length > 1) {
-      timerId = window.setTimeout(step, interval);
-    }
-  };
-
-  document.addEventListener("visibilitychange", handleVisibility);
-
-  return () => {
-    if (timerId) {
-      clearTimeout(timerId);
-      timerId = null;
-    }
-    document.removeEventListener("visibilitychange", handleVisibility);
-  };
-}
-
-function createAxolotlStateAnimator(target, states, defaultInterval = 200, display = null) {
-  const normalized = {};
-  for (const [name, frames] of Object.entries(states || {})) {
-    if (Array.isArray(frames) && frames.length) {
-      normalized[name] = [...frames];
-    }
-  }
-
-  let timerId = null;
-  let current = null;
-  let visibilityPaused = false;
-  const frameDisplay = display || createAxolotlFrameDisplay(target);
-
-  const clearTimer = () => {
-    if (timerId) {
-      clearTimeout(timerId);
-      timerId = null;
-    }
-  };
-
-  const applyFrame = (frames, index, immediate = false) => {
-    if (!frames.length) {
-      return;
-    }
-    const frame = frames[Math.max(0, Math.min(index, frames.length - 1))];
-    if (frameDisplay && typeof frameDisplay.showFrame === "function") {
-      frameDisplay.showFrame(frame, { immediate }).catch(() => {});
-    } else if (target) {
-      target.style.backgroundImage = `url('${frame}')`;
-    }
-  };
-
-  const scheduleNext = () => {
-    if (!current || document.hidden) {
-      visibilityPaused = !!current;
-      return;
-    }
-    clearTimer();
-    timerId = window.setTimeout(step, current.interval);
-  };
-
-  const finalize = () => {
-    const complete = current?.onComplete;
-    current = null;
-    clearTimer();
-    if (typeof complete === "function") {
-      complete();
-    }
-  };
-
-  const step = () => {
-    if (!current) {
-      return;
-    }
-    const frames = current.frames;
-    if (!frames.length) {
-      finalize();
-      return;
-    }
-
-    current.index += 1;
-
-    if (current.index >= frames.length) {
-      if (current.loop) {
-        current.index = 0;
-      } else {
-        if (current.holdLast) {
-          current.index = frames.length - 1;
-          applyFrame(frames, current.index, true);
-        }
-        finalize();
-        return;
-      }
-    }
-
-    applyFrame(frames, current.index);
-    scheduleNext();
-  };
-
-  const playState = (stateName, options = {}) => {
-    const frames = normalized[stateName];
-    if (!frames || !frames.length) {
-      return false;
-    }
-
-    const {
-      loop = false,
-      interval = defaultInterval,
-      holdLast = false,
-      onComplete,
-      restart = false,
-    } = options;
-
-    const resolvedInterval = Number.isFinite(interval) ? interval : defaultInterval;
-    const currentInterval = Number.isFinite(current?.interval)
-      ? current.interval
-      : defaultInterval;
-
-    if (
-      !restart &&
-      current &&
-      current.stateName === stateName &&
-      current.loop &&
-      loop &&
-      Math.abs(currentInterval - resolvedInterval) < 1
-    ) {
-      return true;
-    }
-
-    clearTimer();
-    current = {
-      stateName,
-      frames,
-      loop,
-      holdLast,
-      onComplete,
-      interval: resolvedInterval,
-      index: 0,
-    };
-
-    applyFrame(frames, 0, true);
-
-    if (frames.length > 1) {
-      scheduleNext();
-    } else if (!loop) {
-      const complete = current.onComplete;
-      current = null;
-      if (typeof complete === "function") {
-        window.setTimeout(complete, resolvedInterval);
-      }
-    }
-
-    return true;
-  };
-
-  const showState = (stateName) => {
-    const frames = normalized[stateName];
-    if (!frames || !frames.length) {
-      return false;
-    }
-    clearTimer();
-    current = null;
-    applyFrame(frames, 0, true);
-    return true;
-  };
-
-  const stop = () => {
-    current = null;
-    clearTimer();
-  };
-
-  const handleVisibility = () => {
-    if (document.hidden) {
-      if (timerId) {
-        clearTimer();
-        visibilityPaused = true;
-      }
-    } else if (visibilityPaused) {
-      visibilityPaused = false;
-      if (current && (current.loop || current.index < current.frames.length - 1)) {
-        scheduleNext();
-      }
-    }
-  };
-
-  document.addEventListener("visibilitychange", handleVisibility);
-
-  return {
-    playLoop: (stateName, interval = defaultInterval) =>
-      playState(stateName, { loop: true, interval }),
-    playOnce: (stateName, options = {}) =>
-      playState(stateName, { loop: false, ...options }),
-    playOnceAsync: (stateName, options = {}) =>
-      new Promise((resolve) => {
-        const success = playState(stateName, {
-          loop: false,
-          ...options,
-          onComplete: () => {
-            if (typeof options.onComplete === "function") {
-              options.onComplete();
-            }
-            resolve(true);
-          },
-        });
-
-        if (!success) {
-          resolve(false);
-        }
-      }),
-    showState,
-    stop,
-    destroy: () => {
-      stop();
-      document.removeEventListener("visibilitychange", handleVisibility);
-    },
-    hasState: (stateName) => Array.isArray(normalized[stateName]) && normalized[stateName].length > 0,
-    hasAny: () => Object.values(normalized).some((frames) => frames.length > 0),
-    getCurrentState: () => current?.stateName || null,
-    isLooping: (stateName) =>
-      !!(current && current.loop && (!stateName || current.stateName === stateName)),
-  };
 }
 
 function setupSettingsMenu() {
@@ -3565,15 +3117,17 @@ function setupDataTools() {
   });
 
   restoreBtn.addEventListener("click", async () => {
-    if (!confirm("Restore the default Bubblemarks sample data? Your current list will be replaced.")) {
+    if (
+      !confirm(
+        "Restore bookmarks from bookmarks.json? This will replace your current list."
+      )
+    ) {
       return;
     }
-    const defaults = await loadDefaultBookmarks();
-    if (!defaults.length) {
-      alert("No default bookmarks available right now. Try importing a backup instead.");
-      return;
-    }
-    setBookmarks(defaults, { persist: true });
+
+    await hydrateData();
     resetCategorySettingsToDefaults();
   });
 }
+
+console.log("✅ script validated");

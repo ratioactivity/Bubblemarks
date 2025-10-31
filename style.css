@@ -53,17 +53,13 @@ body[data-card-size="roomy"] {
 
 @font-face {
   font-family: "Bigbesty";
-  src:
-    url("fonts/Bigbesty.woff2") format("woff2"),
-    url("fonts/Bigbesty.ttf") format("truetype");
+  src: local("Bigbesty"), url("fonts/Bigbesty.ttf") format("truetype");
   font-display: swap;
 }
 
 @font-face {
   font-family: "Papernotes";
-  src:
-    url("fonts/Papernotes.woff2") format("woff2"),
-    url("fonts/Papernotes.ttf") format("truetype");
+  src: local("Papernotes"), url("fonts/Papernotes.ttf") format("truetype");
   font-display: swap;
 }
 
@@ -628,6 +624,7 @@ body {
 
 .keyboard {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
   gap: 0.6rem;
   justify-items: center;
   padding: clamp(0.6rem, 2vw, 1rem);
@@ -635,13 +632,6 @@ body {
   background: var(--keyboard-bg);
   border: 2px solid rgba(255, 255, 255, 0.65);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5), 0 14px 26px rgba(187, 205, 255, 0.3);
-}
-
-.keyboard-row {
-  display: flex;
-  gap: clamp(0.35rem, 2vw, 0.75rem);
-  justify-content: center;
-  flex-wrap: nowrap;
 }
 
 .key-btn {
@@ -653,19 +643,10 @@ body {
   color: var(--accent);
   padding: 0.55rem 0.9rem;
   min-width: 42px;
+  width: 100%;
   cursor: pointer;
   box-shadow: 0 6px 16px rgba(158, 188, 255, 0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
-}
-
-.key-btn[data-key="space"] {
-  min-width: 120px;
-}
-
-.key-btn[data-key="backspace"],
-.key-btn[data-key="clear"] {
-  font-size: clamp(1rem, 3.5vw, 1.3rem);
-  color: #ff8fb5;
 }
 
 .key-btn:hover,
