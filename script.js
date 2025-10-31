@@ -1319,6 +1319,7 @@ function setupSearch() {
     applyFilters();
     searchInput.focus();
   });
+  return pill;
 }
 
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
