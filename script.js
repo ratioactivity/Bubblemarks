@@ -3354,3 +3354,5 @@ function setupDataTools() {
     resetCategorySettingsToDefaults();
   });
 }
+
+console.log("✅ script validated");
