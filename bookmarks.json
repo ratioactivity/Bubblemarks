@@ -1,14 +1,200 @@
 [
   {
-    "name": "Ebay",
-    "url": "https://ebay.com",
-    "category": "Shop",
-    "image": "images/ebay.png"
+    "name": "Hulu",
+    "url": "https://www.hulu.com",
+    "category": "AV",
+    "image": "https://deadline.com/wp-content/uploads/2022/08/hulu-Green-digital-logo-1.jpg?w=1024"
+  },
+  {
+    "name": "Prime Video",
+    "url": "https://www.amazon.com/Amazon-Video/b/?&node=2858778011&ref=dvm_MLP_ROWNA_US_1&rs=140-5036548-8732934:C",
+    "category": "AV",
+    "image": "https://ppc.land/content/images/2024/01/prime-video.png"
+  },
+  {
+    "name": "HBO Max",
+    "url": "https://www.hbomax.com/#",
+    "category": "AV",
+    "image": "https://hardynet.net/wp-content/uploads/2020/07/HBO-Max-logo3.jpg"
+  },
+  {
+    "name": "ChatGPT 4o",
+    "url": "https://chatgpt.com/?model=gpt-4o",
+    "category": "AI",
+    "image": "https://www.c-sharpcorner.com/article/introducing-chatgpt-4o-the-future-of-multimodal-ai-interaction/Images/ChatGPT-4o.jpg"
   },
   {
     "name": "ChatGPT 5o",
-    "url": "https://chat.openai.com/?mo_=gpt-5",
+    "url": "https://chatgpt.com/?model=gpt-5",
     "category": "AI",
-    "image": "images/gpt5.png"
+    "image": "https://images.ctfassets.net/kftzwdyauwt9/2BUWdgTaQBs75ThHVwgAQ9/07670be78f9babba79f23515ab434124/20250805_Jupiter_ArtCard_1920x1080_16x9_DZ_v20__00265_.jpg?w=1600&h=900&fit=fill"
+  },
+  {
+    "name": "Google Drive",
+    "url": "https://drive.google.com/drive/u/0/home",
+    "category": "Google",
+    "image": "https://www.bobcloud.net/wp-content/uploads/2023/10/Google-Drive-Logo-2023.png"
+  },
+  {
+    "name": "Font Generator",
+    "url": "https://codepen.io/dhglxaqq-the-builder/pen/yLdGrqK",
+    "category": "Tools",
+    "image": "https://compote.slate.com/images/277a0417-dc8b-4aa4-88a8-9d87a4420c0b.jpeg?crop=4120%2C2746%2Cx0%2Cy91"
+  },
+  {
+    "name": "Otter Cam",
+    "url": "https://www.montereybayaquarium.org/animals/live-cams/sea-otter-cam",
+    "category": "AV",
+    "image": "https://giorgifoundation.org/wp-content/uploads/2020/08/cMontereyBayAquarium_TR19-0747.jpg"
+  },
+  {
+    "name": "Pinterest",
+    "url": "https://www.pinterest.com/",
+    "category": "Tools",
+    "image": "https://assets.turbologo.com/blog/en/2021/11/14085702/Pinterest-Logo-2016-1.png"
+  },
+  {
+    "name": "Chase",
+    "url": "https://www.chase.com/",
+    "category": "Shopping",
+    "image": "https://d2hmeuvi8rov6c.cloudfront.net/companies/wide_images/000/000/005/1518101921_large.png"
+  },
+  {
+    "name": "Discover",
+    "url": "https://www.discover.com/",
+    "category": "Shopping",
+    "image": "https://shop.goebt.com/pub/media/catalog/product/cache/c3c992f3003f382ded6b88eb2c380b50/d/i/discover-logo_1.jpeg"
+  },
+  {
+    "name": "Image Upscaler",
+    "url": "https://imgupscaler.com/",
+    "category": "Tools",
+    "image": "https://fixthephoto.com/images/content/imgupscaler-logo.png"
+  },
+  {
+    "name": "Background Remover",
+    "url": "https://www.remove.bg/",
+    "category": "Tools",
+    "image": "https://www.toolpilot.ai/cdn/shop/files/removebg.jpg?v=1688392321"
+  },
+  {
+    "name": "Google Home",
+    "url": "https://home.google.com/u/0/home/1-e329dd0e8f07b1267872ec64c1a0c4d18454946b2e6d274e7dfc1afd912ec965/cameras/grid",
+    "category": "Google",
+    "image": "https://1000logos.net/wp-content/uploads/2021/12/Google-Home-Logo.png"
+  },
+  {
+    "name": "Doordash",
+    "url": "https://www.doordash.com/",
+    "category": "Tools",
+    "image": "https://1000logos.net/wp-content/uploads/2021/06/DoorDash-logo-2048x1152.png"
+  },
+  {
+    "name": "YouTube",
+    "url": "https://www.youtube.com/",
+    "category": "AV",
+    "image": "https://preview.redd.it/accurate-recreation-of-the-new-youtube-logo-v0-l8divibm8dxd1.png?width=1080&crop=smart&auto=webp&s=1eae35ce4367dc1bdff820374e0089a8ecefd39f"
+  },
+  {
+    "name": "Etsy",
+    "url": "https://www.etsy.com/",
+    "category": "Tools",
+    "image": "https://cdn.freebiesupply.com/logos/large/2x/etsy-2-logo-png-transparent.png"
+  },
+  {
+    "name": "Twitch",
+    "url": "https://www.twitch.tv/",
+    "category": "AV",
+    "image": "https://variety.com/wp-content/uploads/2019/09/twitch_logo.jpg"
+  },
+  {
+    "name": "Jacob\u2019s Twitch",
+    "url": "https://www.twitch.tv/jaketheallosaurian",
+    "category": "AV",
+    "image": "https://www.nhm.ac.uk/content/dam/nhm-www/discover/dinosaur-parents/dino-parents-allosaurus-illustration-two-column.jpg"
+  },
+  {
+    "name": "Starz",
+    "url": "https://www.starz.com/us/en/",
+    "category": "AV",
+    "image": "https://images.squarespace-cdn.com/content/v1/6481e2427d99a120d7205507/715fad38-eee4-4c0f-9bf9-8d5bdea27754/STARZ_Cover_01_NOISE.jpg"
+  },
+  {
+    "name": "Quotev",
+    "url": "https://www.quotev.com/",
+    "category": "Tools",
+    "image": "https://i.quotev.com/6f76kabpaaaa.jpg"
+  },
+  {
+    "name": "Github",
+    "url": "https://github.com",
+    "category": "Tools",
+    "image": "https://beecrowd.com/wp-content/uploads/2024/04/2022-08-18-GitHub.jpg"
+  },
+  {
+    "name": "Orca Acoustics",
+    "url": "https://www.orcabehaviorinstitute.org/orca-acoustics",
+    "category": "AV",
+    "image": "https://i.pinimg.com/736x/ae/48/f1/ae48f1d0d2be72f3afdcd6b3db845329.jpg"
+  },
+  {
+    "name": "Ebay",
+    "url": "ebay.com",
+    "category": "Shopping",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/8/88/Radium_Dial.jpg"
+  },
+  {
+    "name": "Codex",
+    "url": "https://chatgpt.com/codex",
+    "category": "AI",
+    "image": "https://i.ytimg.com/vi/Kd0QGZMy_tA/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAqVomHi3c0ozIhCk6F4qtJL1QFTA"
+  },
+  {
+    "name": "itch.io",
+    "url": "https://itch.io",
+    "category": "Games",
+    "image": "https://i.pcmag.com/imagery/reviews/044PXMK6FlED1dNwOXkecXV-4..v1597354669.jpg"
+  },
+  {
+    "name": "GX Games",
+    "url": "https://gx.games",
+    "category": "Games",
+    "image": "https://mobidictum.com/wp-content/uploads/2022/07/GX-Games-free-publishing-platform.jpg"
+  },
+  {
+    "name": "Vaquita Valiente",
+    "url": "https://gx.games/games/388dbv/vaquita-valiente",
+    "category": "Games",
+    "image": "image_2025-10-23_164332202.png"
+  },
+  {
+    "name": "Papa\u2019s Sushiria",
+    "url": "https://www.coolmathgames.com/0-papas-sushiria",
+    "category": "Games",
+    "image": "https://imgs.crazygames.com/auto-covers/papas-sushiria_1x1.png?format=auto&quality=70&metadata=none"
+  },
+  {
+    "name": "A Dark Room",
+    "url": "https://adarkroom.doublespeakgames.com",
+    "category": "Games",
+    "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2460660/capsule_616x353.jpg?t=1720740126"
+  },
+  {
+    "name": "2048",
+    "url": "https://play2048.co",
+    "category": "Games",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/2048_logo.svg/1200px-2048_logo.svg.png"
+  },
+  {
+    "name": "Netflix",
+    "url": "netflix.com",
+    "category": "AV",
+    "image": "https://images.ctfassets.net/y2ske730sjqp/1aONibCke6niZhgPxuiilC/2c401b05a07288746ddf3bd3943fbc76/BrandAssets_Logos_01-Wordmark.jpg?w=940"
+  },
+  {
+    "name": "Paramount+",
+    "url": "https://www.paramountplus.com",
+    "category": "AV",
+    "image": "https://variety.com/wp-content/uploads/2022/03/Paramount-Plus-Logo.png?w=1000&h=627&crop=1"
   }
 ]
