@@ -1413,6 +1413,16 @@ function setupKeyboard() {
 
   container.innerHTML = "";
 
+  function playKeySound(keyLabel) {
+    const upper = keyLabel.toUpperCase();
+    const file =
+      /^[A-Z]$/.test(upper) ? `sounds/${upper}.mp3` : "sounds/allothers.mp3";
+    const audio = new Audio(file);
+    audio.volume = 0.3; // soft, subtle click
+    audio.currentTime = 0;
+    audio.play().catch(() => {}); // prevent errors if user hasn’t interacted yet
+  }
+
   buttons.forEach((char) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -1425,6 +1435,7 @@ function setupKeyboard() {
       search.value += char;
       search.dispatchEvent(new Event("input", { bubbles: true }));
       search.focus({ preventScroll: true });
+      playKeySound(char);
     });
     container.appendChild(button);
   });
