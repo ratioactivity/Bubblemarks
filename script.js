@@ -244,14 +244,6 @@ let categoryForm;
 let categorySettingsList;
 let addCategoryBtn;
 let categoryItemTemplate;
-let paginationContainer;
-let paginationPrevBtn;
-let paginationNextBtn;
-let lastRenderedCollection = [];
-let isNotionMode = false;
-let currentPage = 1;
-let notionRowsPerPage = 4;
-let notionRowsSelect;
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
@@ -316,8 +308,6 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   if (!grid) console.error("Missing #bookmarks element in DOM");
   if (!keyboardContainer) console.error("Missing #keyboard element in DOM");
-
-  ensurePaginationControls();
 
   preferences = loadPreferences();
   applyPreferences({ syncInputs: false, lazyAxolotl: true });
@@ -1319,7 +1309,225 @@ function setupSearch() {
     applyFilters();
     searchInput.focus();
   });
-  return pill;
+
+  if (addCategoryBtn) {
+    addCategoryBtn.addEventListener("click", () => {
+      addNewCategoryRow();
+    });
+  }
+
+  categorySettingsList.addEventListener("click", handleCategoryListClick);
+  document.addEventListener("keydown", handleCategoryModalKeydown);
+}
+
+function openCategoryModal() {
+  renderCategorySettingsEditor();
+  categoryModal.hidden = false;
+  document.body.classList.add("modal-open");
+  const firstInput = categorySettingsList.querySelector('input[name="label"]');
+  if (firstInput) {
+    window.setTimeout(() => firstInput.focus(), 20);
+  }
+}
+
+function closeCategoryModal() {
+  categoryModal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function handleCategoryModalKeydown(event) {
+  if (event.key === "Escape" && !categoryModal.hidden) {
+    event.preventDefault();
+    closeCategoryModal();
+  }
+}
+
+  function renderCategorySettingsEditor() {
+    if (!categorySettingsList) {
+      return;
+    }
+    const descriptors = computeCategoryDescriptors();
+    const rows = descriptors.map((descriptor) => createCategorySettingRow(descriptor));
+    replaceChildrenSafe(categorySettingsList, rows);
+  }
+
+function createCategorySettingRow(descriptor) {
+  const node = categoryItemTemplate?.content?.firstElementChild
+    ? categoryItemTemplate.content.firstElementChild.cloneNode(true)
+    : document.createElement("div");
+
+  if (!node.classList.contains("category-setting")) {
+    node.className = "category-setting";
+    node.innerHTML =
+      '<div class="category-setting__inputs">\n        <label class="category-setting__label">\n          <span>Name</span>\n          <input type="text" name="label" required />\n        </label>\n        <label class="category-setting__color">\n          <span>Color</span>\n          <input type="color" name="color" value="#ff80c8" />\n        </label>\n      </div>\n      <div class="category-setting__actions">\n        <button type="button" class="category-setting__move" data-direction="up" aria-label="Move up">▲</button>\n        <button type="button" class="category-setting__move" data-direction="down" aria-label="Move down">▼</button>\n        <button type="button" class="category-setting__remove" aria-label="Remove category">Remove</button>\n      </div>';
+  }
+
+  node.dataset.categoryKey = descriptor.key || "";
+
+  const labelInput = node.querySelector('input[name="label"]');
+  const colorInput = node.querySelector('input[name="color"]');
+  const removeBtn = node.querySelector(".category-setting__remove");
+
+  if (labelInput) {
+    labelInput.value = descriptor.label || "";
+    labelInput.placeholder = descriptor.originalLabel || descriptor.label || "Category";
+  }
+
+  if (colorInput) {
+    colorInput.value = ensureHexColor(descriptor.color) || pickCategoryColor(descriptor.key || "custom");
+  }
+
+  if (descriptor.isExtra) {
+    node.dataset.extra = "true";
+    if (removeBtn) {
+      removeBtn.disabled = false;
+      removeBtn.removeAttribute("aria-hidden");
+      removeBtn.tabIndex = 0;
+      removeBtn.style.display = "";
+    }
+  } else {
+    node.dataset.fixed = "true";
+    if (removeBtn) {
+      removeBtn.disabled = true;
+      removeBtn.setAttribute("aria-hidden", "true");
+      removeBtn.tabIndex = -1;
+      removeBtn.style.display = "none";
+    }
+  }
+
+  return node;
+}
+
+function handleCategoryListClick(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const setting = target.closest(".category-setting");
+  if (!setting) {
+    return;
+  }
+
+  if (target.classList.contains("category-setting__remove")) {
+    if (setting.dataset.extra === "true") {
+      setting.remove();
+    }
+    return;
+  }
+
+  if (target.classList.contains("category-setting__move")) {
+    const direction = target.dataset.direction;
+    if (direction === "up" && setting.previousElementSibling) {
+      categorySettingsList.insertBefore(setting, setting.previousElementSibling);
+    } else if (direction === "down" && setting.nextElementSibling) {
+      categorySettingsList.insertBefore(setting.nextElementSibling, setting);
+    }
+  }
+}
+
+function addNewCategoryRow() {
+  const descriptor = {
+    key: "",
+    label: "",
+    color: pickCategoryColor(`custom-${Date.now()}`),
+    isExtra: true,
+    originalLabel: "",
+  };
+
+  const node = createCategorySettingRow(descriptor);
+  node.dataset.new = "true";
+  categorySettingsList.appendChild(node);
+
+  const labelInput = node.querySelector('input[name="label"]');
+  if (labelInput) {
+    window.setTimeout(() => {
+      labelInput.focus();
+      labelInput.select();
+    }, 20);
+  }
+}
+
+function handleCategoryFormSubmit() {
+  const rows = Array.from(categorySettingsList.querySelectorAll(".category-setting"));
+  if (!rows.length) {
+    categorySettings = [];
+    saveCategorySettings();
+    updateCategoryBar();
+    applyFilters();
+    closeCategoryModal();
+    return;
+  }
+
+  const nextSettings = [];
+  const existingKeys = new Set();
+
+  rows.forEach((row, index) => {
+    const labelInput = row.querySelector('input[name="label"]');
+    const colorInput = row.querySelector('input[name="color"]');
+    const isExtra = row.dataset.extra === "true";
+    const labelValue = labelInput?.value.trim() || `Category ${index + 1}`;
+    let key = row.dataset.categoryKey;
+
+    if (!key || isExtra) {
+      key = generateCategoryKey(labelValue, existingKeys);
+      row.dataset.categoryKey = key;
+    }
+
+    existingKeys.add(key);
+    const color = ensureHexColor(colorInput?.value) || pickCategoryColor(key);
+
+    nextSettings.push({
+      key,
+      label: labelValue,
+      color,
+      isExtra,
+    });
+  });
+
+  categorySettings = nextSettings;
+  saveCategorySettings();
+  updateCategoryBar();
+  applyFilters();
+  closeCategoryModal();
+}
+
+function setBookmarks(next, { persist } = { persist: true }) {
+  bookmarks = sanitizeBookmarks(next);
+  categoryInfo = collectCategoryInfo();
+  if (persist) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
+    } catch (error) {
+      console.warn("Unable to save bookmarks", error);
+    }
+  }
+  updateCategoryBar();
+  updateSuggestions();
+  if (searchTerm.trim() || activeCategory !== "all") {
+    applyFilters();
+  } else {
+    renderBookmarks(bookmarks);
+  }
+}
+
+function setupSearch() {
+  if (!searchInput || !clearSearchBtn || !datalist) {
+    console.error("Search UI is missing required elements");
+    return;
+  }
+
+  searchInput.addEventListener("input", (event) => {
+    searchTerm = event.target.value;
+    applyFilters();
+  });
+
+  clearSearchBtn.addEventListener("click", () => {
+    searchTerm = "";
+    searchInput.value = "";
+    applyFilters();
+    searchInput.focus();
+  });
 }
 
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
@@ -1360,9 +1568,59 @@ function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
   } else {
     axolotlController?.disable?.();
   }
+}
 
-  if (isNotionMode && lastRenderedCollection.length) {
-    renderBookmarks(lastRenderedCollection, { maintainPage: true });
+function ensureAxolotlInitialized() {
+  if (preferences.showAxolotl === false) {
+    axolotlController?.disable?.();
+    return;
+  }
+
+  if (axolotlInitialized) {
+    axolotlController?.enable?.();
+    return;
+  }
+
+  return initAxolotlMascot();
+}
+
+function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
+  const showHeading = preferences.showHeading !== false;
+  const showAxolotl = preferences.showAxolotl !== false;
+  const cardSize = normalizeCardSize(preferences.cardSize);
+
+  preferences.cardSize = cardSize;
+
+  if (heroHeading) {
+    heroHeading.hidden = !showHeading;
+  }
+
+  if (syncInputs) {
+    if (toggleHeadingInput) {
+      toggleHeadingInput.checked = showHeading;
+    }
+    if (toggleAxolotlInput) {
+      toggleAxolotlInput.checked = showAxolotl;
+    }
+    if (cardSizeInput) {
+      cardSizeInput.value = String(cardSizeToIndex(cardSize));
+    }
+  }
+
+  if (axolotlLayer) {
+    axolotlLayer.hidden = !showAxolotl;
+  }
+
+  if (document.body) {
+    document.body.setAttribute("data-card-size", cardSize);
+  }
+
+  if (showAxolotl) {
+    if (!lazyAxolotl) {
+      ensureAxolotlInitialized();
+    }
+  } else {
+    axolotlController?.disable?.();
   }
 }
 
@@ -1479,74 +1737,15 @@ function ensureNotionToggleHost() {
 }
 
 function setupNotionMode() {
-  const host = ensureNotionToggleHost();
-  if (!host) {
-    return;
-  }
-
-  host.querySelectorAll(".notion-controls").forEach((node) => node.remove());
-
-  const wrapper = document.createElement("div");
-  wrapper.className = "notion-controls";
-
+  ensureNotionToggleHost();
   const notionToggle = document.createElement("button");
   notionToggle.type = "button";
   notionToggle.textContent = "Notion Mode";
   notionToggle.classList.add("notion-toggle", "soft-btn", "soft-btn--ghost");
-  notionToggle.setAttribute("aria-pressed", "false");
-
   notionToggle.addEventListener("click", () => {
-    const nextState = !isNotionMode;
-    document.body.classList.toggle("notion-mode", nextState);
-    isNotionMode = nextState;
-    notionToggle.setAttribute("aria-pressed", nextState ? "true" : "false");
-    if (notionRowsSelect) {
-      notionRowsSelect.disabled = !nextState;
-    }
-    currentPage = 1;
-    if (isNotionMode) {
-      renderBookmarks(lastRenderedCollection.length ? lastRenderedCollection : bookmarks);
-    } else {
-      hidePaginationControls();
-      renderBookmarks(lastRenderedCollection.length ? lastRenderedCollection : bookmarks);
-    }
+    document.body.classList.toggle("notion-mode");
   });
-
-  const rowsLabel = document.createElement("label");
-  rowsLabel.className = "notion-rows";
-
-  const rowsText = document.createElement("span");
-  rowsText.textContent = "Rows per page";
-
-  notionRowsSelect = document.createElement("select");
-  notionRowsSelect.className = "notion-rows__select";
-  [3, 4, 5].forEach((count) => {
-    const option = document.createElement("option");
-    option.value = String(count);
-    option.textContent = String(count);
-    notionRowsSelect.appendChild(option);
-  });
-  notionRowsSelect.value = String(notionRowsPerPage);
-  notionRowsSelect.disabled = !isNotionMode;
-  notionRowsSelect.addEventListener("change", (event) => {
-    const value = parseInt(event.target.value, 10);
-    notionRowsPerPage = Number.isFinite(value) && value > 0 ? value : notionRowsPerPage;
-    currentPage = 1;
-    if (isNotionMode) {
-      renderBookmarks(lastRenderedCollection);
-    }
-  });
-
-  rowsLabel.append(rowsText, notionRowsSelect);
-
-  if (document.body.classList.contains("notion-mode")) {
-    isNotionMode = true;
-    notionToggle.setAttribute("aria-pressed", "true");
-    notionRowsSelect.disabled = false;
-  }
-
-  wrapper.append(notionToggle, rowsLabel);
-  host.appendChild(wrapper);
+  document.querySelector("#settings")?.appendChild(notionToggle);
 }
 
 function setupSettingsMenu() {
@@ -1836,7 +2035,7 @@ function syncActiveCategoryVisuals() {
   renderBookmarks(filtered);
 }
 
-  function renderBookmarks(collection, options = {}) {
+  function renderBookmarks(collection) {
     if (!grid) {
       console.error("Cannot render bookmarks without #bookmarks element");
       return;
@@ -1847,47 +2046,14 @@ function syncActiveCategoryVisuals() {
       return;
     }
 
-    const maintainPage = Boolean(options.maintainPage);
-
-    if (!maintainPage || !lastRenderedCollection.length) {
-      lastRenderedCollection = Array.isArray(collection) ? collection.slice() : [];
-      if (!maintainPage) {
-        currentPage = 1;
-      }
-    }
-
-    const source = maintainPage ? lastRenderedCollection : lastRenderedCollection;
-
-    if (!source.length) {
-      hidePaginationControls();
-      replaceChildrenSafe(grid, []);
+    if (!collection.length) {
       showEmptyState("No bookmarks match that vibe yet. Try a different search or category!");
       return;
     }
 
     hideEmptyState();
 
-    let working = source;
-
-    if (isNotionMode) {
-      ensurePaginationControls();
-      const perPage = Math.max(1, getItemsPerPage());
-      const totalPages = Math.max(1, Math.ceil(source.length / perPage));
-      if (currentPage > totalPages) {
-        currentPage = totalPages;
-      }
-      if (currentPage < 1) {
-        currentPage = 1;
-      }
-      const start = (currentPage - 1) * perPage;
-      const end = start + perPage;
-      working = source.slice(start, end);
-      updatePaginationControls(totalPages);
-    } else {
-      hidePaginationControls();
-    }
-
-    const cards = working.map((bookmark) => {
+    const cards = collection.map((bookmark) => {
       const card = template.content.firstElementChild.cloneNode(true);
       const imageEl = card.querySelector(".card-image");
       const titleEl = card.querySelector(".card-title");
@@ -1918,103 +2084,6 @@ function syncActiveCategoryVisuals() {
     });
 
     replaceChildrenSafe(grid, cards);
-  }
-
-  function getGridColumnCount() {
-    if (!grid) {
-      return 1;
-    }
-
-    const bodyStyle = window.getComputedStyle(document.body);
-    const declared = parseInt(bodyStyle.getPropertyValue("--grid-columns"), 10);
-    if (Number.isFinite(declared) && declared > 0) {
-      return declared;
-    }
-
-    const gridStyle = window.getComputedStyle(grid);
-    const template = gridStyle.getPropertyValue("grid-template-columns");
-    if (template) {
-      const count = template.split(" ").filter(Boolean).length;
-      if (count > 0) {
-        return count;
-      }
-    }
-
-    return 1;
-  }
-
-  function getItemsPerPage() {
-    if (!isNotionMode) {
-      return lastRenderedCollection.length || bookmarks.length || 1;
-    }
-
-    const columns = Math.max(1, getGridColumnCount());
-    return Math.max(1, columns * notionRowsPerPage);
-  }
-
-  function ensurePaginationControls() {
-    if (paginationContainer || !grid) {
-      return;
-    }
-
-    paginationContainer = document.createElement("div");
-    paginationContainer.className = "pagination-arrows";
-    paginationContainer.hidden = true;
-
-    paginationPrevBtn = document.createElement("button");
-    paginationPrevBtn.type = "button";
-    paginationPrevBtn.className = "pagination-arrow pagination-arrow--prev";
-    paginationPrevBtn.textContent = "\u25C0";
-    paginationPrevBtn.addEventListener("click", () => {
-      if (currentPage <= 1) {
-        return;
-      }
-      currentPage -= 1;
-      renderBookmarks(lastRenderedCollection, { maintainPage: true });
-    });
-
-    paginationNextBtn = document.createElement("button");
-    paginationNextBtn.type = "button";
-    paginationNextBtn.className = "pagination-arrow pagination-arrow--next";
-    paginationNextBtn.textContent = "\u25B6";
-    paginationNextBtn.addEventListener("click", () => {
-      const perPage = Math.max(1, getItemsPerPage());
-      const totalPages = Math.max(1, Math.ceil(lastRenderedCollection.length / perPage));
-      if (currentPage >= totalPages) {
-        return;
-      }
-      currentPage += 1;
-      renderBookmarks(lastRenderedCollection, { maintainPage: true });
-    });
-
-    paginationContainer.append(paginationPrevBtn, paginationNextBtn);
-    grid.insertAdjacentElement("afterend", paginationContainer);
-  }
-
-  function hidePaginationControls() {
-    if (paginationContainer) {
-      paginationContainer.hidden = true;
-    }
-  }
-
-  function updatePaginationControls(totalPages) {
-    if (!paginationContainer) {
-      ensurePaginationControls();
-    }
-
-    if (!paginationContainer) {
-      return;
-    }
-
-    const hasPages = isNotionMode && lastRenderedCollection.length > 0;
-    paginationContainer.hidden = !hasPages;
-
-    if (!paginationPrevBtn || !paginationNextBtn) {
-      return;
-    }
-
-    paginationPrevBtn.disabled = currentPage <= 1;
-    paginationNextBtn.disabled = currentPage >= totalPages;
   }
 
 function applyBookmarkImage(imageEl, bookmark) {
