@@ -658,6 +658,31 @@ body {
 
 .filter-bar {
   display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.hero__settings-btn {
+  font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+  padding: 0.55rem 1.3rem;
+}
+
+.tagline {
+  margin: 0.5rem 0 0;
+  font-size: clamp(1rem, 2.8vw, 1.35rem);
+  color: rgba(85, 65, 95, 0.75);
+}
+
+.controls {
+  position: relative;
+  display: grid;
+  gap: clamp(1rem, 3vw, 2rem);
+  margin-bottom: clamp(1.5rem, 4vw, 3rem);
+}
+
+.controls__tabs {
+  display: flex;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 0.75rem;
   justify-content: center;
@@ -1341,18 +1366,55 @@ body.modal-open {
   display: flex;
 }
 
-.settings-extra .notion-toggle {
-  margin-right: auto;
+.settings-extra .notion-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
 }
 
 .notion-toggle {
   font-family: inherit;
 }
 
+.notion-controls .notion-toggle {
+  margin-right: 0;
+}
+
+.notion-rows {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.notion-rows__select {
+  border-radius: 999px;
+  border: 2px solid rgba(255, 194, 220, 0.8);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.2rem 0.6rem;
+  font-family: inherit;
+  color: inherit;
+}
+
+.notion-rows__select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 body.notion-mode {
-  transform: scale(0.75);
-  transform-origin: top center;
-  overflow-x: hidden;
+  transform: none;
+  zoom: 0.8;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background-position: center;
+  overflow: hidden;
+}
+
+body.notion-mode #bookmarks {
+  max-width: 90%;
+  margin: 0 auto;
 }
 
 body.notion-mode #bookmarks,
@@ -1368,4 +1430,36 @@ body.notion-mode .bookmark-card {
 
 body.notion-mode .category-button {
   padding: 4px 10px;
+}
+
+.pagination-arrows {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+.pagination-arrows button {
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: "Papernotes", "Comic Sans MS", "Segoe UI", sans-serif;
+  font-size: 1rem;
+  transition: 0.2s ease;
+  box-shadow: 0 6px 14px rgba(160, 180, 220, 0.25);
+}
+
+.pagination-arrows button:hover:not(:disabled),
+.pagination-arrows button:focus-visible:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(255, 173, 221, 0.5);
+  outline: none;
+}
+
+.pagination-arrows button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
