@@ -2,19 +2,19 @@
   {
     "name": "Hulu",
     "url": "https://www.hulu.com",
-    "category": "A/V",
+    "category": "AV",
     "image": "https://deadline.com/wp-content/uploads/2022/08/hulu-Green-digital-logo-1.jpg?w=1024"
   },
   {
     "name": "Prime Video",
     "url": "https://www.amazon.com/Amazon-Video/b/?&node=2858778011&ref=dvm_MLP_ROWNA_US_1&rs=140-5036548-8732934:C",
-    "category": "A/V",
+    "category": "AV",
     "image": "https://ppc.land/content/images/2024/01/prime-video.png"
   },
   {
     "name": "HBO Max",
     "url": "https://www.hbomax.com/#",
-    "category": "A/V",
+    "category": "AV",
     "image": "https://hardynet.net/wp-content/uploads/2020/07/HBO-Max-logo3.jpg"
   },
   {
@@ -44,7 +44,7 @@
   {
     "name": "Otter Cam",
     "url": "https://www.montereybayaquarium.org/animals/live-cams/sea-otter-cam",
-    "category": "A/V",
+    "category": "AV",
     "image": "https://giorgifoundation.org/wp-content/uploads/2020/08/cMontereyBayAquarium_TR19-0747.jpg"
   },
   {
@@ -92,7 +92,7 @@
   {
     "name": "YouTube",
     "url": "https://www.youtube.com/",
-    "category": "A/V",
+    "category": "AV",
     "image": "https://preview.redd.it/accurate-recreation-of-the-new-youtube-logo-v0-l8divibm8dxd1.png?width=1080&crop=smart&auto=webp&s=1eae35ce4367dc1bdff820374e0089a8ecefd39f"
   },
   {
@@ -104,19 +104,19 @@
   {
     "name": "Twitch",
     "url": "https://www.twitch.tv/",
-    "category": "A/V",
+    "category": "AV",
     "image": "https://variety.com/wp-content/uploads/2019/09/twitch_logo.jpg"
   },
   {
     "name": "Jacob\u2019s Twitch",
     "url": "https://www.twitch.tv/jaketheallosaurian",
-    "category": "A/V",
+    "category": "AV",
     "image": "https://www.nhm.ac.uk/content/dam/nhm-www/discover/dinosaur-parents/dino-parents-allosaurus-illustration-two-column.jpg"
   },
   {
     "name": "Starz",
     "url": "https://www.starz.com/us/en/",
-    "category": "A/V",
+    "category": "AV",
     "image": "https://images.squarespace-cdn.com/content/v1/6481e2427d99a120d7205507/715fad38-eee4-4c0f-9bf9-8d5bdea27754/STARZ_Cover_01_NOISE.jpg"
   },
   {
@@ -134,13 +134,13 @@
   {
     "name": "Orca Acoustics",
     "url": "https://www.orcabehaviorinstitute.org/orca-acoustics",
-    "category": "A/V",
+    "category": "AV",
     "image": "https://i.pinimg.com/736x/ae/48/f1/ae48f1d0d2be72f3afdcd6b3db845329.jpg"
   },
   {
     "name": "Ebay",
     "url": "ebay.com",
-    "category": "Tools",
+    "category": "Shopping",
     "image": "https://upload.wikimedia.org/wikipedia/commons/8/88/Radium_Dial.jpg"
   },
   {
@@ -188,13 +188,13 @@
   {
     "name": "Netflix",
     "url": "netflix.com",
-    "category": "A/V",
+    "category": "AV",
     "image": "https://images.ctfassets.net/y2ske730sjqp/1aONibCke6niZhgPxuiilC/2c401b05a07288746ddf3bd3943fbc76/BrandAssets_Logos_01-Wordmark.jpg?w=940"
   },
   {
     "name": "Paramount+",
     "url": "https://www.paramountplus.com",
-    "category": "A/V",
+    "category": "AV",
     "image": "https://variety.com/wp-content/uploads/2022/03/Paramount-Plus-Logo.png?w=1000&h=627&crop=1"
   }
 ]
