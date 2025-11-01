@@ -1,5 +1,11 @@
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
 const DEFAULT_SOURCE = "bookmarks.json";
+// ABSOLUTE RULES FOR CODEX
+// 1. Do not modify bookmarks.json at runtime.
+// 2. Do not reset localStorage without explicit user click.
+// 3. Never auto-overwrite saved user data with defaults.
+// 4. You are forbidden to "helpfully" merge or clean old data.
+// 5. Your only job is to PATCH functions as requested.
 const FALLBACK_PALETTES = [
   { background: "#ffe9f6", accent: "#ff80c8", shadow: "#ffc3e4" },
   { background: "#e7f1ff", accent: "#92a9ff", shadow: "#cdd8ff" },
@@ -345,10 +351,23 @@ window.addEventListener("DOMContentLoaded", async () => {
 async function hydrateData() {
   setLoading(true);
   try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setBookmarks(sanitizeBookmarks(parsed));
+      return;
+    }
+
     const response = await fetch("bookmarks.json", { cache: "no-store" });
     if (!response.ok) throw new Error("Unable to load bookmarks.json");
     const data = await response.json();
-    setBookmarks(sanitizeBookmarks(data));
+    const sanitized = sanitizeBookmarks(data);
+    setBookmarks(sanitized);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
+    } catch (storageError) {
+      console.warn("Unable to save initial bookmarks", storageError);
+    }
   } catch (error) {
     console.error("Error loading bookmarks:", error);
     renderBookmarks([]);
@@ -1319,7 +1338,6 @@ function setupSearch() {
     applyFilters();
     searchInput.focus();
   });
-  return pill;
 }
 
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
