@@ -1647,21 +1647,33 @@ function getAppShell() {
   return document.querySelector(".app-shell");
 }
 
-function updateNotionScale() {
-  if (!isNotionMode) return;
-
+function applyNotionScale() {
   const shell = getAppShell();
   if (!shell) return;
 
-  const width = Math.max(shell.offsetWidth, 1);
-  const height = Math.max(shell.offsetHeight, 1);
-  const scaleX = window.innerWidth / width;
-  const scaleY = window.innerHeight / height;
-  const scale = Math.min(scaleX, scaleY);
+  if (!isNotionMode) {
+    shell.style.transform = "";
+    shell.style.transformOrigin = "";
+    shell.style.removeProperty("width");
+    shell.style.removeProperty("margin");
+    document.body.style.overflow = "";
+    return;
+  }
+
+  const containerWidth = window.innerWidth;
+  const desiredWidth = 1100;
+  const scale = Math.min(1, Math.max(containerWidth / desiredWidth, 0.85));
 
   shell.style.transform = `scale(${scale})`;
   shell.style.transformOrigin = "top center";
+  shell.style.width = `${desiredWidth}px`;
+  shell.style.margin = "0 auto";
   document.body.style.overflow = "hidden";
+}
+
+function updateNotionScale() {
+  if (!isNotionMode) return;
+  applyNotionScale();
 }
 
 function scheduleNotionScaleUpdate() {
@@ -1718,8 +1730,9 @@ function enableNotionMode() {
   document.documentElement.classList.add("notion-mode");
   document.body.classList.add("notion-mode");
   observeNotionShell();
+  applyNotionScale();
   scheduleNotionScaleUpdate();
-  window.addEventListener("resize", scheduleNotionScaleUpdate);
+  window.addEventListener("resize", applyNotionScale);
 }
 
 function disableNotionMode() {
@@ -1732,13 +1745,16 @@ function disableNotionMode() {
   if (shell) {
     shell.style.transform = "";
     shell.style.transformOrigin = "";
+    shell.style.removeProperty("width");
+    shell.style.removeProperty("margin");
   }
   if (notionScaleFrame !== null) {
     window.cancelAnimationFrame(notionScaleFrame);
     notionScaleFrame = null;
   }
-  window.removeEventListener("resize", scheduleNotionScaleUpdate);
+  window.removeEventListener("resize", applyNotionScale);
   unobserveNotionShell();
+  applyNotionScale();
 }
 
 function setupSettingsMenu() {
@@ -2088,20 +2104,20 @@ function syncActiveCategoryVisuals() {
       const card = template.content.firstElementChild.cloneNode(true);
       card.classList.add("bookmark-card");
       card.innerHTML = `
-        <img class="card-image" alt="">
+        <img src="${bookmark.image ?? ""}" alt="${bookmark.name ?? ""}">
         <div class="card-body">
-          <div class="card-title"></div>
-          <div class="card-category"></div>
+          <div class="card-title">${bookmark.name ?? ""}</div>
+          <div class="card-category">${bookmark.category ?? ""}</div>
         </div>
       `;
 
-      const imageEl = card.querySelector(".card-image");
+      const imageEl = card.querySelector("img");
       const titleEl = card.querySelector(".card-title");
       const categoryEl = card.querySelector(".card-category");
 
       applyBookmarkImage(imageEl, bookmark);
-      imageEl.alt = bookmark.name;
-      titleEl.textContent = bookmark.name;
+      imageEl.alt = bookmark.name || "";
+      titleEl.textContent = bookmark.name || "";
       const categoryKey = resolveAllowedCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL);
       const displayLabel = getCategoryLabel(categoryKey, bookmark.category || DEFAULT_CATEGORY_LABEL);
       categoryEl.textContent = displayLabel;
@@ -2139,17 +2155,39 @@ function syncActiveCategoryVisuals() {
       return declared;
     }
 
-    const gridStyle = window.getComputedStyle(grid);
-    const template = gridStyle.getPropertyValue("grid-template-columns");
-    if (template) {
-      const count = template.split(" ").filter(Boolean).length;
-      if (count > 0) {
-        return count;
+  const gridStyle = window.getComputedStyle(grid);
+  const template = gridStyle.getPropertyValue("grid-template-columns");
+  if (template) {
+    const segments = template
+      .split(/\s+(?![^\(]*\))/)
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+    const segmentCount = segments.length;
+    if (segmentCount > 0 && !template.includes("repeat")) {
+      return segmentCount;
+    }
+  }
+
+  const firstCard = grid.querySelector(".bookmark-card");
+  if (firstCard) {
+    const gridWidth = grid.getBoundingClientRect().width;
+    const cardWidth = firstCard.getBoundingClientRect().width;
+    if (gridWidth > 0 && cardWidth > 0) {
+      const gap = parseFloat(gridStyle.getPropertyValue("column-gap")) ||
+        parseFloat(gridStyle.getPropertyValue("gap")) ||
+        0;
+      const estimated = Math.max(
+        1,
+        Math.round((gridWidth + gap) / (cardWidth + gap))
+      );
+      if (Number.isFinite(estimated) && estimated > 0) {
+        return estimated;
       }
     }
-
-    return 1;
   }
+
+  return 1;
+}
 
   function getItemsPerPage() {
     if (!isNotionMode) {
