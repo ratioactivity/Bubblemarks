@@ -537,16 +537,6 @@ body {
   transition: all 0.25s ease;
 }
 
-#bookmarks {
-  display: grid;
-  grid-template-columns: repeat(var(--grid-columns), 1fr);
-  justify-content: center;
-  align-items: start;
-  width: 100%;
-  max-width: var(--grid-max-width);
-  margin: 0 auto;
-}
-
 .controls__tab {
   border: 2px solid rgba(255, 255, 255, 0.75);
   border-radius: 999px;
@@ -1515,40 +1505,66 @@ body.notion-mode .pagination-arrows {
 .bookmark-card {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   border-radius: 18px;
   background: var(--card-gradient);
   box-shadow: var(--shadow-card);
   overflow: hidden;
   aspect-ratio: 16 / 9;
+  min-height: 0;
 }
 
-.bookmark-card img {
+.bookmark-card .card-media {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
   width: 100%;
-  height: 70%;
+}
+
+.bookmark-card .card-image {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   display: block;
 }
 
 .bookmark-card .card-body {
-  padding: 0.6rem 0.8rem;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.65rem 0.9rem 0.8rem;
   text-align: center;
+  width: 100%;
 }
 
 .bookmark-card .card-title {
-  font-size: 0.9rem;
+  margin: 0;
+  font-size: clamp(0.95rem, 2.4vw, 1.1rem);
   font-weight: 600;
   color: var(--text-main);
+  max-width: 100%;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .bookmark-card .card-category {
-  margin-top: 0.3rem;
-  font-size: 0.75rem;
-  display: inline-block;
-  background: rgba(255, 255, 255, 0.5);
+  font-size: 0.78rem;
+  padding: 0.15rem 0.7rem;
   border-radius: 999px;
-  padding: 0.1rem 0.6rem;
+  background: var(--category-chip-bg, rgba(255, 255, 255, 0.75));
+  border: 1px solid var(--category-chip-border, rgba(255, 255, 255, 0.6));
+  color: var(--category-chip-text, var(--text-main));
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(85, 65, 95, 0.12);
 }

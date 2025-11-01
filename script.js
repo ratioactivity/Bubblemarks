@@ -1654,20 +1654,44 @@ function applyNotionScale() {
   if (!isNotionMode) {
     shell.style.transform = "";
     shell.style.transformOrigin = "";
-    shell.style.removeProperty("width");
-    shell.style.removeProperty("margin");
+    shell.style.removeProperty("margin-left");
+    shell.style.removeProperty("margin-right");
+    document.documentElement.style.removeProperty("--notion-scale");
+    document.body.style.removeProperty("--notion-scale");
     document.body.style.overflow = "";
     return;
   }
 
-  const containerWidth = window.innerWidth;
-  const desiredWidth = 1100;
-  const scale = Math.min(1, Math.max(containerWidth / desiredWidth, 0.85));
+  const previousTransition = shell.style.transition;
+  shell.style.transition = "none";
+  shell.style.transform = "";
+  shell.style.transformOrigin = "top center";
+  shell.style.removeProperty("margin-left");
+  shell.style.removeProperty("margin-right");
 
+  const rect = shell.getBoundingClientRect();
+  const naturalWidth = rect.width || shell.offsetWidth;
+  const naturalHeight = rect.height || shell.offsetHeight;
+
+  const availableWidth = Math.min(window.innerWidth, NOTION_MAX_WIDTH);
+  const availableHeight = Math.min(window.innerHeight, NOTION_MAX_HEIGHT);
+
+  const scaleX = naturalWidth > 0 ? availableWidth / naturalWidth : 1;
+  const scaleY = naturalHeight > 0 ? availableHeight / naturalHeight : 1;
+  const rawScale = Math.min(scaleX, scaleY);
+  const scale = Math.max(MIN_NOTION_SCALE, Math.min(1, rawScale));
+
+  document.documentElement.style.setProperty("--notion-scale", String(scale));
+  document.body.style.setProperty("--notion-scale", String(scale));
   shell.style.transform = `scale(${scale})`;
   shell.style.transformOrigin = "top center";
-  shell.style.width = `${desiredWidth}px`;
-  shell.style.margin = "0 auto";
+  shell.style.marginLeft = "auto";
+  shell.style.marginRight = "auto";
+  if (previousTransition) {
+    shell.style.transition = previousTransition;
+  } else {
+    shell.style.removeProperty("transition");
+  }
   document.body.style.overflow = "hidden";
 }
 
@@ -1745,8 +1769,8 @@ function disableNotionMode() {
   if (shell) {
     shell.style.transform = "";
     shell.style.transformOrigin = "";
-    shell.style.removeProperty("width");
-    shell.style.removeProperty("margin");
+    shell.style.removeProperty("margin-left");
+    shell.style.removeProperty("margin-right");
   }
   if (notionScaleFrame !== null) {
     window.cancelAnimationFrame(notionScaleFrame);
@@ -2104,24 +2128,32 @@ function syncActiveCategoryVisuals() {
       const card = template.content.firstElementChild.cloneNode(true);
       card.classList.add("bookmark-card");
       card.innerHTML = `
-        <img src="${bookmark.image ?? ""}" alt="${bookmark.name ?? ""}">
+        <div class="card-media">
+          <img class="card-image" src="${bookmark.image ?? ""}" alt="${bookmark.name ?? ""}" loading="lazy">
+        </div>
         <div class="card-body">
-          <div class="card-title">${bookmark.name ?? ""}</div>
-          <div class="card-category">${bookmark.category ?? ""}</div>
+          <h2 class="card-title">${bookmark.name ?? ""}</h2>
+          <span class="card-category">${bookmark.category ?? ""}</span>
         </div>
       `;
 
-      const imageEl = card.querySelector("img");
+      const imageEl = card.querySelector(".card-image");
       const titleEl = card.querySelector(".card-title");
       const categoryEl = card.querySelector(".card-category");
 
-      applyBookmarkImage(imageEl, bookmark);
-      imageEl.alt = bookmark.name || "";
-      titleEl.textContent = bookmark.name || "";
+      if (imageEl) {
+        applyBookmarkImage(imageEl, bookmark);
+        imageEl.alt = bookmark.name || "";
+      }
+      if (titleEl) {
+        titleEl.textContent = bookmark.name || "";
+      }
       const categoryKey = resolveAllowedCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL);
       const displayLabel = getCategoryLabel(categoryKey, bookmark.category || DEFAULT_CATEGORY_LABEL);
-      categoryEl.textContent = displayLabel;
-      applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
+      if (categoryEl) {
+        categoryEl.textContent = displayLabel;
+        applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
+      }
 
       const openBookmark = () => {
         window.open(bookmark.url, "_blank", "noopener,noreferrer");
@@ -2157,28 +2189,28 @@ function syncActiveCategoryVisuals() {
 
   const gridStyle = window.getComputedStyle(grid);
   const template = gridStyle.getPropertyValue("grid-template-columns");
-  if (template) {
+  if (template && !template.includes("repeat")) {
     const segments = template
       .split(/\s+(?![^\(]*\))/)
       .map((segment) => segment.trim())
       .filter(Boolean);
     const segmentCount = segments.length;
-    if (segmentCount > 0 && !template.includes("repeat")) {
+    if (segmentCount > 0) {
       return segmentCount;
     }
   }
 
   const firstCard = grid.querySelector(".bookmark-card");
   if (firstCard) {
-    const gridWidth = grid.getBoundingClientRect().width;
-    const cardWidth = firstCard.getBoundingClientRect().width;
+    const gap = parseFloat(gridStyle.getPropertyValue("column-gap")) ||
+      parseFloat(gridStyle.getPropertyValue("gap")) ||
+      0;
+    const gridWidth = grid.clientWidth;
+    const cardWidth = firstCard.offsetWidth;
     if (gridWidth > 0 && cardWidth > 0) {
-      const gap = parseFloat(gridStyle.getPropertyValue("column-gap")) ||
-        parseFloat(gridStyle.getPropertyValue("gap")) ||
-        0;
       const estimated = Math.max(
         1,
-        Math.round((gridWidth + gap) / (cardWidth + gap))
+        Math.floor((gridWidth + gap) / (cardWidth + gap))
       );
       if (Number.isFinite(estimated) && estimated > 0) {
         return estimated;
