@@ -278,8 +278,10 @@ let isNotionMode = false;
 let currentPage = 1;
 let notionRowsPerPage = 4;
 let notionRowsSelect;
-const NOTION_SAFE_PADDING = 24;
 const MIN_NOTION_SCALE = 0.6;
+// Enforce correct Notion sizing and pagination
+const NOTION_MAX_HEIGHT = 900; // container height cap
+const NOTION_MAX_WIDTH = 1100; // consistent scaling with normal view
 let notionResizeObserver;
 let notionScaleFrame = null;
 let notionObservedShell = null;
@@ -1646,37 +1648,24 @@ function getAppShell() {
 }
 
 function updateNotionScale() {
-  if (!isNotionMode) {
-    return;
-  }
+  if (!isNotionMode) return;
 
   const shell = getAppShell();
-  if (!shell) {
-    return;
-  }
+  if (!shell) return;
 
-  const availableWidth = Math.max(
-    320,
-    window.innerWidth - NOTION_SAFE_PADDING * 2
+  const naturalWidth = Math.max(shell.scrollWidth || shell.offsetWidth || 1, 1);
+  const naturalHeight = Math.max(shell.scrollHeight || shell.offsetHeight || 1, 1);
+  const scaleX = Math.min(1, NOTION_MAX_WIDTH / naturalWidth);
+  const scaleY = Math.min(1, NOTION_MAX_HEIGHT / naturalHeight);
+  const scale = Math.max(MIN_NOTION_SCALE, Math.min(scaleX, scaleY));
+
+  document.documentElement.style.setProperty(
+    "--notion-scale",
+    String(Number(scale.toFixed(3)))
   );
-  const availableHeight = Math.max(
-    320,
-    window.innerHeight - NOTION_SAFE_PADDING * 2
-  );
-
-  const baseWidth = shell.offsetWidth || shell.clientWidth;
-  const baseHeight = shell.offsetHeight || shell.clientHeight;
-
-  if (!baseWidth || !baseHeight) {
-    document.body.style.setProperty("--notion-scale", "1");
-    return;
-  }
-
-  const widthScale = availableWidth / baseWidth;
-  const heightScale = availableHeight / baseHeight;
-  const nextScale = Math.min(1, Math.max(MIN_NOTION_SCALE, Math.min(widthScale, heightScale)));
-
-  document.body.style.setProperty("--notion-scale", String(Number(nextScale.toFixed(3))));
+  shell.style.transform = `scale(${scale})`;
+  shell.style.transformOrigin = "top center";
+  document.body.style.overflow = "hidden";
 }
 
 function scheduleNotionScaleUpdate() {
@@ -1740,7 +1729,14 @@ function enableNotionMode() {
 function disableNotionMode() {
   document.documentElement.classList.remove("notion-mode");
   document.body.classList.remove("notion-mode");
+  document.documentElement.style.removeProperty("--notion-scale");
   document.body.style.removeProperty("--notion-scale");
+  document.body.style.overflow = "";
+  const shell = getAppShell();
+  if (shell) {
+    shell.style.transform = "";
+    shell.style.transformOrigin = "";
+  }
   if (notionScaleFrame !== null) {
     window.cancelAnimationFrame(notionScaleFrame);
     notionScaleFrame = null;
@@ -2074,7 +2070,9 @@ function syncActiveCategoryVisuals() {
 
     if (isNotionMode) {
       ensurePaginationControls();
-      const perPage = Math.max(1, getItemsPerPage());
+      const rowsPerPage = Math.max(1, notionRowsPerPage);
+      const columns = Math.max(1, Math.min(4, getGridColumnCount()));
+      const perPage = Math.max(1, rowsPerPage * columns);
       const totalPages = Math.max(1, Math.ceil(source.length / perPage));
       if (currentPage > totalPages) {
         currentPage = totalPages;
@@ -2082,9 +2080,9 @@ function syncActiveCategoryVisuals() {
       if (currentPage < 1) {
         currentPage = 1;
       }
-      const start = (currentPage - 1) * perPage;
-      const end = start + perPage;
-      working = source.slice(start, end);
+      const startIndex = (currentPage - 1) * perPage;
+      const endIndex = startIndex + perPage;
+      working = source.slice(startIndex, endIndex);
       updatePaginationControls(totalPages);
     } else {
       hidePaginationControls();
@@ -2153,8 +2151,9 @@ function syncActiveCategoryVisuals() {
       return lastRenderedCollection.length || bookmarks.length || 1;
     }
 
-    const columns = Math.max(1, getGridColumnCount());
-    return Math.max(1, columns * notionRowsPerPage);
+    const columns = Math.max(1, Math.min(4, getGridColumnCount()));
+    const rows = Math.max(1, notionRowsPerPage);
+    return Math.max(1, columns * rows);
   }
 
   function ensurePaginationControls() {
@@ -2169,7 +2168,8 @@ function syncActiveCategoryVisuals() {
     paginationPrevBtn = document.createElement("button");
     paginationPrevBtn.type = "button";
     paginationPrevBtn.className = "pagination-arrow pagination-arrow--prev";
-    paginationPrevBtn.textContent = "\u25C0";
+    paginationPrevBtn.textContent = "Previous";
+    paginationPrevBtn.setAttribute("aria-label", "Previous page");
     paginationPrevBtn.addEventListener("click", () => {
       if (currentPage <= 1) {
         return;
@@ -2181,7 +2181,8 @@ function syncActiveCategoryVisuals() {
     paginationNextBtn = document.createElement("button");
     paginationNextBtn.type = "button";
     paginationNextBtn.className = "pagination-arrow pagination-arrow--next";
-    paginationNextBtn.textContent = "\u25B6";
+    paginationNextBtn.textContent = "Next";
+    paginationNextBtn.setAttribute("aria-label", "Next page");
     paginationNextBtn.addEventListener("click", () => {
       const perPage = Math.max(1, getItemsPerPage());
       const totalPages = Math.max(1, Math.ceil(lastRenderedCollection.length / perPage));

@@ -77,7 +77,9 @@ body {
   color: var(--text-main);
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   padding: clamp(1.5rem, 3vw, 3rem);
+  overflow-x: hidden;
 }
 
 [hidden] {
@@ -456,6 +458,8 @@ body {
   box-shadow: var(--shadow-soft);
   padding: clamp(1.5rem, 3vw, 3.5rem);
   border: 2px solid rgba(255, 255, 255, 0.6);
+  margin: 0 auto;
+  overflow: hidden;
 }
 
 .hero {
@@ -516,6 +520,18 @@ body {
   gap: clamp(0.6rem, 2vw, 1rem);
   position: relative;
   z-index: 1;
+}
+
+#bookmarks {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns), 1fr);
+  justify-content: center;
+  align-items: start;
+  width: 100%;
+  max-width: var(--grid-max-width);
+  margin: 0 auto;
+  transform: scale(var(--notion-scale));
+  transform-origin: top center;
 }
 
 .controls__tab {
@@ -1420,11 +1436,16 @@ body.notion-mode {
   overflow: hidden;
 }
 
+body.notion-mode,
+body.notion-mode * {
+  overflow: hidden !important;
+}
+
 body.notion-mode .app-shell {
   width: min(var(--grid-max-width), calc(100% - 2rem));
   margin: 0 auto;
-  transform-origin: top center;
-  transform: scale(var(--notion-scale));
+  max-height: min(900px, 100vh);
+  height: 100%;
 }
 
 body.notion-mode #bookmarks {
