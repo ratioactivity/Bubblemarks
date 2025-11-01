@@ -23,6 +23,7 @@
   --card-category-padding: 0.16rem 0.48rem;
   --grid-columns: 6;
   --grid-max-width: 1200px;
+  --notion-scale: 1;
 }
 
 body[data-card-size="cozy"] {
@@ -76,7 +77,9 @@ body {
   color: var(--text-main);
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   padding: clamp(1.5rem, 3vw, 3rem);
+  overflow-x: hidden;
 }
 
 [hidden] {
@@ -455,6 +458,8 @@ body {
   box-shadow: var(--shadow-soft);
   padding: clamp(1.5rem, 3vw, 3.5rem);
   border: 2px solid rgba(255, 255, 255, 0.6);
+  margin: 0 auto;
+  overflow: hidden;
 }
 
 .hero {
@@ -515,6 +520,18 @@ body {
   gap: clamp(0.6rem, 2vw, 1rem);
   position: relative;
   z-index: 1;
+}
+
+#bookmarks {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns), 1fr);
+  justify-content: center;
+  align-items: start;
+  width: 100%;
+  max-width: var(--grid-max-width);
+  margin: 0 auto;
+  transform: scale(var(--notion-scale));
+  transform-origin: top center;
 }
 
 .controls__tab {
@@ -1402,34 +1419,42 @@ body.modal-open {
   cursor: not-allowed;
 }
 
+html.notion-mode {
+  overflow: hidden;
+  height: 100%;
+}
+
 body.notion-mode {
   transform: none;
-  zoom: 0.8;
-  display: flex;
+  padding: clamp(0.5rem, 2vh, 1.25rem) 0;
+  min-height: 100vh;
+  width: 100%;
+  flex-direction: column;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   background-position: center;
   overflow: hidden;
 }
 
-body.notion-mode #bookmarks {
-  max-width: 90%;
+body.notion-mode,
+body.notion-mode * {
+  overflow: hidden !important;
+}
+
+body.notion-mode .app-shell {
+  width: min(var(--grid-max-width), calc(100% - 2rem));
   margin: 0 auto;
+  max-height: min(900px, 100vh);
+  height: 100%;
 }
 
-body.notion-mode #bookmarks,
-body.notion-mode #keyboard,
-body.notion-mode #categories {
-  zoom: 0.8;
+body.notion-mode #bookmarks {
+  max-width: 100%;
+  margin-inline: auto;
 }
 
-body.notion-mode button,
-body.notion-mode .bookmark-card {
-  font-size: 0.8em;
-}
-
-body.notion-mode .category-button {
-  padding: 4px 10px;
+body.notion-mode .pagination-arrows {
+  margin-top: clamp(0.8rem, 2vh, 1.4rem);
 }
 
 .pagination-arrows {
