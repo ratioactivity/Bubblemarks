@@ -23,6 +23,7 @@
   --card-category-padding: 0.16rem 0.48rem;
   --grid-columns: 6;
   --grid-max-width: 1200px;
+  --notion-scale: 1;
 }
 
 body[data-card-size="cozy"] {
@@ -1402,34 +1403,37 @@ body.modal-open {
   cursor: not-allowed;
 }
 
+html.notion-mode {
+  overflow: hidden;
+  height: 100%;
+}
+
 body.notion-mode {
   transform: none;
-  zoom: 0.8;
-  display: flex;
+  padding: clamp(0.5rem, 2vh, 1.25rem) 0;
+  min-height: 100vh;
+  width: 100%;
+  flex-direction: column;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   background-position: center;
   overflow: hidden;
 }
 
-body.notion-mode #bookmarks {
-  max-width: 90%;
+body.notion-mode .app-shell {
+  width: min(var(--grid-max-width), calc(100% - 2rem));
   margin: 0 auto;
+  transform-origin: top center;
+  transform: scale(var(--notion-scale));
 }
 
-body.notion-mode #bookmarks,
-body.notion-mode #keyboard,
-body.notion-mode #categories {
-  zoom: 0.8;
+body.notion-mode #bookmarks {
+  max-width: 100%;
+  margin-inline: auto;
 }
 
-body.notion-mode button,
-body.notion-mode .bookmark-card {
-  font-size: 0.8em;
-}
-
-body.notion-mode .category-button {
-  padding: 4px 10px;
+body.notion-mode .pagination-arrows {
+  margin-top: clamp(0.8rem, 2vh, 1.4rem);
 }
 
 .pagination-arrows {
