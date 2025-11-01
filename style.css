@@ -21,7 +21,7 @@
   --card-gap: clamp(0.56rem, 1.6vw, 0.82rem);
   --card-category-size: 0.76rem;
   --card-category-padding: 0.16rem 0.48rem;
-  --grid-columns: 6;
+  --grid-columns: 5;
   --grid-max-width: 1200px;
   --notion-scale: 1;
 }
@@ -35,7 +35,7 @@ body[data-card-size="cozy"] {
   --card-gap: clamp(0.48rem, 1.3vw, 0.68rem);
   --card-category-size: 0.7rem;
   --card-category-padding: 0.14rem 0.42rem;
-  --grid-columns: 8;
+  --grid-columns: 6;
   --grid-max-width: 1320px;
 }
 
@@ -48,7 +48,7 @@ body[data-card-size="roomy"] {
   --card-gap: clamp(0.62rem, 1.6vw, 0.88rem);
   --card-category-size: 0.82rem;
   --card-category-padding: 0.18rem 0.5rem;
-  --grid-columns: 5;
+  --grid-columns: 4;
   --grid-max-width: 1080px;
 }
 
@@ -530,8 +530,6 @@ body {
   width: 100%;
   max-width: var(--grid-max-width);
   margin: 0 auto;
-  transform: scale(var(--notion-scale));
-  transform-origin: top center;
 }
 
 .controls__tab {
@@ -810,6 +808,7 @@ body {
   min-height: var(--card-min-height);
   width: 100%;
   max-width: 100%;
+  aspect-ratio: 1.4 / 1;
   background: var(--card-gradient);
   border-radius: calc(var(--soft-radius) * 0.9);
   overflow: hidden;
@@ -1442,10 +1441,20 @@ body.notion-mode * {
 }
 
 body.notion-mode .app-shell {
-  width: min(var(--grid-max-width), calc(100% - 2rem));
+  width: min(1050px, calc(100% - 2rem));
+  max-width: 1050px;
+  max-height: 850px;
   margin: 0 auto;
-  max-height: min(900px, 100vh);
-  height: 100%;
+  overflow: hidden;
+  transform-origin: top center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+body.notion-mode .app-shell > * {
+  width: 100%;
 }
 
 body.notion-mode #bookmarks {

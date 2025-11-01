@@ -276,7 +276,7 @@ let paginationNextBtn;
 let lastRenderedCollection = [];
 let isNotionMode = false;
 let currentPage = 1;
-let notionRowsPerPage = 4;
+let notionRowsPerPage = 3;
 let notionRowsSelect;
 const MIN_NOTION_SCALE = 0.6;
 // Enforce correct Notion sizing and pagination
@@ -1613,7 +1613,7 @@ function setupNotionMode() {
 
   notionRowsSelect = document.createElement("select");
   notionRowsSelect.className = "notion-rows__select";
-  [3, 4, 5].forEach((count) => {
+  [2, 3].forEach((count) => {
     const option = document.createElement("option");
     option.value = String(count);
     option.textContent = String(count);
@@ -1657,12 +1657,8 @@ function updateNotionScale() {
   const naturalHeight = Math.max(shell.scrollHeight || shell.offsetHeight || 1, 1);
   const scaleX = Math.min(1, NOTION_MAX_WIDTH / naturalWidth);
   const scaleY = Math.min(1, NOTION_MAX_HEIGHT / naturalHeight);
-  const scale = Math.max(MIN_NOTION_SCALE, Math.min(scaleX, scaleY));
+  const scale = Math.min(scaleX, scaleY);
 
-  document.documentElement.style.setProperty(
-    "--notion-scale",
-    String(Number(scale.toFixed(3)))
-  );
   shell.style.transform = `scale(${scale})`;
   shell.style.transformOrigin = "top center";
   document.body.style.overflow = "hidden";
@@ -2215,7 +2211,7 @@ function hidePaginationControls() {
       return;
     }
 
-    const hasPages = isNotionMode && lastRenderedCollection.length > 0;
+    const hasPages = isNotionMode && totalPages > 1;
     paginationContainer.hidden = !hasPages;
 
     if (!paginationPrevBtn || !paginationNextBtn) {
