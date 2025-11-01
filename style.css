@@ -537,6 +537,16 @@ body {
   transition: all 0.25s ease;
 }
 
+#bookmarks {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns), 1fr);
+  justify-content: center;
+  align-items: start;
+  width: 100%;
+  max-width: var(--grid-max-width);
+  margin: 0 auto;
+}
+
 .controls__tab {
   border: 2px solid rgba(255, 255, 255, 0.75);
   border-radius: 999px;
