@@ -1,5 +1,10 @@
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
 const DEFAULT_SOURCE = "bookmarks.json";
+// DATA SAFETY RULES
+// 1. Never overwrite bookmarks.json.
+// 2. Never reset or merge localStorage data automatically.
+// 3. No defaults, samples, or preloaded datasets.
+// 4. Use only data from bookmarks.json or existing localStorage.
 // ABSOLUTE RULES FOR CODEX
 // 1. Do not modify bookmarks.json at runtime.
 // 2. Do not reset localStorage without explicit user click.
@@ -15,15 +20,30 @@ const FALLBACK_PALETTES = [
 const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
+const CATEGORY_ALIAS_MAP = new Map([
+  ["shop", "shopping"],
+  ["story", "stories"],
+  ["google", "tools"],
+]);
+
 const DEFAULT_CATEGORY_SETTINGS = [
   { key: "ai", label: "AI", color: "#ff80c8" },
   { key: "av", label: "AV", color: "#92a9ff" },
-  { key: "shop", label: "Shop", color: "#ffc778" },
-  { key: "tools", label: "Tools", color: "#6ad6a6" },
   { key: "games", label: "Games", color: "#b592ff" },
+  { key: "shopping", label: "Shopping", color: "#ffc778" },
+  { key: "stories", label: "Stories", color: "#ff9ed4" },
+  { key: "tools", label: "Tools", color: "#6ad6a6" },
   { key: "work", label: "Work", color: "#ff9dbb" },
   { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" },
 ];
+
+const CATEGORY_LABEL_LOOKUP = new Map(
+  DEFAULT_CATEGORY_SETTINGS.map((entry) => [entry.key, entry.label])
+);
+
+const ALLOWED_CATEGORY_KEYS = new Set(
+  DEFAULT_CATEGORY_SETTINGS.map((entry) => entry.key)
+);
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
 
 const DEFAULT_AXOLOTL_IMAGE = (() => {
@@ -256,8 +276,15 @@ let paginationNextBtn;
 let lastRenderedCollection = [];
 let isNotionMode = false;
 let currentPage = 1;
-let notionRowsPerPage = 4;
+let notionRowsPerPage = 3;
 let notionRowsSelect;
+const MIN_NOTION_SCALE = 0.6;
+// Enforce correct Notion sizing and pagination
+const NOTION_MAX_HEIGHT = 900; // container height cap
+const NOTION_MAX_WIDTH = 1100; // consistent scaling with normal view
+let notionResizeObserver;
+let notionScaleFrame = null;
+let notionObservedShell = null;
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
@@ -278,7 +305,7 @@ function replaceChildrenSafe(target, nodes) {
   }
 }
 
-window.addEventListener("DOMContentLoaded", async () => {
+window.addEventListener("DOMContentLoaded", () => {
   grid = document.getElementById("bookmarks");
   emptyState = document.getElementById("empty-state");
   keyboardContainer = document.getElementById("keyboard");
@@ -328,10 +355,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   preferences = loadPreferences();
   applyPreferences({ syncInputs: false, lazyAxolotl: true });
 
-  setupControlTabs();
   setupSearch();
-  setupKeyboard();
-  setupSettingsMenu();
   setupDataTools();
   setupCategoryCustomization();
   setupBookmarkCreation();
@@ -343,36 +367,35 @@ window.addEventListener("DOMContentLoaded", async () => {
   } else if (axolotlLayer) {
     axolotlLayer.hidden = true;
   }
-
-  await hydrateData();
 });
 
 
 async function hydrateData() {
-  setLoading(true);
   try {
+    // Try to load existing localStorage data first
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       setBookmarks(sanitizeBookmarks(parsed));
+      console.log("Loaded bookmarks from localStorage");
       return;
     }
 
+    // If no localStorage data, load from bookmarks.json
     const response = await fetch("bookmarks.json", { cache: "no-store" });
     if (!response.ok) throw new Error("Unable to load bookmarks.json");
+
     const data = await response.json();
-    const sanitized = sanitizeBookmarks(data);
-    setBookmarks(sanitized);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
-    } catch (storageError) {
-      console.warn("Unable to save initial bookmarks", storageError);
-    }
+    if (!Array.isArray(data)) throw new Error("Invalid bookmarks.json format");
+
+    setBookmarks(sanitizeBookmarks(data));
+
+    // Save the fetched version for next time
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    console.log("Loaded bookmarks from bookmarks.json");
   } catch (error) {
     console.error("Error loading bookmarks:", error);
-    renderBookmarks([]);
-  } finally {
-    setLoading(false);
+    renderBookmarks([]); // Do not inject defaults
   }
 }
 
@@ -444,6 +467,57 @@ function setupControlTabs() {
   }
 }
 
+function findAllowedCategoryKeyByLabel(label) {
+  if (typeof label !== "string") {
+    return "";
+  }
+
+  const trimmed = label.trim().toLowerCase();
+  if (!trimmed) {
+    return "";
+  }
+
+  const match = categorySettings.find((entry) => {
+    const candidate = entry?.label ? String(entry.label).trim().toLowerCase() : "";
+    return candidate === trimmed;
+  });
+
+  if (match && ALLOWED_CATEGORY_KEYS.has(match.key)) {
+    return match.key;
+  }
+
+  return "";
+}
+
+function resolveAllowedCategoryKey(value) {
+  if (typeof value !== "string") {
+    return DEFAULT_CATEGORY_SLUG;
+  }
+
+  const normalized = normalizeCategoryKey(value);
+  if (!normalized) {
+    return DEFAULT_CATEGORY_SLUG;
+  }
+
+  const alias = CATEGORY_ALIAS_MAP.get(normalized);
+  const candidate = alias || normalized;
+  if (ALLOWED_CATEGORY_KEYS.has(candidate)) {
+    return candidate;
+  }
+
+  const fromLabel = findAllowedCategoryKeyByLabel(value);
+  if (fromLabel) {
+    return fromLabel;
+  }
+
+  return DEFAULT_CATEGORY_SLUG;
+}
+
+function coerceCategoryLabel(value) {
+  const key = resolveAllowedCategoryKey(value);
+  return CATEGORY_LABEL_LOOKUP.get(key) || DEFAULT_CATEGORY_LABEL;
+}
+
 function sanitizeBookmarks(entries) {
   if (!Array.isArray(entries)) return [];
 
@@ -451,7 +525,7 @@ function sanitizeBookmarks(entries) {
     .map((entry) => ({
       name: String(entry.name ?? "Untitled").trim(),
       url: String(entry.url ?? "").trim(),
-      category: entry.category ? String(entry.category).trim() : "Unsorted",
+      category: coerceCategoryLabel(entry.category),
       image: entry.image ? String(entry.image).trim() : "",
     }))
     .filter((entry) => entry.name && entry.url);
@@ -662,16 +736,15 @@ function normalizeCategorySetting(entry) {
     return null;
   }
 
-  const key = typeof entry.key === "string" ? normalizeCategoryKey(entry.key) : null;
-  if (!key) {
+  const key = resolveAllowedCategoryKey(entry.key);
+  if (!ALLOWED_CATEGORY_KEYS.has(key)) {
     return null;
   }
 
   const label = typeof entry.label === "string" ? entry.label.trim() : "";
   const color = ensureHexColor(entry.color);
-  const isExtra = Boolean(entry.isExtra);
 
-  return { key, label, color, isExtra };
+  return { key, label, color, isExtra: false };
 }
 
 function ensureHexColor(value) {
@@ -781,11 +854,12 @@ function collectCategoryInfo() {
 
   bookmarks.forEach((bookmark) => {
     const raw = bookmark.category || DEFAULT_CATEGORY_LABEL;
-    const key = normalizeCategoryKey(raw) || DEFAULT_CATEGORY_SLUG;
+    const key = resolveAllowedCategoryKey(raw);
+    const label = coerceCategoryLabel(raw);
     if (!info.has(key)) {
       info.set(key, {
         key,
-        originalLabel: raw || DEFAULT_CATEGORY_LABEL,
+        originalLabel: label,
       });
     }
   });
@@ -1515,19 +1589,20 @@ function setupNotionMode() {
 
   notionToggle.addEventListener("click", () => {
     const nextState = !isNotionMode;
-    document.body.classList.toggle("notion-mode", nextState);
     isNotionMode = nextState;
     notionToggle.setAttribute("aria-pressed", nextState ? "true" : "false");
     if (notionRowsSelect) {
       notionRowsSelect.disabled = !nextState;
     }
     currentPage = 1;
-    if (isNotionMode) {
-      renderBookmarks(lastRenderedCollection.length ? lastRenderedCollection : bookmarks);
+    if (nextState) {
+      enableNotionMode();
     } else {
+      disableNotionMode();
       hidePaginationControls();
-      renderBookmarks(lastRenderedCollection.length ? lastRenderedCollection : bookmarks);
     }
+    const target = lastRenderedCollection.length ? lastRenderedCollection : bookmarks;
+    renderBookmarks(target);
   });
 
   const rowsLabel = document.createElement("label");
@@ -1538,7 +1613,7 @@ function setupNotionMode() {
 
   notionRowsSelect = document.createElement("select");
   notionRowsSelect.className = "notion-rows__select";
-  [3, 4, 5].forEach((count) => {
+  [2, 3].forEach((count) => {
     const option = document.createElement("option");
     option.value = String(count);
     option.textContent = String(count);
@@ -1561,10 +1636,109 @@ function setupNotionMode() {
     isNotionMode = true;
     notionToggle.setAttribute("aria-pressed", "true");
     notionRowsSelect.disabled = false;
+    enableNotionMode();
   }
 
   wrapper.append(notionToggle, rowsLabel);
   host.appendChild(wrapper);
+}
+
+function getAppShell() {
+  return document.querySelector(".app-shell");
+}
+
+function updateNotionScale() {
+  if (!isNotionMode) return;
+
+  const shell = getAppShell();
+  if (!shell) return;
+
+  const width = Math.max(shell.offsetWidth, 1);
+  const height = Math.max(shell.offsetHeight, 1);
+  const scaleX = window.innerWidth / width;
+  const scaleY = window.innerHeight / height;
+  const scale = Math.min(scaleX, scaleY);
+
+  shell.style.transform = `scale(${scale})`;
+  shell.style.transformOrigin = "top center";
+  document.body.style.overflow = "hidden";
+}
+
+function scheduleNotionScaleUpdate() {
+  if (!isNotionMode) {
+    return;
+  }
+
+  if (notionScaleFrame !== null) {
+    return;
+  }
+
+  notionScaleFrame = window.requestAnimationFrame(() => {
+    notionScaleFrame = null;
+    updateNotionScale();
+  });
+}
+
+function observeNotionShell() {
+  if (typeof ResizeObserver === "undefined") {
+    return;
+  }
+
+  const shell = getAppShell();
+  if (!shell) {
+    return;
+  }
+
+  if (!notionResizeObserver) {
+    notionResizeObserver = new ResizeObserver(() => {
+      scheduleNotionScaleUpdate();
+    });
+  }
+
+  if (notionObservedShell === shell) {
+    return;
+  }
+
+  if (notionObservedShell && notionResizeObserver) {
+    notionResizeObserver.unobserve(notionObservedShell);
+  }
+
+  notionObservedShell = shell;
+  notionResizeObserver.observe(shell);
+}
+
+function unobserveNotionShell() {
+  if (notionResizeObserver && notionObservedShell) {
+    notionResizeObserver.unobserve(notionObservedShell);
+  }
+  notionObservedShell = null;
+}
+
+function enableNotionMode() {
+  document.documentElement.classList.add("notion-mode");
+  document.body.classList.add("notion-mode");
+  observeNotionShell();
+  scheduleNotionScaleUpdate();
+  window.addEventListener("resize", scheduleNotionScaleUpdate);
+}
+
+function disableNotionMode() {
+  document.documentElement.classList.remove("notion-mode");
+  document.body.classList.remove("notion-mode");
+  document.documentElement.style.removeProperty("--notion-scale");
+  document.body.style.removeProperty("--notion-scale");
+  document.body.style.overflow = "";
+  const shell = getAppShell();
+  if (shell) {
+    shell.style.transform = "";
+    shell.style.transformOrigin = "";
+  }
+  if (notionScaleFrame !== null) {
+    window.cancelAnimationFrame(notionScaleFrame);
+    notionScaleFrame = null;
+  }
+  window.removeEventListener("resize", scheduleNotionScaleUpdate);
+  unobserveNotionShell();
 }
 
 function setupSettingsMenu() {
@@ -1839,8 +2013,7 @@ function syncActiveCategoryVisuals() {
   function applyFilters() {
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filtered = bookmarks.filter((bookmark) => {
-    const categoryKey = normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
-      DEFAULT_CATEGORY_SLUG;
+    const categoryKey = resolveAllowedCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL);
     const matchesCategory = activeCategory === "all" || categoryKey === activeCategory;
     if (!matchesCategory) return false;
 
@@ -1881,6 +2054,9 @@ function syncActiveCategoryVisuals() {
       hidePaginationControls();
       replaceChildrenSafe(grid, []);
       showEmptyState("No bookmarks match that vibe yet. Try a different search or category!");
+      if (isNotionMode) {
+        scheduleNotionScaleUpdate();
+      }
       return;
     }
 
@@ -1890,7 +2066,9 @@ function syncActiveCategoryVisuals() {
 
     if (isNotionMode) {
       ensurePaginationControls();
-      const perPage = Math.max(1, getItemsPerPage());
+      const rowsPerPage = Math.max(1, notionRowsPerPage);
+      const columns = Math.max(1, Math.min(4, getGridColumnCount()));
+      const perPage = Math.max(1, rowsPerPage * columns);
       const totalPages = Math.max(1, Math.ceil(source.length / perPage));
       if (currentPage > totalPages) {
         currentPage = totalPages;
@@ -1898,9 +2076,9 @@ function syncActiveCategoryVisuals() {
       if (currentPage < 1) {
         currentPage = 1;
       }
-      const start = (currentPage - 1) * perPage;
-      const end = start + perPage;
-      working = source.slice(start, end);
+      const startIndex = (currentPage - 1) * perPage;
+      const endIndex = startIndex + perPage;
+      working = source.slice(startIndex, endIndex);
       updatePaginationControls(totalPages);
     } else {
       hidePaginationControls();
@@ -1908,24 +2086,32 @@ function syncActiveCategoryVisuals() {
 
     const cards = working.map((bookmark) => {
       const card = template.content.firstElementChild.cloneNode(true);
+      card.classList.add("bookmark-card");
+      card.innerHTML = `
+        <img class="card-image" alt="">
+        <div class="card-body">
+          <div class="card-title"></div>
+          <div class="card-category"></div>
+        </div>
+      `;
+
       const imageEl = card.querySelector(".card-image");
       const titleEl = card.querySelector(".card-title");
       const categoryEl = card.querySelector(".card-category");
 
       applyBookmarkImage(imageEl, bookmark);
-    imageEl.alt = bookmark.name;
-    titleEl.textContent = bookmark.name;
-    const categoryKey = normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
-      DEFAULT_CATEGORY_SLUG;
-    const displayLabel = getCategoryLabel(categoryKey, bookmark.category || DEFAULT_CATEGORY_LABEL);
-    categoryEl.textContent = displayLabel;
-    applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
+      imageEl.alt = bookmark.name;
+      titleEl.textContent = bookmark.name;
+      const categoryKey = resolveAllowedCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL);
+      const displayLabel = getCategoryLabel(categoryKey, bookmark.category || DEFAULT_CATEGORY_LABEL);
+      categoryEl.textContent = displayLabel;
+      applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
-    const openBookmark = () => {
-      window.open(bookmark.url, "_blank", "noopener,noreferrer");
-    };
+      const openBookmark = () => {
+        window.open(bookmark.url, "_blank", "noopener,noreferrer");
+      };
 
-    card.addEventListener("click", openBookmark);
+      card.addEventListener("click", openBookmark);
       card.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -1937,6 +2123,9 @@ function syncActiveCategoryVisuals() {
     });
 
     replaceChildrenSafe(grid, cards);
+    if (isNotionMode) {
+      scheduleNotionScaleUpdate();
+    }
   }
 
   function getGridColumnCount() {
@@ -1967,8 +2156,9 @@ function syncActiveCategoryVisuals() {
       return lastRenderedCollection.length || bookmarks.length || 1;
     }
 
-    const columns = Math.max(1, getGridColumnCount());
-    return Math.max(1, columns * notionRowsPerPage);
+    const columns = Math.max(1, Math.min(4, getGridColumnCount()));
+    const rows = Math.max(1, notionRowsPerPage);
+    return Math.max(1, columns * rows);
   }
 
   function ensurePaginationControls() {
@@ -1983,7 +2173,8 @@ function syncActiveCategoryVisuals() {
     paginationPrevBtn = document.createElement("button");
     paginationPrevBtn.type = "button";
     paginationPrevBtn.className = "pagination-arrow pagination-arrow--prev";
-    paginationPrevBtn.textContent = "\u25C0";
+    paginationPrevBtn.textContent = "Previous";
+    paginationPrevBtn.setAttribute("aria-label", "Previous page");
     paginationPrevBtn.addEventListener("click", () => {
       if (currentPage <= 1) {
         return;
@@ -1995,7 +2186,8 @@ function syncActiveCategoryVisuals() {
     paginationNextBtn = document.createElement("button");
     paginationNextBtn.type = "button";
     paginationNextBtn.className = "pagination-arrow pagination-arrow--next";
-    paginationNextBtn.textContent = "\u25B6";
+    paginationNextBtn.textContent = "Next";
+    paginationNextBtn.setAttribute("aria-label", "Next page");
     paginationNextBtn.addEventListener("click", () => {
       const perPage = Math.max(1, getItemsPerPage());
       const totalPages = Math.max(1, Math.ceil(lastRenderedCollection.length / perPage));
@@ -2010,11 +2202,14 @@ function syncActiveCategoryVisuals() {
     grid.insertAdjacentElement("afterend", paginationContainer);
   }
 
-  function hidePaginationControls() {
-    if (paginationContainer) {
-      paginationContainer.hidden = true;
+function hidePaginationControls() {
+  if (paginationContainer) {
+    paginationContainer.hidden = true;
+    if (isNotionMode) {
+      scheduleNotionScaleUpdate();
     }
   }
+}
 
   function updatePaginationControls(totalPages) {
     if (!paginationContainer) {
@@ -2025,7 +2220,7 @@ function syncActiveCategoryVisuals() {
       return;
     }
 
-    const hasPages = isNotionMode && lastRenderedCollection.length > 0;
+    const hasPages = isNotionMode && totalPages > 1;
     paginationContainer.hidden = !hasPages;
 
     if (!paginationPrevBtn || !paginationNextBtn) {
@@ -2034,6 +2229,10 @@ function syncActiveCategoryVisuals() {
 
     paginationPrevBtn.disabled = currentPage <= 1;
     paginationNextBtn.disabled = currentPage >= totalPages;
+
+    if (isNotionMode) {
+      scheduleNotionScaleUpdate();
+    }
   }
 
 function applyBookmarkImage(imageEl, bookmark) {
@@ -3399,5 +3598,12 @@ function setupDataTools() {
     resetCategorySettingsToDefaults();
   });
 }
+
+window.addEventListener("DOMContentLoaded", () => {
+  hydrateData();
+  setupControlTabs();
+  setupKeyboard();
+  setupSettingsMenu();
+});
 
 console.log("✅ script validated");
