@@ -1,5 +1,10 @@
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
 const DEFAULT_SOURCE = "bookmarks.json";
+// DATA SAFETY RULES
+// 1. Never overwrite bookmarks.json.
+// 2. Never reset or merge localStorage data automatically.
+// 3. No defaults, samples, or preloaded datasets.
+// 4. Use only data from bookmarks.json or existing localStorage.
 // ABSOLUTE RULES FOR CODEX
 // 1. Do not modify bookmarks.json at runtime.
 // 2. Do not reset localStorage without explicit user click.
@@ -298,7 +303,7 @@ function replaceChildrenSafe(target, nodes) {
   }
 }
 
-window.addEventListener("DOMContentLoaded", async () => {
+window.addEventListener("DOMContentLoaded", () => {
   grid = document.getElementById("bookmarks");
   emptyState = document.getElementById("empty-state");
   keyboardContainer = document.getElementById("keyboard");
@@ -348,10 +353,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   preferences = loadPreferences();
   applyPreferences({ syncInputs: false, lazyAxolotl: true });
 
-  setupControlTabs();
   setupSearch();
-  setupKeyboard();
-  setupSettingsMenu();
   setupDataTools();
   setupCategoryCustomization();
   setupBookmarkCreation();
@@ -363,36 +365,35 @@ window.addEventListener("DOMContentLoaded", async () => {
   } else if (axolotlLayer) {
     axolotlLayer.hidden = true;
   }
-
-  await hydrateData();
 });
 
 
 async function hydrateData() {
-  setLoading(true);
   try {
+    // Try to load existing localStorage data first
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       setBookmarks(sanitizeBookmarks(parsed));
+      console.log("Loaded bookmarks from localStorage");
       return;
     }
 
+    // If no localStorage data, load from bookmarks.json
     const response = await fetch("bookmarks.json", { cache: "no-store" });
     if (!response.ok) throw new Error("Unable to load bookmarks.json");
+
     const data = await response.json();
-    const sanitized = sanitizeBookmarks(data);
-    setBookmarks(sanitized);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
-    } catch (storageError) {
-      console.warn("Unable to save initial bookmarks", storageError);
-    }
+    if (!Array.isArray(data)) throw new Error("Invalid bookmarks.json format");
+
+    setBookmarks(sanitizeBookmarks(data));
+
+    // Save the fetched version for next time
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    console.log("Loaded bookmarks from bookmarks.json");
   } catch (error) {
     console.error("Error loading bookmarks:", error);
-    renderBookmarks([]);
-  } finally {
-    setLoading(false);
+    renderBookmarks([]); // Do not inject defaults
   }
 }
 
@@ -3591,5 +3592,12 @@ function setupDataTools() {
     resetCategorySettingsToDefaults();
   });
 }
+
+window.addEventListener("DOMContentLoaded", () => {
+  hydrateData();
+  setupControlTabs();
+  setupKeyboard();
+  setupSettingsMenu();
+});
 
 console.log("✅ script validated");
