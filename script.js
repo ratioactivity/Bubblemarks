@@ -1653,10 +1653,10 @@ function updateNotionScale() {
   const shell = getAppShell();
   if (!shell) return;
 
-  const naturalWidth = Math.max(shell.scrollWidth || shell.offsetWidth || 1, 1);
-  const naturalHeight = Math.max(shell.scrollHeight || shell.offsetHeight || 1, 1);
-  const scaleX = Math.min(1, NOTION_MAX_WIDTH / naturalWidth);
-  const scaleY = Math.min(1, NOTION_MAX_HEIGHT / naturalHeight);
+  const width = Math.max(shell.offsetWidth, 1);
+  const height = Math.max(shell.offsetHeight, 1);
+  const scaleX = window.innerWidth / width;
+  const scaleY = window.innerHeight / height;
   const scale = Math.min(scaleX, scaleY);
 
   shell.style.transform = `scale(${scale})`;
@@ -2086,6 +2086,15 @@ function syncActiveCategoryVisuals() {
 
     const cards = working.map((bookmark) => {
       const card = template.content.firstElementChild.cloneNode(true);
+      card.classList.add("bookmark-card");
+      card.innerHTML = `
+        <img class="card-image" alt="">
+        <div class="card-body">
+          <div class="card-title"></div>
+          <div class="card-category"></div>
+        </div>
+      `;
+
       const imageEl = card.querySelector(".card-image");
       const titleEl = card.querySelector(".card-title");
       const categoryEl = card.querySelector(".card-category");

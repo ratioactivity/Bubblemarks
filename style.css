@@ -1497,3 +1497,48 @@ body.notion-mode .pagination-arrows {
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+.bookmark-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--card-gradient);
+  box-shadow: var(--shadow-card);
+  aspect-ratio: 1.6 / 1;
+  width: 100%;
+  height: auto;
+}
+
+.bookmark-card img {
+  width: 100%;
+  height: 70%;
+  object-fit: cover;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.bookmark-card .card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.4rem 0.8rem;
+  text-align: center;
+}
+
+.bookmark-card .card-title {
+  font-size: 0.9rem;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookmark-card .card-category {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  display: inline-block;
+}
