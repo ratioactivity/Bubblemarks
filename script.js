@@ -15,15 +15,30 @@ const FALLBACK_PALETTES = [
 const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
+const CATEGORY_ALIAS_MAP = new Map([
+  ["shop", "shopping"],
+  ["story", "stories"],
+  ["google", "tools"],
+]);
+
 const DEFAULT_CATEGORY_SETTINGS = [
   { key: "ai", label: "AI", color: "#ff80c8" },
   { key: "av", label: "AV", color: "#92a9ff" },
-  { key: "shop", label: "Shop", color: "#ffc778" },
-  { key: "tools", label: "Tools", color: "#6ad6a6" },
   { key: "games", label: "Games", color: "#b592ff" },
+  { key: "shopping", label: "Shopping", color: "#ffc778" },
+  { key: "stories", label: "Stories", color: "#ff9ed4" },
+  { key: "tools", label: "Tools", color: "#6ad6a6" },
   { key: "work", label: "Work", color: "#ff9dbb" },
   { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" },
 ];
+
+const CATEGORY_LABEL_LOOKUP = new Map(
+  DEFAULT_CATEGORY_SETTINGS.map((entry) => [entry.key, entry.label])
+);
+
+const ALLOWED_CATEGORY_KEYS = new Set(
+  DEFAULT_CATEGORY_SETTINGS.map((entry) => entry.key)
+);
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
 
 const DEFAULT_AXOLOTL_IMAGE = (() => {
@@ -258,6 +273,11 @@ let isNotionMode = false;
 let currentPage = 1;
 let notionRowsPerPage = 4;
 let notionRowsSelect;
+const NOTION_SAFE_PADDING = 24;
+const MIN_NOTION_SCALE = 0.6;
+let notionResizeObserver;
+let notionScaleFrame = null;
+let notionObservedShell = null;
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
@@ -444,6 +464,57 @@ function setupControlTabs() {
   }
 }
 
+function findAllowedCategoryKeyByLabel(label) {
+  if (typeof label !== "string") {
+    return "";
+  }
+
+  const trimmed = label.trim().toLowerCase();
+  if (!trimmed) {
+    return "";
+  }
+
+  const match = categorySettings.find((entry) => {
+    const candidate = entry?.label ? String(entry.label).trim().toLowerCase() : "";
+    return candidate === trimmed;
+  });
+
+  if (match && ALLOWED_CATEGORY_KEYS.has(match.key)) {
+    return match.key;
+  }
+
+  return "";
+}
+
+function resolveAllowedCategoryKey(value) {
+  if (typeof value !== "string") {
+    return DEFAULT_CATEGORY_SLUG;
+  }
+
+  const normalized = normalizeCategoryKey(value);
+  if (!normalized) {
+    return DEFAULT_CATEGORY_SLUG;
+  }
+
+  const alias = CATEGORY_ALIAS_MAP.get(normalized);
+  const candidate = alias || normalized;
+  if (ALLOWED_CATEGORY_KEYS.has(candidate)) {
+    return candidate;
+  }
+
+  const fromLabel = findAllowedCategoryKeyByLabel(value);
+  if (fromLabel) {
+    return fromLabel;
+  }
+
+  return DEFAULT_CATEGORY_SLUG;
+}
+
+function coerceCategoryLabel(value) {
+  const key = resolveAllowedCategoryKey(value);
+  return CATEGORY_LABEL_LOOKUP.get(key) || DEFAULT_CATEGORY_LABEL;
+}
+
 function sanitizeBookmarks(entries) {
   if (!Array.isArray(entries)) return [];
 
@@ -451,7 +522,7 @@ function sanitizeBookmarks(entries) {
     .map((entry) => ({
       name: String(entry.name ?? "Untitled").trim(),
       url: String(entry.url ?? "").trim(),
-      category: entry.category ? String(entry.category).trim() : "Unsorted",
+      category: coerceCategoryLabel(entry.category),
       image: entry.image ? String(entry.image).trim() : "",
     }))
     .filter((entry) => entry.name && entry.url);
@@ -662,16 +733,15 @@ function normalizeCategorySetting(entry) {
     return null;
   }
 
-  const key = typeof entry.key === "string" ? normalizeCategoryKey(entry.key) : null;
-  if (!key) {
+  const key = resolveAllowedCategoryKey(entry.key);
+  if (!ALLOWED_CATEGORY_KEYS.has(key)) {
     return null;
   }
 
   const label = typeof entry.label === "string" ? entry.label.trim() : "";
   const color = ensureHexColor(entry.color);
-  const isExtra = Boolean(entry.isExtra);
 
-  return { key, label, color, isExtra };
+  return { key, label, color, isExtra: false };
 }
 
 function ensureHexColor(value) {
@@ -781,11 +851,12 @@ function collectCategoryInfo() {
 
   bookmarks.forEach((bookmark) => {
     const raw = bookmark.category || DEFAULT_CATEGORY_LABEL;
-    const key = normalizeCategoryKey(raw) || DEFAULT_CATEGORY_SLUG;
+    const key = resolveAllowedCategoryKey(raw);
+    const label = coerceCategoryLabel(raw);
     if (!info.has(key)) {
       info.set(key, {
         key,
-        originalLabel: raw || DEFAULT_CATEGORY_LABEL,
+        originalLabel: label,
       });
     }
   });
@@ -1515,19 +1586,20 @@ function setupNotionMode() {
 
   notionToggle.addEventListener("click", () => {
     const nextState = !isNotionMode;
-    document.body.classList.toggle("notion-mode", nextState);
     isNotionMode = nextState;
     notionToggle.setAttribute("aria-pressed", nextState ? "true" : "false");
     if (notionRowsSelect) {
       notionRowsSelect.disabled = !nextState;
     }
     currentPage = 1;
-    if (isNotionMode) {
-      renderBookmarks(lastRenderedCollection.length ? lastRenderedCollection : bookmarks);
+    if (nextState) {
+      enableNotionMode();
     } else {
+      disableNotionMode();
       hidePaginationControls();
-      renderBookmarks(lastRenderedCollection.length ? lastRenderedCollection : bookmarks);
     }
+    const target = lastRenderedCollection.length ? lastRenderedCollection : bookmarks;
+    renderBookmarks(target);
   });
 
   const rowsLabel = document.createElement("label");
@@ -1561,10 +1633,119 @@ function setupNotionMode() {
     isNotionMode = true;
     notionToggle.setAttribute("aria-pressed", "true");
     notionRowsSelect.disabled = false;
+    enableNotionMode();
   }
 
   wrapper.append(notionToggle, rowsLabel);
   host.appendChild(wrapper);
+}
+
+function getAppShell() {
+  return document.querySelector(".app-shell");
+}
+
+function updateNotionScale() {
+  if (!isNotionMode) {
+    return;
+  }
+
+  const shell = getAppShell();
+  if (!shell) {
+    return;
+  }
+
+  const availableWidth = Math.max(
+    320,
+    window.innerWidth - NOTION_SAFE_PADDING * 2
+  );
+  const availableHeight = Math.max(
+    320,
+    window.innerHeight - NOTION_SAFE_PADDING * 2
+  );
+
+  const baseWidth = shell.offsetWidth || shell.clientWidth;
+  const baseHeight = shell.offsetHeight || shell.clientHeight;
+
+  if (!baseWidth || !baseHeight) {
+    document.body.style.setProperty("--notion-scale", "1");
+    return;
+  }
+
+  const widthScale = availableWidth / baseWidth;
+  const heightScale = availableHeight / baseHeight;
+  const nextScale = Math.min(1, Math.max(MIN_NOTION_SCALE, Math.min(widthScale, heightScale)));
+
+  document.body.style.setProperty("--notion-scale", String(Number(nextScale.toFixed(3))));
+}
+
+function scheduleNotionScaleUpdate() {
+  if (!isNotionMode) {
+    return;
+  }
+
+  if (notionScaleFrame !== null) {
+    return;
+  }
+
+  notionScaleFrame = window.requestAnimationFrame(() => {
+    notionScaleFrame = null;
+    updateNotionScale();
+  });
+}
+
+function observeNotionShell() {
+  if (typeof ResizeObserver === "undefined") {
+    return;
+  }
+
+  const shell = getAppShell();
+  if (!shell) {
+    return;
+  }
+
+  if (!notionResizeObserver) {
+    notionResizeObserver = new ResizeObserver(() => {
+      scheduleNotionScaleUpdate();
+    });
+  }
+
+  if (notionObservedShell === shell) {
+    return;
+  }
+
+  if (notionObservedShell && notionResizeObserver) {
+    notionResizeObserver.unobserve(notionObservedShell);
+  }
+
+  notionObservedShell = shell;
+  notionResizeObserver.observe(shell);
+}
+
+function unobserveNotionShell() {
+  if (notionResizeObserver && notionObservedShell) {
+    notionResizeObserver.unobserve(notionObservedShell);
+  }
+  notionObservedShell = null;
+}
+
+function enableNotionMode() {
+  document.documentElement.classList.add("notion-mode");
+  document.body.classList.add("notion-mode");
+  observeNotionShell();
+  scheduleNotionScaleUpdate();
+  window.addEventListener("resize", scheduleNotionScaleUpdate);
+}
+
+function disableNotionMode() {
+  document.documentElement.classList.remove("notion-mode");
+  document.body.classList.remove("notion-mode");
+  document.body.style.removeProperty("--notion-scale");
+  if (notionScaleFrame !== null) {
+    window.cancelAnimationFrame(notionScaleFrame);
+    notionScaleFrame = null;
+  }
+  window.removeEventListener("resize", scheduleNotionScaleUpdate);
+  unobserveNotionShell();
 }
 
 function setupSettingsMenu() {
@@ -1839,8 +2020,7 @@ function syncActiveCategoryVisuals() {
   function applyFilters() {
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filtered = bookmarks.filter((bookmark) => {
-    const categoryKey = normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
-      DEFAULT_CATEGORY_SLUG;
+    const categoryKey = resolveAllowedCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL);
     const matchesCategory = activeCategory === "all" || categoryKey === activeCategory;
     if (!matchesCategory) return false;
 
@@ -1881,6 +2061,9 @@ function syncActiveCategoryVisuals() {
       hidePaginationControls();
       replaceChildrenSafe(grid, []);
       showEmptyState("No bookmarks match that vibe yet. Try a different search or category!");
+      if (isNotionMode) {
+        scheduleNotionScaleUpdate();
+      }
       return;
     }
 
@@ -1913,19 +2096,18 @@ function syncActiveCategoryVisuals() {
       const categoryEl = card.querySelector(".card-category");
 
       applyBookmarkImage(imageEl, bookmark);
-    imageEl.alt = bookmark.name;
-    titleEl.textContent = bookmark.name;
-    const categoryKey = normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
-      DEFAULT_CATEGORY_SLUG;
-    const displayLabel = getCategoryLabel(categoryKey, bookmark.category || DEFAULT_CATEGORY_LABEL);
-    categoryEl.textContent = displayLabel;
-    applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
+      imageEl.alt = bookmark.name;
+      titleEl.textContent = bookmark.name;
+      const categoryKey = resolveAllowedCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL);
+      const displayLabel = getCategoryLabel(categoryKey, bookmark.category || DEFAULT_CATEGORY_LABEL);
+      categoryEl.textContent = displayLabel;
+      applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
-    const openBookmark = () => {
-      window.open(bookmark.url, "_blank", "noopener,noreferrer");
-    };
+      const openBookmark = () => {
+        window.open(bookmark.url, "_blank", "noopener,noreferrer");
+      };
 
-    card.addEventListener("click", openBookmark);
+      card.addEventListener("click", openBookmark);
       card.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -1937,6 +2119,9 @@ function syncActiveCategoryVisuals() {
     });
 
     replaceChildrenSafe(grid, cards);
+    if (isNotionMode) {
+      scheduleNotionScaleUpdate();
+    }
   }
 
   function getGridColumnCount() {
@@ -2010,11 +2195,14 @@ function syncActiveCategoryVisuals() {
     grid.insertAdjacentElement("afterend", paginationContainer);
   }
 
-  function hidePaginationControls() {
-    if (paginationContainer) {
-      paginationContainer.hidden = true;
+function hidePaginationControls() {
+  if (paginationContainer) {
+    paginationContainer.hidden = true;
+    if (isNotionMode) {
+      scheduleNotionScaleUpdate();
     }
   }
+}
 
   function updatePaginationControls(totalPages) {
     if (!paginationContainer) {
@@ -2034,6 +2222,10 @@ function syncActiveCategoryVisuals() {
 
     paginationPrevBtn.disabled = currentPage <= 1;
     paginationNextBtn.disabled = currentPage >= totalPages;
+
+    if (isNotionMode) {
+      scheduleNotionScaleUpdate();
+    }
   }
 
 function applyBookmarkImage(imageEl, bookmark) {
