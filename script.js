@@ -1895,8 +1895,10 @@ function syncActiveCategoryVisuals() {
     const cards = visible.map((bookmark) => {
       const card = template.content.firstElementChild.cloneNode(true);
       const imageEl = card.querySelector(".card-image");
+      const mediaEl = card.querySelector(".card-media");
       const titleEl = card.querySelector(".card-title");
       const categoryEl = card.querySelector(".card-category");
+      const bodyEl = card.querySelector(".card-body");
 
       applyBookmarkImage(imageEl, bookmark);
       imageEl.alt = bookmark.name;
@@ -1911,7 +1913,28 @@ function syncActiveCategoryVisuals() {
         window.open(bookmark.url, "_blank", "noopener,noreferrer");
       };
 
-      card.addEventListener("click", openBookmark);
+      if (mediaEl) {
+        mediaEl.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          openBookmark();
+        });
+      } else {
+        card.addEventListener("click", (event) => {
+          event.preventDefault();
+          openBookmark();
+        });
+      }
+
+      card.addEventListener("click", (event) => {
+        if (!(event.target instanceof Element)) {
+          return;
+        }
+        if (mediaEl && mediaEl.contains(event.target)) {
+          event.preventDefault();
+          openBookmark();
+        }
+      });
       card.addEventListener("keydown", (event) => {
         if (event.target !== card) {
           return;
@@ -1929,16 +1952,19 @@ function syncActiveCategoryVisuals() {
       deleteBtn.title = "Delete bookmark";
       deleteBtn.addEventListener("click", (event) => {
         event.stopPropagation();
-        if (confirm(`Delete "${bookmark.name}"?`)) {
-          const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
-          if (nextBookmarks.length !== bookmarks.length) {
-            const updatedCollection = lastRenderedCollection.filter((item) => item !== bookmark);
-            setBookmarks(nextBookmarks);
-            renderBookmarks(updatedCollection);
-          }
-        }
+        event.preventDefault();
+
+        if (!confirm(`Delete "${bookmark.name}"?`)) return;
+
+        const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
+        setBookmarks(nextBookmarks, { persist: true });
       });
-      card.appendChild(deleteBtn);
+
+      if (bodyEl) {
+        bodyEl.appendChild(deleteBtn);
+      } else {
+        card.appendChild(deleteBtn);
+      }
 
       return card;
     });
