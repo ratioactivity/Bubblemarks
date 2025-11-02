@@ -21,8 +21,9 @@
   --card-gap: clamp(0.56rem, 1.6vw, 0.82rem);
   --card-category-size: 0.76rem;
   --card-category-padding: 0.16rem 0.48rem;
-  --grid-columns: 6;
+  --grid-columns: 5;
   --grid-max-width: 1200px;
+  --notion-scale: 1;
 }
 
 body[data-card-size="cozy"] {
@@ -34,7 +35,7 @@ body[data-card-size="cozy"] {
   --card-gap: clamp(0.48rem, 1.3vw, 0.68rem);
   --card-category-size: 0.7rem;
   --card-category-padding: 0.14rem 0.42rem;
-  --grid-columns: 8;
+  --grid-columns: 6;
   --grid-max-width: 1320px;
 }
 
@@ -47,7 +48,7 @@ body[data-card-size="roomy"] {
   --card-gap: clamp(0.62rem, 1.6vw, 0.88rem);
   --card-category-size: 0.82rem;
   --card-category-padding: 0.18rem 0.5rem;
-  --grid-columns: 5;
+  --grid-columns: 4;
   --grid-max-width: 1080px;
 }
 
@@ -76,7 +77,9 @@ body {
   color: var(--text-main);
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   padding: clamp(1.5rem, 3vw, 3rem);
+  overflow-x: hidden;
 }
 
 [hidden] {
@@ -455,6 +458,8 @@ body {
   box-shadow: var(--shadow-soft);
   padding: clamp(1.5rem, 3vw, 3.5rem);
   border: 2px solid rgba(255, 255, 255, 0.6);
+  margin: 0 auto;
+  overflow: hidden;
 }
 
 .hero {
@@ -515,6 +520,20 @@ body {
   gap: clamp(0.6rem, 2vw, 1rem);
   position: relative;
   z-index: 1;
+  overflow-x: auto;
+  max-width: 100%;
+  padding: 0 1rem;
+}
+
+#bookmarks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.2rem;
+  justify-content: center;
+  align-items: start;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
 .controls__tab {
@@ -793,6 +812,7 @@ body {
   min-height: var(--card-min-height);
   width: 100%;
   max-width: 100%;
+  aspect-ratio: 1.4 / 1;
   background: var(--card-gradient);
   border-radius: calc(var(--soft-radius) * 0.9);
   overflow: hidden;
@@ -1402,34 +1422,51 @@ body.modal-open {
   cursor: not-allowed;
 }
 
+html.notion-mode {
+  overflow: hidden;
+  height: 100%;
+}
+
 body.notion-mode {
   transform: none;
-  zoom: 0.8;
-  display: flex;
+  padding: clamp(0.5rem, 2vh, 1.25rem) 0;
+  min-height: 100vh;
+  width: 100%;
+  flex-direction: column;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   background-position: center;
   overflow: hidden;
 }
 
-body.notion-mode #bookmarks {
-  max-width: 90%;
+body.notion-mode,
+body.notion-mode * {
+  overflow: hidden !important;
+}
+
+body.notion-mode .app-shell {
+  max-width: 1050px;
+  max-height: 850px;
   margin: 0 auto;
+  overflow: hidden;
+  transform-origin: top center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
 }
 
-body.notion-mode #bookmarks,
-body.notion-mode #keyboard,
-body.notion-mode #categories {
-  zoom: 0.8;
+body.notion-mode .app-shell > * {
+  width: 100%;
 }
 
-body.notion-mode button,
-body.notion-mode .bookmark-card {
-  font-size: 0.8em;
+body.notion-mode #bookmarks {
+  max-width: 100%;
+  margin-inline: auto;
 }
 
-body.notion-mode .category-button {
-  padding: 4px 10px;
+body.notion-mode .pagination-arrows {
+  margin-top: clamp(0.8rem, 2vh, 1.4rem);
 }
 
 .pagination-arrows {
@@ -1462,4 +1499,71 @@ body.notion-mode .category-button {
 .pagination-arrows button:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+.bookmark-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--card-gradient);
+  box-shadow: var(--shadow-card);
+  aspect-ratio: 16 / 9;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bookmark-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.bookmark-card img {
+  width: 100%;
+  height: 70%;
+  object-fit: cover;
+  display: block;
+}
+
+.bookmark-card .card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+  padding: 0.5rem 0.8rem;
+}
+
+.bookmark-card .card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookmark-card .card-category {
+  font-size: 0.75rem;
+  margin-top: 0.3rem;
+  display: inline-block;
+  background: var(--category-chip-bg, rgba(255, 255, 255, 0.6));
+  color: var(--category-chip-text, var(--text-main));
+  border: 1px solid var(--category-chip-border, rgba(255, 255, 255, 0.55));
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.controls__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  overflow-x: auto;
+  max-width: 100%;
+  box-sizing: border-box;
 }
