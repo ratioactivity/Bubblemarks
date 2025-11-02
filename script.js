@@ -282,6 +282,7 @@ const MIN_NOTION_SCALE = 0.6;
 // Enforce correct Notion sizing and pagination
 const NOTION_MAX_HEIGHT = 850; // Notion embed height cap
 const NOTION_MAX_WIDTH = 1050; // Notion embed width cap
+const NOTION_SAFE_PADDING = 24;
 let notionResizeObserver;
 let notionScaleFrame = null;
 let notionObservedShell = null;
@@ -1658,23 +1659,64 @@ function applyNotionScaling() {
     shell.style.removeProperty("width");
     shell.style.removeProperty("height");
     shell.style.removeProperty("overflow");
+    shell.style.removeProperty("max-width");
+    shell.style.removeProperty("max-height");
     document.body.style.overflow = "";
     return;
   }
 
-  const notionMaxWidth = NOTION_MAX_WIDTH;
-  const notionMaxHeight = NOTION_MAX_HEIGHT;
+  const notionMaxWidth = Math.max(0, NOTION_MAX_WIDTH);
+  const notionMaxHeight = Math.max(0, NOTION_MAX_HEIGHT);
 
-  const widthScale = notionMaxWidth > 0 ? window.innerWidth / notionMaxWidth : 1;
-  const heightScale = notionMaxHeight > 0 ? window.innerHeight / notionMaxHeight : 1;
-  const scale = Math.min(widthScale, heightScale, 1);
+  shell.style.width = "";
+  shell.style.height = "";
+  if (notionMaxWidth) {
+    shell.style.maxWidth = `${notionMaxWidth}px`;
+  } else {
+    shell.style.removeProperty("max-width");
+  }
+  if (notionMaxHeight) {
+    shell.style.maxHeight = `${notionMaxHeight}px`;
+  } else {
+    shell.style.removeProperty("max-height");
+  }
+
+  const previousTransition = shell.style.transition;
+
+  shell.style.transition = "none";
+  shell.style.transform = "";
+  shell.style.transformOrigin = "top center";
+
+  const naturalRect = shell.getBoundingClientRect();
+  const naturalWidth = naturalRect.width || shell.offsetWidth;
+  const naturalHeight = naturalRect.height || shell.offsetHeight;
+
+  const constrainedWidth = notionMaxWidth
+    ? Math.min(naturalWidth, notionMaxWidth)
+    : naturalWidth;
+  const constrainedHeight = notionMaxHeight
+    ? Math.min(naturalHeight, notionMaxHeight)
+    : naturalHeight;
+
+  const availableWidth = Math.max(window.innerWidth - NOTION_SAFE_PADDING * 2, 0);
+  const availableHeight = Math.max(window.innerHeight - NOTION_SAFE_PADDING * 2, 0);
+
+  const scaleX = constrainedWidth > 0 ? availableWidth / constrainedWidth : 1;
+  const scaleY = constrainedHeight > 0 ? availableHeight / constrainedHeight : 1;
+  const computedScale = Math.min(scaleX, scaleY, 1);
+  const scale = Math.max(MIN_NOTION_SCALE, isFinite(computedScale) ? computedScale : 1);
 
   shell.style.transform = `scale(${scale})`;
   shell.style.transformOrigin = "top center";
   shell.style.margin = "0 auto";
-  shell.style.width = `${notionMaxWidth}px`;
-  shell.style.height = `${notionMaxHeight}px`;
   shell.style.overflow = "hidden";
+
+  if (previousTransition) {
+    shell.style.transition = previousTransition;
+  } else {
+    shell.style.removeProperty("transition");
+  }
+
   document.body.style.overflow = "hidden";
 }
 
@@ -1756,6 +1798,8 @@ function disableNotionMode() {
     shell.style.removeProperty("width");
     shell.style.removeProperty("height");
     shell.style.removeProperty("overflow");
+    shell.style.removeProperty("max-width");
+    shell.style.removeProperty("max-height");
   }
   if (notionScaleFrame !== null) {
     window.cancelAnimationFrame(notionScaleFrame);
