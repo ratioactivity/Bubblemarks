@@ -280,8 +280,8 @@ let notionRowsPerPage = 3;
 let notionRowsSelect;
 const MIN_NOTION_SCALE = 0.6;
 // Enforce correct Notion sizing and pagination
-const NOTION_MAX_HEIGHT = 900; // container height cap
-const NOTION_MAX_WIDTH = 1100; // consistent scaling with normal view
+const NOTION_MAX_HEIGHT = 850; // Notion embed height cap
+const NOTION_MAX_WIDTH = 1050; // Notion embed width cap
 let notionResizeObserver;
 let notionScaleFrame = null;
 let notionObservedShell = null;
@@ -1647,57 +1647,40 @@ function getAppShell() {
   return document.querySelector(".app-shell");
 }
 
-function applyNotionScale() {
+function applyNotionScaling() {
   const shell = getAppShell();
   if (!shell) return;
 
   if (!isNotionMode) {
     shell.style.transform = "";
     shell.style.transformOrigin = "";
-    shell.style.removeProperty("margin-left");
-    shell.style.removeProperty("margin-right");
-    document.documentElement.style.removeProperty("--notion-scale");
-    document.body.style.removeProperty("--notion-scale");
+    shell.style.removeProperty("margin");
+    shell.style.removeProperty("width");
+    shell.style.removeProperty("height");
+    shell.style.removeProperty("overflow");
     document.body.style.overflow = "";
     return;
   }
 
-  const previousTransition = shell.style.transition;
-  shell.style.transition = "none";
-  shell.style.transform = "";
-  shell.style.transformOrigin = "top center";
-  shell.style.removeProperty("margin-left");
-  shell.style.removeProperty("margin-right");
+  const notionMaxWidth = NOTION_MAX_WIDTH;
+  const notionMaxHeight = NOTION_MAX_HEIGHT;
 
-  const rect = shell.getBoundingClientRect();
-  const naturalWidth = rect.width || shell.offsetWidth;
-  const naturalHeight = rect.height || shell.offsetHeight;
+  const widthScale = notionMaxWidth > 0 ? window.innerWidth / notionMaxWidth : 1;
+  const heightScale = notionMaxHeight > 0 ? window.innerHeight / notionMaxHeight : 1;
+  const scale = Math.min(widthScale, heightScale, 1);
 
-  const availableWidth = Math.min(window.innerWidth, NOTION_MAX_WIDTH);
-  const availableHeight = Math.min(window.innerHeight, NOTION_MAX_HEIGHT);
-
-  const scaleX = naturalWidth > 0 ? availableWidth / naturalWidth : 1;
-  const scaleY = naturalHeight > 0 ? availableHeight / naturalHeight : 1;
-  const rawScale = Math.min(scaleX, scaleY);
-  const scale = Math.max(MIN_NOTION_SCALE, Math.min(1, rawScale));
-
-  document.documentElement.style.setProperty("--notion-scale", String(scale));
-  document.body.style.setProperty("--notion-scale", String(scale));
   shell.style.transform = `scale(${scale})`;
   shell.style.transformOrigin = "top center";
-  shell.style.marginLeft = "auto";
-  shell.style.marginRight = "auto";
-  if (previousTransition) {
-    shell.style.transition = previousTransition;
-  } else {
-    shell.style.removeProperty("transition");
-  }
+  shell.style.margin = "0 auto";
+  shell.style.width = `${notionMaxWidth}px`;
+  shell.style.height = `${notionMaxHeight}px`;
+  shell.style.overflow = "hidden";
   document.body.style.overflow = "hidden";
 }
 
 function updateNotionScale() {
   if (!isNotionMode) return;
-  applyNotionScale();
+  applyNotionScaling();
 }
 
 function scheduleNotionScaleUpdate() {
@@ -1754,9 +1737,9 @@ function enableNotionMode() {
   document.documentElement.classList.add("notion-mode");
   document.body.classList.add("notion-mode");
   observeNotionShell();
-  applyNotionScale();
+  applyNotionScaling();
   scheduleNotionScaleUpdate();
-  window.addEventListener("resize", applyNotionScale);
+  window.addEventListener("resize", applyNotionScaling);
 }
 
 function disableNotionMode() {
@@ -1769,16 +1752,18 @@ function disableNotionMode() {
   if (shell) {
     shell.style.transform = "";
     shell.style.transformOrigin = "";
-    shell.style.removeProperty("margin-left");
-    shell.style.removeProperty("margin-right");
+    shell.style.removeProperty("margin");
+    shell.style.removeProperty("width");
+    shell.style.removeProperty("height");
+    shell.style.removeProperty("overflow");
   }
   if (notionScaleFrame !== null) {
     window.cancelAnimationFrame(notionScaleFrame);
     notionScaleFrame = null;
   }
-  window.removeEventListener("resize", applyNotionScale);
+  window.removeEventListener("resize", applyNotionScaling);
   unobserveNotionShell();
-  applyNotionScale();
+  applyNotionScaling();
 }
 
 function setupSettingsMenu() {
@@ -2128,20 +2113,20 @@ function syncActiveCategoryVisuals() {
       const card = template.content.firstElementChild.cloneNode(true);
       card.classList.add("bookmark-card");
       card.innerHTML = `
-        <div class="card-media">
-          <img class="card-image" src="${bookmark.image ?? ""}" alt="${bookmark.name ?? ""}" loading="lazy">
-        </div>
+        <img src="${bookmark.image ?? ""}" alt="${bookmark.name ?? ""}">
         <div class="card-body">
-          <h2 class="card-title">${bookmark.name ?? ""}</h2>
-          <span class="card-category">${bookmark.category ?? ""}</span>
+          <div class="card-title">${bookmark.name ?? ""}</div>
+          <div class="card-category">${bookmark.category ?? ""}</div>
         </div>
       `;
 
-      const imageEl = card.querySelector(".card-image");
+      const imageEl = card.querySelector("img");
       const titleEl = card.querySelector(".card-title");
       const categoryEl = card.querySelector(".card-category");
 
       if (imageEl) {
+        imageEl.classList.add("card-image");
+        imageEl.loading = "lazy";
         applyBookmarkImage(imageEl, bookmark);
         imageEl.alt = bookmark.name || "";
       }
