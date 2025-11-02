@@ -278,6 +278,14 @@ let isNotionMode = false;
 let currentPage = 1;
 let notionRowsPerPage = 3;
 let notionRowsSelect;
+const MIN_NOTION_SCALE = 0.6;
+// Enforce correct Notion sizing and pagination
+const NOTION_MAX_HEIGHT = 850; // Notion embed height cap
+const NOTION_MAX_WIDTH = 1050; // Notion embed width cap
+const NOTION_SAFE_PADDING = 24;
+let notionResizeObserver;
+let notionScaleFrame = null;
+let notionObservedShell = null;
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
@@ -1974,6 +1982,9 @@ function syncActiveCategoryVisuals() {
       hidePaginationControls();
       replaceChildrenSafe(grid, []);
       showEmptyState("No bookmarks match that vibe yet. Try a different search or category!");
+      if (isNotionMode) {
+        scheduleNotionScaleUpdate();
+      }
       return;
     }
 
@@ -2048,6 +2059,9 @@ function syncActiveCategoryVisuals() {
     });
 
     replaceChildrenSafe(grid, cards);
+    if (isNotionMode) {
+      scheduleNotionScaleUpdate();
+    }
   }
 
   function getGridColumnCount() {
@@ -2092,9 +2106,10 @@ function syncActiveCategoryVisuals() {
         }
       }
     }
-
-    return 1;
   }
+
+  return 1;
+}
 
   function getItemsPerPage() {
     if (!isNotionMode) {

@@ -23,6 +23,7 @@
   --card-category-padding: 0.16rem 0.48rem;
   --grid-columns: 5;
   --grid-max-width: 1200px;
+  --notion-scale: 1;
 }
 
 body[data-card-size="cozy"] {
@@ -526,6 +527,23 @@ body {
   box-sizing: border-box;
   position: relative;
   z-index: 1;
+  overflow-x: auto;
+  max-width: 100%;
+  padding: 0.5rem clamp(0.75rem, 2vw, 1.5rem);
+}
+
+#bookmarks {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 240px), 1fr)
+  );
+  gap: clamp(0.75rem, 2.4vw, 1.2rem);
+  justify-content: center;
+  align-items: start;
+  width: min(100%, 1100px);
+  margin: 0 auto;
+  padding: 0 clamp(0.75rem, 2vw, 1.25rem);
 }
 
 #bookmarks {
