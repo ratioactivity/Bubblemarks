@@ -1,19 +1,3 @@
-// --- 🩷 Card sizing system ---
-const sizeSettings = {
-  cozy: { width: 220, height: 150, gap: 12 },
-  comfy: { width: 260, height: 180, gap: 16 },
-  roomy: { width: 320, height: 220, gap: 20 },
-};
-
-function applyCardSize(sizeKey) {
-  const size = sizeSettings[sizeKey];
-  if (!size) return;
-
-  document.documentElement.style.setProperty('--card-width', `${size.width}px`);
-  document.documentElement.style.setProperty('--card-height', `${size.height}px`);
-  document.documentElement.style.setProperty('--gap', `${size.gap}px`);
-}
-
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
 const DEFAULT_SOURCE = "bookmarks.json";
 const FALLBACK_PALETTES = [
