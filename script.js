@@ -3141,38 +3141,50 @@ function setupDataTools() {
   });
 }
 
-// === Responsive Grid Fix for Notion Embeds === //
+// === Responsive Grid + Card Size Fix for Notion Embeds === //
 (function handleNotionResize() {
   const grid = document.getElementById("bookmarks");
-  const root = document.documentElement;
   const cardSizeSlider = document.getElementById("card-size");
 
   if (!grid || !cardSizeSlider) return;
 
-  function updateGridColumns() {
+  function updateGridAndCardSize() {
     const width = window.innerWidth;
     const size = parseInt(cardSizeSlider.value, 10) || 1; // 0 = cozy, 1 = comfy, 2 = roomy
     let columns;
 
-    // Adjust number of columns dynamically based on width + card size setting
-    if (width < 500) {
-      columns = size === 0 ? 2 : size === 1 ? 2 : 1;
-    } else if (width < 800) {
-      columns = size === 0 ? 3 : size === 1 ? 2 : 2;
-    } else if (width < 1200) {
+    // Determine columns based on window width + card size
+    if (width < 600) {
+      columns = size === 0 ? 2 : size === 1 ? 1 : 1;
+    } else if (width < 1000) {
+      columns = size === 0 ? 3 : size === 1 ? 2 : 1;
+    } else if (width < 1400) {
       columns = size === 0 ? 4 : size === 1 ? 3 : 2;
     } else {
       columns = size === 0 ? 5 : size === 1 ? 4 : 3;
     }
 
     grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+
+    // Card scaling
+    document.querySelectorAll(".bookmark-card").forEach((card) => {
+      if (size === 0) {
+        card.style.transform = "scale(0.9)";
+        card.style.margin = "0.3rem";
+      } else if (size === 1) {
+        card.style.transform = "scale(1)";
+        card.style.margin = "0.4rem";
+      } else {
+        card.style.transform = "scale(1.1)";
+        card.style.margin = "0.5rem";
+      }
+    });
   }
 
-  window.addEventListener("resize", updateGridColumns);
-  cardSizeSlider.addEventListener("input", updateGridColumns);
+  window.addEventListener("resize", updateGridAndCardSize);
+  cardSizeSlider.addEventListener("input", updateGridAndCardSize);
 
-  // Initial run
-  updateGridColumns();
+  updateGridAndCardSize(); // initial render
 })();
 
 console.log("✅ script validated");
