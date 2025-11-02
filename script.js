@@ -1,3 +1,7 @@
+document.addEventListener("DOMContentLoaded", () => {
+  initializeBubblemarks();
+});
+
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
 const DEFAULT_SOURCE = "bookmarks.json";
 // DATA SAFETY RULES
@@ -306,47 +310,47 @@ function replaceChildrenSafe(target, nodes) {
   }
 }
 
-window.addEventListener("DOMContentLoaded", () => {
-  grid = document.getElementById("bookmarks");
-  emptyState = document.getElementById("empty-state");
-  keyboardContainer = document.getElementById("keyboard");
-  categoryBar = document.getElementById("categories");
-  searchInput = document.getElementById("search");
-  clearSearchBtn = document.getElementById("clear-search");
-  datalist = document.getElementById("bookmark-suggestions");
-  importBtn = document.getElementById("import-btn");
-  exportBtn = document.getElementById("export-btn");
-  restoreBtn = document.getElementById("restore-btn");
-  importInput = document.getElementById("import-input");
-  template = document.getElementById("bookmark-card-template");
-  addBookmarkBtn = document.getElementById("add-bookmark");
-  bookmarkModal = document.getElementById("bookmark-modal");
-  bookmarkForm = document.getElementById("bookmark-form");
-  bookmarkNameInput = document.getElementById("bookmark-name");
-  bookmarkUrlInput = document.getElementById("bookmark-url");
-  bookmarkImageInput = document.getElementById("bookmark-image");
-  bookmarkCategorySelect = document.getElementById("bookmark-category");
-  axolotlLayer = document.querySelector(".axolotl-layer");
-  axolotlPath = document.getElementById("axolotl-path");
-  axolotlSprite = document.getElementById("axolotl-sprite");
-  axolotlFigure = document.getElementById("axolotl-figure");
-  axolotlFrameDisplay = axolotlFigure
-    ? createAxolotlFrameDisplay(axolotlFigure)
-    : null;
-  heroHeading = document.getElementById("app-heading");
-  settingsBtn = document.getElementById("settings-btn");
-  settingsModal = document.getElementById("settings-modal");
-  settingsForm = document.getElementById("settings-form");
-  settingsDialog = document.querySelector(".settings-modal__dialog");
-  toggleHeadingInput = document.getElementById("toggle-heading");
-  toggleAxolotlInput = document.getElementById("toggle-axolotl");
-  cardSizeInput = document.getElementById("card-size");
-  customizeCategoriesBtn = document.getElementById("customize-categories");
-  categoryModal = document.getElementById("category-modal");
-  categoryForm = document.getElementById("category-form");
-  categorySettingsList = document.getElementById("category-settings-list");
-  addCategoryBtn = document.getElementById("add-category");
-  categoryItemTemplate = document.getElementById("category-item-template");
+function initializeBubblemarks() {
+  grid = document.getElementById("bookmarks") || grid;
+  emptyState = document.getElementById("empty-state") || emptyState;
+  keyboardContainer = document.getElementById("keyboard") || keyboardContainer;
+  categoryBar = document.getElementById("categories") || categoryBar;
+  searchInput = document.getElementById("search") || searchInput;
+  clearSearchBtn = document.getElementById("clear-search") || clearSearchBtn;
+  datalist = document.getElementById("bookmark-suggestions") || datalist;
+  importBtn = document.getElementById("import-btn") || importBtn;
+  exportBtn = document.getElementById("export-btn") || exportBtn;
+  restoreBtn = document.getElementById("restore-btn") || restoreBtn;
+  importInput = document.getElementById("import-input") || importInput;
+  template = document.getElementById("bookmark-card-template") || template;
+  addBookmarkBtn = document.getElementById("add-bookmark") || addBookmarkBtn;
+  bookmarkModal = document.getElementById("bookmark-modal") || bookmarkModal;
+  bookmarkForm = document.getElementById("bookmark-form") || bookmarkForm;
+  bookmarkNameInput = document.getElementById("bookmark-name") || bookmarkNameInput;
+  bookmarkUrlInput = document.getElementById("bookmark-url") || bookmarkUrlInput;
+  bookmarkImageInput = document.getElementById("bookmark-image") || bookmarkImageInput;
+  bookmarkCategorySelect = document.getElementById("bookmark-category") || bookmarkCategorySelect;
+  axolotlLayer = document.querySelector(".axolotl-layer") || axolotlLayer;
+  axolotlPath = document.getElementById("axolotl-path") || axolotlPath;
+  axolotlSprite = document.getElementById("axolotl-sprite") || axolotlSprite;
+  axolotlFigure = document.getElementById("axolotl-figure") || axolotlFigure;
+  if (axolotlFigure && !axolotlFrameDisplay) {
+    axolotlFrameDisplay = createAxolotlFrameDisplay(axolotlFigure);
+  }
+  heroHeading = document.getElementById("app-heading") || heroHeading;
+  settingsBtn = document.getElementById("settings-btn") || settingsBtn;
+  settingsModal = document.getElementById("settings-modal") || settingsModal;
+  settingsForm = document.getElementById("settings-form") || settingsForm;
+  settingsDialog = document.querySelector(".settings-modal__dialog") || settingsDialog;
+  toggleHeadingInput = document.getElementById("toggle-heading") || toggleHeadingInput;
+  toggleAxolotlInput = document.getElementById("toggle-axolotl") || toggleAxolotlInput;
+  cardSizeInput = document.getElementById("card-size") || cardSizeInput;
+  customizeCategoriesBtn = document.getElementById("customize-categories") || customizeCategoriesBtn;
+  categoryModal = document.getElementById("category-modal") || categoryModal;
+  categoryForm = document.getElementById("category-form") || categoryForm;
+  categorySettingsList = document.getElementById("category-settings-list") || categorySettingsList;
+  addCategoryBtn = document.getElementById("add-category") || addCategoryBtn;
+  categoryItemTemplate = document.getElementById("category-item-template") || categoryItemTemplate;
 
   if (!grid) console.error("Missing #bookmarks element in DOM");
   if (!keyboardContainer) console.error("Missing #keyboard element in DOM");
@@ -368,7 +372,13 @@ window.addEventListener("DOMContentLoaded", () => {
   } else if (axolotlLayer) {
     axolotlLayer.hidden = true;
   }
-});
+
+  hydrateData();
+  setupControlTabs();
+  setupKeyboard();
+  setupSettingsMenu();
+  bindStaticCategoryButtons();
+}
 
 
 async function hydrateData() {
@@ -466,6 +476,26 @@ function setupControlTabs() {
   if (initial) {
     activateControlTab(initial.dataset.controlsTab);
   }
+}
+
+function bindStaticCategoryButtons() {
+  const buttons = Array.from(
+    document.querySelectorAll(".controls__tabs button[data-category]")
+  );
+
+  if (!buttons.length) {
+    return;
+  }
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", (event) => {
+      const target = event.currentTarget;
+      const rawCategory = target.dataset.category || "All";
+      const normalized = normalizeCategoryKey(rawCategory) || "all";
+      setActiveCategory(normalized);
+      renderBookmarks(bookmarks, { maintainPage: false });
+    });
+  });
 }
 
 function findAllowedCategoryKeyByLabel(label) {
@@ -1956,10 +1986,12 @@ function syncActiveCategoryVisuals() {
 }
 
   function renderBookmarks(collection, options = {}) {
-    if (!grid) {
+    const bookmarksContainer = grid || document.getElementById("bookmarks");
+    if (!bookmarksContainer) {
       console.error("Cannot render bookmarks without #bookmarks element");
       return;
     }
+    grid = bookmarksContainer;
 
     if (!template?.content?.firstElementChild) {
       console.error("Missing bookmark card template");
@@ -1980,7 +2012,7 @@ function syncActiveCategoryVisuals() {
 
     if (!source.length) {
       hidePaginationControls();
-      replaceChildrenSafe(grid, []);
+      replaceChildrenSafe(bookmarksContainer, []);
       showEmptyState("No bookmarks match that vibe yet. Try a different search or category!");
       if (isNotionMode) {
         scheduleNotionScaleUpdate();
@@ -2058,10 +2090,7 @@ function syncActiveCategoryVisuals() {
       return card;
     });
 
-    replaceChildrenSafe(grid, cards);
-    if (isNotionMode) {
-      scheduleNotionScaleUpdate();
-    }
+    replaceChildrenSafe(bookmarksContainer, cards);
   }
 
   function getGridColumnCount() {
@@ -2085,6 +2114,25 @@ function syncActiveCategoryVisuals() {
       const segmentCount = segments.length;
       if (segmentCount > 0) {
         return segmentCount;
+      }
+    }
+
+    const firstCard = grid.querySelector(".bookmark-card");
+    if (firstCard) {
+      const gap =
+        parseFloat(gridStyle.getPropertyValue("column-gap")) ||
+        parseFloat(gridStyle.getPropertyValue("gap")) ||
+        0;
+      const gridWidth = grid.clientWidth;
+      const cardWidth = firstCard.offsetWidth;
+      if (gridWidth > 0 && cardWidth > 0) {
+        const estimated = Math.max(
+          1,
+          Math.floor((gridWidth + gap) / (cardWidth + gap))
+        );
+        if (Number.isFinite(estimated) && estimated > 0) {
+          return estimated;
+        }
       }
     }
 
