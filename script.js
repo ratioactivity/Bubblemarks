@@ -1913,11 +1913,32 @@ function syncActiveCategoryVisuals() {
 
       card.addEventListener("click", openBookmark);
       card.addEventListener("keydown", (event) => {
+        if (event.target !== card) {
+          return;
+        }
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           openBookmark();
         }
       });
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.type = "button";
+      deleteBtn.innerHTML = "✕";
+      deleteBtn.title = "Delete bookmark";
+      deleteBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (confirm(`Delete "${bookmark.name}"?`)) {
+          const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
+          if (nextBookmarks.length !== bookmarks.length) {
+            const updatedCollection = lastRenderedCollection.filter((item) => item !== bookmark);
+            setBookmarks(nextBookmarks);
+            renderBookmarks(updatedCollection);
+          }
+        }
+      });
+      card.appendChild(deleteBtn);
 
       return card;
     });
