@@ -1349,3 +1349,33 @@ body.modal-open {
     gap: 1.2rem;
   }
 }
+
+/* === Responsive Grid Fix for Notion Embeds === */
+.grid {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (max-width: 600px) {
+  .grid {
+    gap: 0.8rem;
+  }
+  .card {
+    transform: scale(0.95);
+  }
+}
+
+@media (max-width: 400px) {
+  .card {
+    transform: scale(0.9);
+  }
+}
