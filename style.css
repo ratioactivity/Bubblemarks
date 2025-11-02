@@ -1379,3 +1379,9 @@ body.modal-open {
     transform: scale(0.9);
   }
 }
+
+/* === Card scaling visuals === */
+.bookmark-card {
+  transition: transform 0.3s ease, margin 0.3s ease;
+  transform-origin: center center;
+}
