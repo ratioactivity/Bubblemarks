@@ -3141,52 +3141,43 @@ function setupDataTools() {
   });
 }
 
-// === Refined Responsive Grid for Notion Embeds === //
+// === Minimal Debug Responsive Grid === //
 (function handleNotionResize() {
   const grid = document.getElementById("bookmarks");
-  const cardSizeSlider = document.getElementById("card-size");
+  const slider = document.getElementById("card-size");
 
-  if (!grid || !cardSizeSlider) return;
+  if (!grid || !slider) {
+    console.warn("❌ Grid or slider not found in DOM");
+    return;
+  }
 
-  function updateGridAndCardSize() {
+  function updateGrid() {
+    const size = parseInt(slider.value, 10) || 1;
     const width = window.innerWidth;
-    const size = parseInt(cardSizeSlider.value, 10) || 1; // 0 = cozy, 1 = comfy, 2 = roomy
     let columns;
 
-    // Base column logic for Notion embeds
-    if (width < 600) {
-      columns = size === 0 ? 2 : size === 1 ? 2 : 1;
-    } else if (width < 900) {
-      columns = size === 0 ? 3 : size === 1 ? 2 : 2;
-    } else if (width < 1200) {
-      columns = size === 0 ? 4 : size === 1 ? 3 : 2;
-    } else if (width < 1600) {
-      columns = size === 0 ? 5 : size === 1 ? 4 : 3;
-    } else {
-      columns = size === 0 ? 6 : size === 1 ? 5 : 4;
-    }
+    // Basic mapping to test responsiveness
+    if (width < 700) columns = 2;
+    else if (width < 1000) columns = 3;
+    else if (width < 1300) columns = 4;
+    else if (width < 1600) columns = 5;
+    else columns = 6;
+
+    // Adjust by slider setting
+    if (size === 0) columns += 1; // cozy = more columns
+    if (size === 2) columns -= 1; // roomy = fewer columns
+    if (columns < 1) columns = 1;
 
     grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
 
-    // Adjust scale slightly for comfort level
-    document.querySelectorAll(".bookmark-card").forEach((card) => {
-      card.style.transition = "transform 0.3s ease, margin 0.3s ease";
-      if (size === 0) {
-        card.style.transform = "scale(0.95)";
-        card.style.margin = "0.3rem";
-      } else if (size === 1) {
-        card.style.transform = "scale(1)";
-        card.style.margin = "0.4rem";
-      } else {
-        card.style.transform = "scale(1.05)";
-        card.style.margin = "0.5rem";
-      }
-    });
+    console.log(`Grid updated → ${columns} columns (size ${size}, width ${width})`);
   }
 
-  window.addEventListener("resize", updateGridAndCardSize);
-  cardSizeSlider.addEventListener("input", updateGridAndCardSize);
-  updateGridAndCardSize();
+  window.addEventListener("resize", updateGrid);
+  slider.addEventListener("input", updateGrid);
+
+  // Run immediately
+  updateGrid();
 })();
 
 console.log("✅ script validated");
