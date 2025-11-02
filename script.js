@@ -1,3 +1,4 @@
+// --- 🩷 Card sizing system ---
 const sizeSettings = {
   cozy: { width: 220, height: 150, gap: 12 },
   comfy: { width: 260, height: 180, gap: 16 },
