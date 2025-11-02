@@ -2277,9 +2277,6 @@ function syncActiveCategoryVisuals() {
     }
   }
 
-  return 1;
-}
-
   function getItemsPerPage() {
     if (!isNotionMode) {
       return lastRenderedCollection.length || bookmarks.length || 1;
