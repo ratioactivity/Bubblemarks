@@ -3141,7 +3141,7 @@ function setupDataTools() {
   });
 }
 
-// === Responsive Grid + Card Size Fix for Notion Embeds === //
+// === Refined Responsive Grid for Notion Embeds === //
 (function handleNotionResize() {
   const grid = document.getElementById("bookmarks");
   const cardSizeSlider = document.getElementById("card-size");
@@ -3153,29 +3153,32 @@ function setupDataTools() {
     const size = parseInt(cardSizeSlider.value, 10) || 1; // 0 = cozy, 1 = comfy, 2 = roomy
     let columns;
 
-    // Determine columns based on window width + card size
+    // Base column logic for Notion embeds
     if (width < 600) {
-      columns = size === 0 ? 2 : size === 1 ? 1 : 1;
-    } else if (width < 1000) {
-      columns = size === 0 ? 3 : size === 1 ? 2 : 1;
-    } else if (width < 1400) {
+      columns = size === 0 ? 2 : size === 1 ? 2 : 1;
+    } else if (width < 900) {
+      columns = size === 0 ? 3 : size === 1 ? 2 : 2;
+    } else if (width < 1200) {
       columns = size === 0 ? 4 : size === 1 ? 3 : 2;
-    } else {
+    } else if (width < 1600) {
       columns = size === 0 ? 5 : size === 1 ? 4 : 3;
+    } else {
+      columns = size === 0 ? 6 : size === 1 ? 5 : 4;
     }
 
     grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
 
-    // Card scaling
+    // Adjust scale slightly for comfort level
     document.querySelectorAll(".bookmark-card").forEach((card) => {
+      card.style.transition = "transform 0.3s ease, margin 0.3s ease";
       if (size === 0) {
-        card.style.transform = "scale(0.9)";
+        card.style.transform = "scale(0.95)";
         card.style.margin = "0.3rem";
       } else if (size === 1) {
         card.style.transform = "scale(1)";
         card.style.margin = "0.4rem";
       } else {
-        card.style.transform = "scale(1.1)";
+        card.style.transform = "scale(1.05)";
         card.style.margin = "0.5rem";
       }
     });
@@ -3183,8 +3186,7 @@ function setupDataTools() {
 
   window.addEventListener("resize", updateGridAndCardSize);
   cardSizeSlider.addEventListener("input", updateGridAndCardSize);
-
-  updateGridAndCardSize(); // initial render
+  updateGridAndCardSize();
 })();
 
 console.log("✅ script validated");
