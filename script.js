@@ -2266,25 +2266,6 @@ function syncActiveCategoryVisuals() {
         }
       }
     }
-
-    const firstCard = grid.querySelector(".bookmark-card");
-    if (firstCard) {
-      const gap =
-        parseFloat(gridStyle.getPropertyValue("column-gap")) ||
-        parseFloat(gridStyle.getPropertyValue("gap")) ||
-        0;
-      const gridWidth = grid.clientWidth;
-      const cardWidth = firstCard.offsetWidth;
-      if (gridWidth > 0 && cardWidth > 0) {
-        const estimated = Math.max(
-          1,
-          Math.floor((gridWidth + gap) / (cardWidth + gap))
-        );
-        if (Number.isFinite(estimated) && estimated > 0) {
-          return estimated;
-        }
-      }
-    }
   }
 
   return 1;
