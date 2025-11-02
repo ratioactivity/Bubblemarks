@@ -1,3 +1,5 @@
+if (window.clock) console.warn("External script defines 'clock'. Using isolated scope.");
+
 console.log("Top of script.js reached.");
 console.log("Is clock already defined?", typeof clock !== "undefined");
 console.log("Bubblemarks script loaded once:", !window.bubblemarksLoaded);
