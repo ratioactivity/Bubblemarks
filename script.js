@@ -1,3 +1,11 @@
+console.log("Top of script.js reached.");
+console.log("Is clock already defined?", typeof clock !== "undefined");
+console.log("Bubblemarks script loaded once:", !window.bubblemarksLoaded);
+if (window.bubblemarksLoaded) {
+  throw new Error("Bubblemarks script already loaded!");
+}
+window.bubblemarksLoaded = true;
+
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Bubblemarks initializing...");
   initializeBubblemarks();
