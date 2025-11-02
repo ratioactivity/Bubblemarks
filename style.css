@@ -4,12 +4,26 @@
   --gap: 16px;
 }
 
+html,
+body {
+  overflow: hidden !important;
+}
+
 .bookmark-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(var(--card-width), 1fr));
   gap: var(--gap);
   justify-content: center;
   align-items: start;
+  overflow: hidden !important;
+  height: auto;
+  max-height: 100%;
+}
+
+.main-container,
+.app-shell,
+.bookmark-grid {
+  overflow: hidden !important;
 }
 
 :root {
@@ -766,6 +780,19 @@ body {
   gap: var(--card-gap, 1rem);
 }
 
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 1.5rem auto 0;
+  width: 100%;
+  max-width: var(--grid-max-width, 1200px);
+}
+
+.pagination-controls[hidden] {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .grid {
     width: 100%;
@@ -1278,6 +1305,39 @@ body {
   color: rgba(85, 65, 95, 0.55);
 }
 
+.settings-layout {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.settings-layout__field {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(210, 200, 240, 0.5);
+  box-shadow: 0 10px 20px rgba(180, 200, 255, 0.22);
+  font-size: 1rem;
+  color: rgba(85, 65, 95, 0.8);
+}
+
+.settings-layout__field input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(210, 200, 240, 0.6);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(85, 65, 95, 0.85);
+  font-size: 1rem;
+}
+
+.settings-layout__field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .settings-note {
   margin: 0;
   font-size: 0.95rem;
@@ -1359,6 +1419,7 @@ body.modal-open {
 }
 
 .card {
+  position: relative;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 12px;
   overflow: hidden;
@@ -1383,4 +1444,24 @@ body.modal-open {
 .bookmark-card {
   transform-origin: center;
   transition: transform 0.3s ease, margin 0.3s ease;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+  line-height: 18px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.delete-btn:hover {
+  background: rgba(255, 0, 0, 0.6);
 }
