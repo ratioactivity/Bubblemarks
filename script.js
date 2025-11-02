@@ -132,7 +132,6 @@ function renderBookmarks(category) {
     console.log(
       `Rendered ${filtered.length} bookmarks for category ${requestedCategory}`
     );
-    return;
   }
 
   activeCategory = normalizedKey;
@@ -2779,8 +2778,6 @@ async function initAxolotlMascot() {
             settleMascot();
           },
         };
-
-        return;
       }
 
       destroyStateAnimatorIfNeeded();
