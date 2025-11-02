@@ -1,9 +1,145 @@
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("Bubblemarks initializing...");
   initializeBubblemarks();
+  console.log("✅ script validated");
 });
 
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
 const DEFAULT_SOURCE = "bookmarks.json";
+
+function initializeBubblemarks() {
+  try {
+    bootstrapBubblemarks();
+    setupCategories();
+    setupBookmarks();
+    renderBookmarks("All");
+    console.log("Bubblemarks loaded successfully");
+  } catch (err) {
+    console.error("Initialization error:", err);
+  }
+}
+
+let bookmarks = [];
+
+function setupBookmarks() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        bookmarks = parsed;
+        setBookmarks(bookmarks, { persist: false });
+        renderBookmarks("All");
+        return;
+      }
+    }
+  } catch (error) {
+    console.error("Error loading bookmarks from localStorage:", error);
+  }
+
+  fetch("bookmarks.json")
+    .then((res) => res.json())
+    .then((data) => {
+      if (bookmarks.length) {
+        return;
+      }
+      bookmarks = Array.isArray(data) ? data : [];
+      setBookmarks(bookmarks);
+      renderBookmarks("All");
+    })
+    .catch((err) => console.error("Error loading bookmarks:", err));
+}
+
+function setupCategories() {
+  const categoriesContainer = document.getElementById("categories");
+  if (categoriesContainer) {
+    categoryBar = categoriesContainer;
+  }
+
+  const buttons = document.querySelectorAll(".controls__tabs button");
+  if (!buttons.length) {
+    console.warn("No category buttons found.");
+    return;
+  }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const category = e.target.dataset.category || "All";
+      renderBookmarks(category);
+    });
+  });
+}
+
+function renderBookmarks(category) {
+  const container = document.getElementById("bookmarks");
+  if (!container) {
+    console.error("No #bookmarks container found.");
+    return;
+  }
+
+  container.innerHTML = "";
+
+  const requestedCategory =
+    typeof category === "string" && category.trim() ? category : "All";
+  const normalizedKey = normalizeCategoryKey(requestedCategory) || "all";
+
+  const filtered = bookmarks.filter((bookmark) => {
+    const bookmarkKey = resolveAllowedCategoryKey(
+      bookmark.category || DEFAULT_CATEGORY_LABEL
+    );
+    return normalizedKey === "all" || bookmarkKey === normalizedKey;
+  });
+
+  const templateReady = template?.content?.firstElementChild;
+
+  if (!templateReady) {
+    filtered.forEach((bookmark) => {
+      const card = document.createElement("div");
+      card.className = "bookmark-card";
+      card.innerHTML = `
+        <img src="${bookmark.image}" alt="${bookmark.name}">
+        <div class="card-body">
+          <div class="card-title">${bookmark.name}</div>
+          <div class="card-category">${bookmark.category}</div>
+        </div>`;
+
+      const openBookmark = () => {
+        if (bookmark.url) {
+          window.open(bookmark.url, "_blank", "noopener,noreferrer");
+        }
+      };
+
+      card.tabIndex = 0;
+      card.addEventListener("click", openBookmark);
+      card.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openBookmark();
+        }
+      });
+
+      container.appendChild(card);
+    });
+
+    console.log(
+      `Rendered ${filtered.length} bookmarks for category ${requestedCategory}`
+    );
+    return;
+  }
+
+  activeCategory = normalizedKey;
+
+  if (typeof setActiveCategory === "function" && categoryBar) {
+    setActiveCategory(normalizedKey);
+  } else {
+    renderBookmarkCollection(filtered);
+  }
+
+  console.log(
+    `Rendered ${filtered.length} bookmarks for category ${requestedCategory}`
+  );
+}
+
 // DATA SAFETY RULES
 // 1. Never overwrite bookmarks.json.
 // 2. Never reset or merge localStorage data automatically.
@@ -226,7 +362,6 @@ const AXOLOTL_STATE_FRAME_PATTERNS = [
 
 const imageProbeCache = new Map();
 
-let bookmarks = [];
 let activeCategory = "all";
 let searchTerm = "";
 let categorySettings = loadCategorySettings();
@@ -310,7 +445,7 @@ function replaceChildrenSafe(target, nodes) {
   }
 }
 
-function initializeBubblemarks() {
+function bootstrapBubblemarks() {
   grid = document.getElementById("bookmarks") || grid;
   emptyState = document.getElementById("empty-state") || emptyState;
   keyboardContainer = document.getElementById("keyboard") || keyboardContainer;
@@ -373,11 +508,9 @@ function initializeBubblemarks() {
     axolotlLayer.hidden = true;
   }
 
-  hydrateData();
   setupControlTabs();
   setupKeyboard();
   setupSettingsMenu();
-  bindStaticCategoryButtons();
 }
 
 
@@ -406,7 +539,7 @@ async function hydrateData() {
     console.log("Loaded bookmarks from bookmarks.json");
   } catch (error) {
     console.error("Error loading bookmarks:", error);
-    renderBookmarks([]); // Do not inject defaults
+    renderBookmarkCollection([]); // Do not inject defaults
   }
 }
 
@@ -491,9 +624,7 @@ function bindStaticCategoryButtons() {
     button.addEventListener("click", (event) => {
       const target = event.currentTarget;
       const rawCategory = target.dataset.category || "All";
-      const normalized = normalizeCategoryKey(rawCategory) || "all";
-      setActiveCategory(normalized);
-      renderBookmarks(bookmarks, { maintainPage: false });
+      renderBookmarks(rawCategory);
     });
   });
 }
@@ -1422,7 +1553,7 @@ function setBookmarks(next, { persist } = { persist: true }) {
   if (searchTerm.trim() || activeCategory !== "all") {
     applyFilters();
   } else {
-    renderBookmarks(bookmarks);
+    renderBookmarkCollection(bookmarks);
   }
 }
 
@@ -1485,7 +1616,7 @@ function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
   }
 
   if (isNotionMode && lastRenderedCollection.length) {
-    renderBookmarks(lastRenderedCollection, { maintainPage: true });
+    renderBookmarkCollection(lastRenderedCollection, { maintainPage: true });
   }
 }
 
@@ -1633,7 +1764,7 @@ function setupNotionMode() {
       hidePaginationControls();
     }
     const target = lastRenderedCollection.length ? lastRenderedCollection : bookmarks;
-    renderBookmarks(target);
+    renderBookmarkCollection(target);
   });
 
   const rowsLabel = document.createElement("label");
@@ -1657,7 +1788,7 @@ function setupNotionMode() {
     notionRowsPerPage = Number.isFinite(value) && value > 0 ? value : notionRowsPerPage;
     currentPage = 1;
     if (isNotionMode) {
-      renderBookmarks(lastRenderedCollection);
+      renderBookmarkCollection(lastRenderedCollection);
     }
   });
 
@@ -1982,10 +2113,10 @@ function syncActiveCategoryVisuals() {
     return haystack.includes(normalizedSearch);
   });
 
-  renderBookmarks(filtered);
+  renderBookmarkCollection(filtered);
 }
 
-  function renderBookmarks(collection, options = {}) {
+  function renderBookmarkCollection(collection, options = {}) {
     const bookmarksContainer = grid || document.getElementById("bookmarks");
     if (!bookmarksContainer) {
       console.error("Cannot render bookmarks without #bookmarks element");
@@ -2188,7 +2319,7 @@ function syncActiveCategoryVisuals() {
         return;
       }
       currentPage -= 1;
-      renderBookmarks(lastRenderedCollection, { maintainPage: true });
+      renderBookmarkCollection(lastRenderedCollection, { maintainPage: true });
     });
 
     paginationNextBtn = document.createElement("button");
@@ -2203,7 +2334,7 @@ function syncActiveCategoryVisuals() {
         return;
       }
       currentPage += 1;
-      renderBookmarks(lastRenderedCollection, { maintainPage: true });
+      renderBookmarkCollection(lastRenderedCollection, { maintainPage: true });
     });
 
     paginationContainer.append(paginationPrevBtn, paginationNextBtn);

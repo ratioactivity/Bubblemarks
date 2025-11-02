@@ -572,6 +572,19 @@ body {
   padding: 0.5rem 1rem 2rem;
 }
 
+#bookmarks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.2rem;
+  justify-content: center;
+  align-items: start;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 0.5rem 1rem 2rem;
+}
+
 .controls__tab {
   border: 2px solid rgba(255, 255, 255, 0.75);
   border-radius: 999px;
