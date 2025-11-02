@@ -1,3 +1,16 @@
+:root {
+  --card-width: 260px;
+  --card-height: 180px;
+  --gap: 16px;
+}
+
+.bookmark-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--card-width), 1fr));
+  gap: var(--gap);
+  justify-content: center;
+  align-items: start;
+}
 
 :root {
   --bg-gradient: linear-gradient(135deg, #ffe1f4 0%, #dff1ff 50%, #fff8dd 100%);
