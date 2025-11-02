@@ -2244,53 +2244,66 @@ function syncActiveCategoryVisuals() {
       return declared;
     }
 
-    const gridStyle = window.getComputedStyle(grid);
-    const template = gridStyle.getPropertyValue("grid-template-columns");
-    if (template && !template.includes("repeat")) {
-      const segments = template
-        .split(/\s+(?![^\(]*\))/)
-        .map((segment) => segment.trim())
-        .filter(Boolean);
-      const segmentCount = segments.length;
-      if (segmentCount > 0) {
-        return segmentCount;
-      }
-    }
+    // Calculates how many columns the grid currently has.
+function getGridColumnCount() {
+  const gridStyle = window.getComputedStyle(grid);
+  const template = gridStyle.getPropertyValue("grid-template-columns");
 
-    const firstCard = grid.querySelector(".bookmark-card");
-    if (firstCard) {
-      const gap =
-        parseFloat(gridStyle.getPropertyValue("column-gap")) ||
-        parseFloat(gridStyle.getPropertyValue("gap")) ||
-        0;
-      const gridWidth = grid.clientWidth;
-      const cardWidth = firstCard.offsetWidth;
-      if (gridWidth > 0 && cardWidth > 0) {
-        const estimated = Math.max(
-          1,
-          Math.floor((gridWidth + gap) / (cardWidth + gap))
-        );
-        if (Number.isFinite(estimated) && estimated > 0) {
-          return estimated;
-        }
+  // If grid-template-columns uses explicit values (not repeat())
+  if (template && !template.includes("repeat")) {
+    const segments = template
+      .split(/\s+(?![^\(]*\))/)
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+
+    const segmentCount = segments.length;
+    if (segmentCount > 0) {
+      return segmentCount;
+    }
+  }
+
+  // Fallback: estimate based on card and grid width
+  const firstCard = grid.querySelector(".bookmark-card");
+  if (firstCard) {
+    const gap =
+      parseFloat(gridStyle.getPropertyValue("column-gap")) ||
+      parseFloat(gridStyle.getPropertyValue("gap")) ||
+      0;
+    const gridWidth = grid.clientWidth;
+    const cardWidth = firstCard.offsetWidth;
+
+    if (gridWidth > 0 && cardWidth > 0) {
+      const estimated = Math.max(
+        1,
+        Math.floor((gridWidth + gap) / (cardWidth + gap))
+      );
+      if (Number.isFinite(estimated) && estimated > 0) {
+        return estimated;
       }
     }
   }
 
-  function getItemsPerPage() {
-    if (!isNotionMode) {
-      return lastRenderedCollection.length || bookmarks.length || 1;
-    }
+  // Default fallback — just assume 1 column if all else fails
+  return 1;
+}
 
-    const columns = Math.max(1, Math.min(4, getGridColumnCount()));
-    const rows = Math.max(1, notionRowsPerPage);
-    return Math.max(1, columns * rows);
+function getItemsPerPage() {
+  if (!isNotionMode) {
+    return lastRenderedCollection.length || bookmarks.length || 1;
   }
 
-  function ensurePaginationControls() {
-    if (paginationContainer || !grid) {
-      return;
-    }
+  const columns = Math.max(1, Math.min(4, getGridColumnCount()));
+  const rows = Math.max(1, notionRowsPerPage);
+  return Math.max(1, columns * rows);
+}
+
+function ensurePaginationControls() {
+  if (paginationContainer || !grid) {
+    return;
+  }
+
+  // pagination control code continues here...
+}
 
     paginationContainer = document.createElement("div");
     paginationContainer.className = "pagination-arrows";
