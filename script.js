@@ -470,12 +470,7 @@ function sanitizeBookmarks(entries) {
 }
 
 function getDefaultCategorySettings() {
-  return _SETTINGS.map((entry) => ({
-    key: entry.key,
-    label: entry.label,
-    color: entry.color,
-    isExtra: entry.isExtra ?? false,
-  }));
+  return DEFAULT_CATEGORY_SETTINGS;
 }
 
 function mergeCategorySettingsWithDefaults(current) {
