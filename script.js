@@ -2047,22 +2047,20 @@ function syncActiveCategoryVisuals() {
 
       const deleteBtn = document.createElement("button");
       deleteBtn.type = "button";
-      deleteBtn.className = "bm-delete";
+      deleteBtn.className = "delete-bookmark";
       deleteBtn.textContent = "✕";
       deleteBtn.title = "Delete bookmark";
 
       const inlineConfirm = document.createElement("div");
-      inlineConfirm.className = "bm-inline-delete";
+      inlineConfirm.className = "delete-confirm";
       inlineConfirm.hidden = true;
 
       const confirmDeleteBtn = document.createElement("button");
       confirmDeleteBtn.type = "button";
-      confirmDeleteBtn.className = "bm-inline-delete__confirm";
       confirmDeleteBtn.textContent = "Delete";
 
       const cancelDeleteBtn = document.createElement("button");
       cancelDeleteBtn.type = "button";
-      cancelDeleteBtn.className = "bm-inline-delete__cancel";
       cancelDeleteBtn.textContent = "Cancel";
 
       deleteBtn.addEventListener("click", (event) => {
@@ -2107,6 +2105,98 @@ function syncActiveCategoryVisuals() {
       `[Bubblemarks] Pagination update → page ${pageIndex + 1} of ${totalPages} (showing ${visible.length} of ${totalItems})`
     );
   }
+
+function getCurrentLayout() {
+  const cardsPerRow = normalizeLayoutCount(preferences.cardsPerRow, DEFAULT_CARDS_PER_ROW);
+  const rowsPerPage = normalizeLayoutCount(preferences.rowsPerPage, DEFAULT_ROWS_PER_PAGE);
+  preferences.cardsPerRow = cardsPerRow;
+  preferences.rowsPerPage = rowsPerPage;
+  return { cardsPerRow, rowsPerPage };
+}
+
+function clampPageIndex(index, totalItems, layout) {
+  const normalizedIndex = normalizePageIndex(index);
+  const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
+  if (totalItems <= 0 || pageSize <= 0) {
+    return 0;
+  }
+  const totalPages = Math.ceil(totalItems / pageSize);
+  return clamp(normalizedIndex, 0, Math.max(totalPages - 1, 0));
+}
+
+function updatePaginationUI(pageIndex, totalPages) {
+  const hasMultiplePages = totalPages > 1;
+  if (paginationControls) {
+    paginationControls.hidden = !hasMultiplePages;
+  }
+  if (prevPageBtn) {
+    const showPrev = totalPages > 0 && pageIndex > 0;
+    prevPageBtn.hidden = !showPrev;
+    prevPageBtn.disabled = !showPrev;
+  }
+  if (nextPageBtn) {
+    const showNext = totalPages > 0 && pageIndex < totalPages - 1;
+    nextPageBtn.hidden = !showNext;
+    nextPageBtn.disabled = !showNext;
+  }
+}
+
+function refreshBookmarksView() {
+  renderBookmarks(lastRenderedCollection);
+}
+
+function handleLayoutResize() {
+  if (pendingResizeFrame) {
+    window.cancelAnimationFrame(pendingResizeFrame);
+  }
+  pendingResizeFrame = window.requestAnimationFrame(() => {
+    pendingResizeFrame = null;
+    refreshBookmarksView();
+  });
+}
+
+function changePage(delta) {
+  if (!Number.isFinite(delta) || delta === 0) {
+    return;
+  }
+  const layout = getCurrentLayout();
+  const totalItems = lastRenderedCollection.length;
+  const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
+  if (totalItems <= 0 || pageSize <= 0) {
+    return;
+  }
+  const totalPages = Math.ceil(totalItems / pageSize);
+  if (totalPages <= 1) {
+    updatePaginationUI(0, totalPages);
+    return;
+  }
+  const currentIndex = clamp(normalizePageIndex(preferences.pageIndex), 0, totalPages - 1);
+  const nextIndex = clamp(currentIndex + delta, 0, totalPages - 1);
+  if (nextIndex === currentIndex) {
+    updatePaginationUI(nextIndex, totalPages);
+    return;
+  }
+  preferences.pageIndex = nextIndex;
+  savePreferences();
+  console.log(`[Bubblemarks] Page changed → ${nextIndex + 1}`);
+  renderBookmarks(lastRenderedCollection);
+}
+
+function applyGridLayout(cardsPerRow, rowsPerPage) {
+  if (!grid) {
+    return;
+  }
+  const normalizedCards = normalizeLayoutCount(cardsPerRow, DEFAULT_CARDS_PER_ROW);
+  const normalizedRows = normalizeLayoutCount(rowsPerPage, DEFAULT_ROWS_PER_PAGE);
+  grid.style.gridTemplateColumns = `repeat(${normalizedCards}, 1fr)`;
+  if (
+    lastLoggedLayout.cardsPerRow !== normalizedCards ||
+    lastLoggedLayout.rowsPerPage !== normalizedRows
+  ) {
+    console.log(`[Bubblemarks] Layout set → ${normalizedCards} columns × ${normalizedRows} rows`);
+    lastLoggedLayout = { cardsPerRow: normalizedCards, rowsPerPage: normalizedRows };
+  }
+}
 
 function getCurrentLayout() {
   const cardsPerRow = normalizeLayoutCount(preferences.cardsPerRow, DEFAULT_CARDS_PER_ROW);
