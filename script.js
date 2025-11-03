@@ -1,3 +1,4 @@
+
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
 const DEFAULT_SOURCE = "bookmarks.json";
 const FALLBACK_PALETTES = [
@@ -27,6 +28,23 @@ const DEFAULT_CATEGORY_SETTINGS = [
   { key: "work", label: "Work", color: "#F5D5D9" },
   { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#E8E8E8" },
 ];
+
+const DEFAULT_CATEGORY_SETTINGS = defaultCategories
+  .filter((entry) => entry.name.toLowerCase() !== "all")
+  .map((entry) => {
+    const label = entry.name;
+    const normalized = normalizeCategoryKey(label);
+    const key =
+      label.toLowerCase() === DEFAULT_CATEGORY_LABEL.toLowerCase()
+        ? DEFAULT_CATEGORY_SLUG
+        : normalized;
+    return {
+      key,
+      label,
+      color: ensureHexColor(entry.color) || entry.color,
+      isExtra: false,
+    };
+  });
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
 const LAYOUT_MIN_COUNT = 1;
 const LAYOUT_MAX_COUNT = 10;
