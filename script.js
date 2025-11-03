@@ -9,16 +9,41 @@ const FALLBACK_PALETTES = [
 const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
-const DEFAULT_CATEGORY_SETTINGS = [
-  { key: "ai", label: "AI", color: "#ff80c8" },
-  { key: "av", label: "AV", color: "#92a9ff" },
-  { key: "shop", label: "Shop", color: "#ffc778" },
-  { key: "tools", label: "Tools", color: "#6ad6a6" },
-  { key: "games", label: "Games", color: "#b592ff" },
-  { key: "work", label: "Work", color: "#ff9dbb" },
-  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" },
+const defaultCategories = [
+  { name: "All", color: "#aeb7ff" },
+  { name: "AI", color: "#f5c4d4" },
+  { name: "AV", color: "#dcd6f6" },
+  { name: "Games", color: "#f9f6d2" },
+  { name: "Google", color: "#c9e7d8" },
+  { name: "Pages", color: "#bdeed1" },
+  { name: "Shopping", color: "#d7ecf9" },
+  { name: "Stories", color: "#dcd6f6" },
+  { name: "Tools", color: "#e3d6f6" },
+  { name: "Work", color: "#f5d5d9" },
+  { name: "Unsorted", color: "#e8e8e8" },
 ];
+
+const DEFAULT_CATEGORY_SETTINGS = defaultCategories
+  .filter((entry) => entry.name.toLowerCase() !== "all")
+  .map((entry) => {
+    const label = entry.name;
+    const normalized = normalizeCategoryKey(label);
+    const key =
+      label.toLowerCase() === DEFAULT_CATEGORY_LABEL.toLowerCase()
+        ? DEFAULT_CATEGORY_SLUG
+        : normalized;
+    return {
+      key,
+      label,
+      color: ensureHexColor(entry.color) || entry.color,
+      isExtra: false,
+    };
+  });
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
+const LAYOUT_MIN_COUNT = 1;
+const LAYOUT_MAX_COUNT = 10;
+const DEFAULT_CARDS_PER_ROW = 3;
+const DEFAULT_ROWS_PER_PAGE = 2;
 
 const DEFAULT_AXOLOTL_IMAGE = (() => {
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -244,6 +269,14 @@ let categoryForm;
 let categorySettingsList;
 let addCategoryBtn;
 let categoryItemTemplate;
+let cardsPerRowInput;
+let rowsPerPageInput;
+let paginationControls;
+let prevPageBtn;
+let nextPageBtn;
+let lastRenderedCollection = [];
+let pendingResizeFrame = null;
+let lastLoggedLayout = { cardsPerRow: null, rowsPerPage: null };
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
@@ -299,12 +332,17 @@ window.addEventListener("DOMContentLoaded", async () => {
   toggleHeadingInput = document.getElementById("toggle-heading");
   toggleAxolotlInput = document.getElementById("toggle-axolotl");
   cardSizeInput = document.getElementById("card-size");
+  cardsPerRowInput = document.getElementById("cards-per-row");
+  rowsPerPageInput = document.getElementById("rows-per-page");
   customizeCategoriesBtn = document.getElementById("customize-categories");
   categoryModal = document.getElementById("category-modal");
   categoryForm = document.getElementById("category-form");
   categorySettingsList = document.getElementById("category-settings-list");
   addCategoryBtn = document.getElementById("add-category");
   categoryItemTemplate = document.getElementById("category-item-template");
+  paginationControls = document.getElementById("pagination-controls");
+  prevPageBtn = document.getElementById("prev-page");
+  nextPageBtn = document.getElementById("next-page");
 
   if (!grid) console.error("Missing #bookmarks element in DOM");
   if (!keyboardContainer) console.error("Missing #keyboard element in DOM");
@@ -319,6 +357,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   setupDataTools();
   setupCategoryCustomization();
   setupBookmarkCreation();
+  setupLayoutControls();
 
   applyPreferences({ lazyAxolotl: true });
 
@@ -415,16 +454,33 @@ function setupControlTabs() {
   }
 }
 
+function createBookmarkId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `bookmark-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 function sanitizeBookmarks(entries) {
   if (!Array.isArray(entries)) return [];
 
   return entries
-    .map((entry) => ({
-      name: String(entry.name ?? "Untitled").trim(),
-      url: String(entry.url ?? "").trim(),
-      category: entry.category ? String(entry.category).trim() : "Unsorted",
-      image: entry.image ? String(entry.image).trim() : "",
-    }))
+    .map((entry) => {
+      const name = String(entry.name ?? "Untitled").trim();
+      const url = String(entry.url ?? "").trim();
+      const category = entry.category ? String(entry.category).trim() : "Unsorted";
+      const image = entry.image ? String(entry.image).trim() : "";
+      const idValue = typeof entry.id === "string" ? entry.id.trim() : "";
+      const id = idValue || createBookmarkId();
+
+      return {
+        id,
+        name,
+        url,
+        category,
+        image,
+      };
+    })
     .filter((entry) => entry.name && entry.url);
 }
 
@@ -577,11 +633,31 @@ function indexToCardSize(value) {
   return CARD_SIZE_OPTIONS[numeric] || "comfy";
 }
 
+function normalizeLayoutCount(value, fallback) {
+  const fallbackNumber = Number.isFinite(fallback) ? fallback : DEFAULT_CARDS_PER_ROW;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    return clamp(Math.round(numeric), LAYOUT_MIN_COUNT, LAYOUT_MAX_COUNT);
+  }
+  return clamp(Math.round(fallbackNumber), LAYOUT_MIN_COUNT, LAYOUT_MAX_COUNT);
+}
+
+function normalizePageIndex(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return 0;
+  }
+  return Math.max(0, Math.floor(numeric));
+}
+
 function getDefaultPreferences() {
   return {
     showHeading: true,
     showAxolotl: true,
     cardSize: "comfy",
+    cardsPerRow: DEFAULT_CARDS_PER_ROW,
+    rowsPerPage: DEFAULT_ROWS_PER_PAGE,
+    pageIndex: 0,
   };
 }
 
@@ -591,10 +667,16 @@ function normalizePreferences(value) {
     return { ...defaults };
   }
 
+  const cardsPerRow = normalizeLayoutCount(value.cardsPerRow, defaults.cardsPerRow);
+  const rowsPerPage = normalizeLayoutCount(value.rowsPerPage, defaults.rowsPerPage);
+
   return {
     showHeading: value.showHeading !== false,
     showAxolotl: value.showAxolotl !== false,
     cardSize: normalizeCardSize(value.cardSize),
+    cardsPerRow,
+    rowsPerPage,
+    pageIndex: normalizePageIndex(value.pageIndex),
   };
 }
 
@@ -725,6 +807,21 @@ function getCategoryColor(key) {
 }
 
 function pickCategoryColor(seed) {
+  let candidateKey = "";
+  if (typeof seed === "string") {
+    candidateKey = normalizeCategoryKey(seed);
+  }
+
+  if (candidateKey) {
+    const preset = defaultCategories.find(
+      (entry) => normalizeCategoryKey(entry.name) === candidateKey
+    );
+    const presetColor = ensureHexColor(preset?.color);
+    if (presetColor) {
+      return presetColor;
+    }
+  }
+
   const palette = pickFallbackPalette(seed || "category");
   return palette.accent || "#ff99da";
 }
@@ -1315,6 +1412,12 @@ function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
   const showHeading = preferences.showHeading !== false;
   const showAxolotl = preferences.showAxolotl !== false;
   const cardSize = normalizeCardSize(preferences.cardSize);
+  const cardsPerRow = normalizeLayoutCount(preferences.cardsPerRow, DEFAULT_CARDS_PER_ROW);
+  const rowsPerPage = normalizeLayoutCount(preferences.rowsPerPage, DEFAULT_ROWS_PER_PAGE);
+
+  preferences.cardsPerRow = cardsPerRow;
+  preferences.rowsPerPage = rowsPerPage;
+  preferences.pageIndex = normalizePageIndex(preferences.pageIndex);
 
   preferences.cardSize = cardSize;
 
@@ -1332,6 +1435,12 @@ function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
     if (cardSizeInput) {
       cardSizeInput.value = String(cardSizeToIndex(cardSize));
     }
+    if (cardsPerRowInput) {
+      cardsPerRowInput.value = String(cardsPerRow);
+    }
+    if (rowsPerPageInput) {
+      rowsPerPageInput.value = String(rowsPerPage);
+    }
   }
 
   if (axolotlLayer) {
@@ -1341,6 +1450,8 @@ function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
   if (document.body) {
     document.body.setAttribute("data-card-size", cardSize);
   }
+
+  applyGridLayout(cardsPerRow, rowsPerPage);
 
   if (showAxolotl) {
     if (!lazyAxolotl) {
@@ -1567,6 +1678,73 @@ function setupSettingsMenu() {
   }
 }
 
+function setupLayoutControls() {
+  if (cardsPerRowInput) {
+    cardsPerRowInput.min = String(LAYOUT_MIN_COUNT);
+    cardsPerRowInput.max = String(LAYOUT_MAX_COUNT);
+    cardsPerRowInput.step = "1";
+    cardsPerRowInput.addEventListener("change", handleLayoutSettingChange);
+  }
+
+  if (rowsPerPageInput) {
+    rowsPerPageInput.min = String(LAYOUT_MIN_COUNT);
+    rowsPerPageInput.max = String(LAYOUT_MAX_COUNT);
+    rowsPerPageInput.step = "1";
+    rowsPerPageInput.addEventListener("change", handleLayoutSettingChange);
+  }
+
+  if (prevPageBtn) {
+    prevPageBtn.addEventListener("click", () => changePage(-1));
+  }
+
+  if (nextPageBtn) {
+    nextPageBtn.addEventListener("click", () => changePage(1));
+  }
+
+  updatePaginationUI(normalizePageIndex(preferences.pageIndex), 0);
+
+  window.addEventListener("resize", handleLayoutResize);
+}
+
+function handleLayoutSettingChange() {
+  const nextCardsPerRow = normalizeLayoutCount(
+    cardsPerRowInput ? cardsPerRowInput.value : preferences.cardsPerRow,
+    preferences.cardsPerRow
+  );
+  const nextRowsPerPage = normalizeLayoutCount(
+    rowsPerPageInput ? rowsPerPageInput.value : preferences.rowsPerPage,
+    preferences.rowsPerPage
+  );
+
+  const layoutChanged =
+    nextCardsPerRow !== preferences.cardsPerRow || nextRowsPerPage !== preferences.rowsPerPage;
+
+  preferences.cardsPerRow = nextCardsPerRow;
+  preferences.rowsPerPage = nextRowsPerPage;
+
+  if (cardsPerRowInput) {
+    cardsPerRowInput.value = String(nextCardsPerRow);
+  }
+  if (rowsPerPageInput) {
+    rowsPerPageInput.value = String(nextRowsPerPage);
+  }
+
+  let shouldLogPageReset = false;
+  if (layoutChanged) {
+    const previousPageIndex = normalizePageIndex(preferences.pageIndex);
+    preferences.pageIndex = 0;
+    shouldLogPageReset = previousPageIndex !== 0;
+  }
+
+  savePreferences();
+
+  if (shouldLogPageReset) {
+    console.log(`[Bubblemarks] Page changed → ${preferences.pageIndex + 1}`);
+  }
+
+  refreshBookmarksView();
+}
+
 function handleVirtualKey(key) {
   const cursorPosition = searchInput.selectionStart ?? searchInput.value.length;
   const value = searchInput.value;
@@ -1737,45 +1915,212 @@ function syncActiveCategoryVisuals() {
       return;
     }
 
-    if (!collection.length) {
+    lastRenderedCollection = Array.isArray(collection) ? [...collection] : [];
+    const layout = getCurrentLayout();
+    const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
+
+    if (!lastRenderedCollection.length) {
+      replaceChildrenSafe(grid, []);
       showEmptyState("No bookmarks match that vibe yet. Try a different search or category!");
+      applyGridLayout(layout.cardsPerRow, layout.rowsPerPage);
+      updatePaginationUI(0, 0);
+      console.log("[Bubblemarks] Pagination update → no bookmarks to display");
       return;
     }
 
     hideEmptyState();
 
-    const cards = collection.map((bookmark) => {
+    const totalItems = lastRenderedCollection.length;
+    const previousIndex = normalizePageIndex(preferences.pageIndex);
+    const totalPages = Math.max(Math.ceil(totalItems / pageSize), 1);
+    const pageIndex = clampPageIndex(previousIndex, totalItems, layout);
+
+    if (pageIndex !== previousIndex) {
+      preferences.pageIndex = pageIndex;
+      savePreferences();
+      console.log(`[Bubblemarks] Page changed → ${pageIndex + 1}`);
+    }
+
+    const start = pageIndex * pageSize;
+    const end = Math.min(start + pageSize, totalItems);
+    const visible = lastRenderedCollection.slice(start, end);
+
+    const cards = visible.map((bookmark) => {
       const card = template.content.firstElementChild.cloneNode(true);
       const imageEl = card.querySelector(".card-image");
+      const mediaEl = card.querySelector(".card-media");
       const titleEl = card.querySelector(".card-title");
       const categoryEl = card.querySelector(".card-category");
+      const bodyEl = card.querySelector(".card-body");
 
       applyBookmarkImage(imageEl, bookmark);
-    imageEl.alt = bookmark.name;
-    titleEl.textContent = bookmark.name;
-    const categoryKey = normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
-      DEFAULT_CATEGORY_SLUG;
-    const displayLabel = getCategoryLabel(categoryKey, bookmark.category || DEFAULT_CATEGORY_LABEL);
-    categoryEl.textContent = displayLabel;
-    applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
+      imageEl.alt = bookmark.name;
+      titleEl.textContent = bookmark.name;
+      const categoryKey = normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
+        DEFAULT_CATEGORY_SLUG;
+      const displayLabel = getCategoryLabel(categoryKey, bookmark.category || DEFAULT_CATEGORY_LABEL);
+      categoryEl.textContent = displayLabel;
+      applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
-    const openBookmark = () => {
-      window.open(bookmark.url, "_blank", "noopener,noreferrer");
-    };
+      const openBookmark = () => {
+        window.open(bookmark.url, "_blank", "noopener,noreferrer");
+      };
 
-    card.addEventListener("click", openBookmark);
+      if (mediaEl) {
+        mediaEl.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          openBookmark();
+        });
+      } else {
+        card.addEventListener("click", (event) => {
+          event.preventDefault();
+          openBookmark();
+        });
+      }
+
+      card.addEventListener("click", (event) => {
+        if (!(event.target instanceof Element)) {
+          return;
+        }
+        if (mediaEl && mediaEl.contains(event.target)) {
+          event.preventDefault();
+          openBookmark();
+        }
+      });
       card.addEventListener("keydown", (event) => {
+        if (event.target !== card) {
+          return;
+        }
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           openBookmark();
         }
       });
 
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.type = "button";
+      deleteBtn.innerHTML = "✕";
+      deleteBtn.title = "Delete bookmark";
+      deleteBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+
+        if (!confirm(`Delete "${bookmark.name}"?`)) return;
+
+        const nextBookmarks = bookmarks.filter((item) => item.id !== bookmark.id);
+        setBookmarks(nextBookmarks, { persist: true });
+      });
+
+      if (bodyEl) {
+        bodyEl.appendChild(deleteBtn);
+      } else {
+        card.appendChild(deleteBtn);
+      }
+
       return card;
     });
 
     replaceChildrenSafe(grid, cards);
+    applyGridLayout(layout.cardsPerRow, layout.rowsPerPage);
+    updatePaginationUI(pageIndex, totalPages);
+    console.log(
+      `[Bubblemarks] Pagination update → page ${pageIndex + 1} of ${totalPages} (showing ${visible.length} of ${totalItems})`
+    );
   }
+
+function getCurrentLayout() {
+  const cardsPerRow = normalizeLayoutCount(preferences.cardsPerRow, DEFAULT_CARDS_PER_ROW);
+  const rowsPerPage = normalizeLayoutCount(preferences.rowsPerPage, DEFAULT_ROWS_PER_PAGE);
+  preferences.cardsPerRow = cardsPerRow;
+  preferences.rowsPerPage = rowsPerPage;
+  return { cardsPerRow, rowsPerPage };
+}
+
+function clampPageIndex(index, totalItems, layout) {
+  const normalizedIndex = normalizePageIndex(index);
+  const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
+  if (totalItems <= 0 || pageSize <= 0) {
+    return 0;
+  }
+  const totalPages = Math.ceil(totalItems / pageSize);
+  return clamp(normalizedIndex, 0, Math.max(totalPages - 1, 0));
+}
+
+function updatePaginationUI(pageIndex, totalPages) {
+  const hasMultiplePages = totalPages > 1;
+  if (paginationControls) {
+    paginationControls.hidden = !hasMultiplePages;
+  }
+  if (prevPageBtn) {
+    const showPrev = totalPages > 0 && pageIndex > 0;
+    prevPageBtn.hidden = !showPrev;
+    prevPageBtn.disabled = !showPrev;
+  }
+  if (nextPageBtn) {
+    const showNext = totalPages > 0 && pageIndex < totalPages - 1;
+    nextPageBtn.hidden = !showNext;
+    nextPageBtn.disabled = !showNext;
+  }
+}
+
+function refreshBookmarksView() {
+  renderBookmarks(lastRenderedCollection);
+}
+
+function handleLayoutResize() {
+  if (pendingResizeFrame) {
+    window.cancelAnimationFrame(pendingResizeFrame);
+  }
+  pendingResizeFrame = window.requestAnimationFrame(() => {
+    pendingResizeFrame = null;
+    refreshBookmarksView();
+  });
+}
+
+function changePage(delta) {
+  if (!Number.isFinite(delta) || delta === 0) {
+    return;
+  }
+  const layout = getCurrentLayout();
+  const totalItems = lastRenderedCollection.length;
+  const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
+  if (totalItems <= 0 || pageSize <= 0) {
+    return;
+  }
+  const totalPages = Math.ceil(totalItems / pageSize);
+  if (totalPages <= 1) {
+    updatePaginationUI(0, totalPages);
+    return;
+  }
+  const currentIndex = clamp(normalizePageIndex(preferences.pageIndex), 0, totalPages - 1);
+  const nextIndex = clamp(currentIndex + delta, 0, totalPages - 1);
+  if (nextIndex === currentIndex) {
+    updatePaginationUI(nextIndex, totalPages);
+    return;
+  }
+  preferences.pageIndex = nextIndex;
+  savePreferences();
+  console.log(`[Bubblemarks] Page changed → ${nextIndex + 1}`);
+  renderBookmarks(lastRenderedCollection);
+}
+
+function applyGridLayout(cardsPerRow, rowsPerPage) {
+  if (!grid) {
+    return;
+  }
+  const normalizedCards = normalizeLayoutCount(cardsPerRow, DEFAULT_CARDS_PER_ROW);
+  const normalizedRows = normalizeLayoutCount(rowsPerPage, DEFAULT_ROWS_PER_PAGE);
+  grid.style.gridTemplateColumns = `repeat(${normalizedCards}, 1fr)`;
+  if (
+    lastLoggedLayout.cardsPerRow !== normalizedCards ||
+    lastLoggedLayout.rowsPerPage !== normalizedRows
+  ) {
+    console.log(`[Bubblemarks] Layout set → ${normalizedCards} columns × ${normalizedRows} rows`);
+    lastLoggedLayout = { cardsPerRow: normalizedCards, rowsPerPage: normalizedRows };
+  }
+}
 
 function applyBookmarkImage(imageEl, bookmark) {
   imageEl.classList.remove("is-fallback");
@@ -3141,43 +3486,23 @@ function setupDataTools() {
   });
 }
 
-// === Minimal Debug Responsive Grid === //
+// === Adaptive Layout Hook for Notion Embeds === //
 (function handleNotionResize() {
-  const grid = document.getElementById("bookmarks");
-  const slider = document.getElementById("card-size");
+  window.addEventListener("DOMContentLoaded", () => {
+    const slider = document.getElementById("card-size");
 
-  if (!grid || !slider) {
-    console.warn("❌ Grid or slider not found in DOM");
-    return;
-  }
+    if (!grid) {
+      console.warn("❌ Grid not found in DOM for adaptive layout");
+      return;
+    }
 
-  function updateGrid() {
-    const size = parseInt(slider.value, 10) || 1;
-    const width = window.innerWidth;
-    let columns;
-
-    // Basic mapping to test responsiveness
-    if (width < 700) columns = 2;
-    else if (width < 1000) columns = 3;
-    else if (width < 1300) columns = 4;
-    else if (width < 1600) columns = 5;
-    else columns = 6;
-
-    // Adjust by slider setting
-    if (size === 0) columns += 1; // cozy = more columns
-    if (size === 2) columns -= 1; // roomy = fewer columns
-    if (columns < 1) columns = 1;
-
-    grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
-
-    console.log(`Grid updated → ${columns} columns (size ${size}, width ${width})`);
-  }
-
-  window.addEventListener("resize", updateGrid);
-  slider.addEventListener("input", updateGrid);
-
-  // Run immediately
-  updateGrid();
+    if (slider) {
+      slider.addEventListener("input", () => {
+        handleLayoutResize();
+        console.log("Grid layout refresh requested for Notion embed context");
+      });
+    }
+  });
 })();
 
 console.log("✅ script validated");
