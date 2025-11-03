@@ -11,13 +11,16 @@ const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
 const DEFAULT_CATEGORY_SETTINGS = [
-  { key: "ai", label: "AI", color: "#ff80c8" },
-  { key: "av", label: "AV", color: "#92a9ff" },
-  { key: "shop", label: "Shop", color: "#ffc778" },
-  { key: "tools", label: "Tools", color: "#6ad6a6" },
-  { key: "games", label: "Games", color: "#b592ff" },
-  { key: "work", label: "Work", color: "#ff9dbb" },
-  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" },
+  { key: "ai", label: "AI", color: "#f6d0eb" },
+  { key: "av", label: "AV", color: "#f2e8d0" },
+  { key: "games", label: "Games", color: "#fffadc" },
+  { key: "google", label: "Google", color: "#d8f2d8" },
+  { key: "pages", label: "Pages", color: "#dbfbe3" },
+  { key: "shopping", label: "Shopping", color: "#d8eefd" },
+  { key: "stories", label: "Stories", color: "#e0d8f7" },
+  { key: "tools", label: "Tools", color: "#e7d9f8" },
+  { key: "work", label: "Work", color: "#f7e0e0" },
+  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ebebeb" },
 ];
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
 const LAYOUT_MIN_COUNT = 1;
