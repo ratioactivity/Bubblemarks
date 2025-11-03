@@ -2008,38 +2008,42 @@ function syncActiveCategoryVisuals() {
           openBookmark();
         }
       });
+// --- Inline delete button setup ---
+const deleteBtn = document.createElement("button");
+deleteBtn.className = "delete-bookmark";
+deleteBtn.textContent = "✕";
+deleteBtn.title = "Delete bookmark";
 
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "delete-btn";
-      deleteBtn.type = "button";
-      deleteBtn.innerHTML = "✕";
-      deleteBtn.title = "Delete bookmark";
-      deleteBtn.addEventListener("click", (event) => {
-        event.stopPropagation();
-        event.preventDefault();
+deleteBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
 
-        if (!confirm(`Delete "${bookmark.name}"?`)) return;
-
-        const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
-        setBookmarks(nextBookmarks, { persist: true });
-      });
-
-      if (bodyEl) {
-        bodyEl.appendChild(deleteBtn);
-      } else {
-        card.appendChild(deleteBtn);
-      }
-
-      return card;
-    });
-
-    replaceChildrenSafe(grid, cards);
-    applyGridLayout(layout.cardsPerRow, layout.rowsPerPage);
-    updatePaginationUI(pageIndex, totalPages);
-    console.log(
-      `[Bubblemarks] Pagination update → page ${pageIndex + 1} of ${totalPages} (showing ${visible.length} of ${totalItems})`
-    );
+  const existing = card.querySelector(".delete-confirm");
+  if (existing) {
+    existing.remove();
+    return;
   }
+
+  const confirm = document.createElement("div");
+  confirm.className = "delete-confirm";
+  confirm.innerHTML = `
+    <span>Delete?</span>
+    <button class="yes">Yes</button>
+    <button class="no">No</button>
+  `;
+
+  confirm.querySelector(".yes").addEventListener("click", () => {
+    const updated = bookmarks.filter(b => b !== bookmark);
+    setBookmarks(updated);
+    applyFilters();
+  });
+
+  confirm.querySelector(".no").addEventListener("click", () => confirm.remove());
+  card.appendChild(confirm);
+});
+
+card.appendChild(deleteBtn);
+// --- end delete setup ---
 
 function getCurrentLayout() {
   const cardsPerRow = normalizeLayoutCount(preferences.cardsPerRow, DEFAULT_CARDS_PER_ROW);
