@@ -2081,6 +2081,17 @@ function syncActiveCategoryVisuals() {
       `[Bubblemarks] Pagination update → page ${pageIndex + 1} of ${totalPages} (showing ${visible.length} of ${totalItems})`
     );
   }
+  const normalizedCards = normalizeLayoutCount(cardsPerRow, DEFAULT_CARDS_PER_ROW);
+  const normalizedRows = normalizeLayoutCount(rowsPerPage, DEFAULT_ROWS_PER_PAGE);
+  grid.style.gridTemplateColumns = `repeat(${normalizedCards}, 1fr)`;
+  if (
+    lastLoggedLayout.cardsPerRow !== normalizedCards ||
+    lastLoggedLayout.rowsPerPage !== normalizedRows
+  ) {
+    console.log(`[Bubblemarks] Layout set → ${normalizedCards} columns × ${normalizedRows} rows`);
+    lastLoggedLayout = { cardsPerRow: normalizedCards, rowsPerPage: normalizedRows };
+  }
+}
 
 function getCurrentLayout() {
   const cardsPerRow = normalizeLayoutCount(preferences.cardsPerRow, DEFAULT_CARDS_PER_ROW);
