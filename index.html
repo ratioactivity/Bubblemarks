@@ -125,6 +125,10 @@
     </section>
 
     <section id="bookmarks" class="grid" aria-live="polite" aria-busy="false"></section>
+    <div id="pagination-controls" class="pagination-controls">
+      <button id="prev-page" type="button" class="soft-btn soft-btn--ghost">← Previous</button>
+      <button id="next-page" type="button" class="soft-btn">Next →</button>
+    </div>
     <p id="empty-state" class="empty-state" hidden>
       No bookmarks match that vibe yet. Try a different search or category!
     </p>
@@ -284,6 +288,16 @@
               </div>
             </div>
           </div>
+          <div class="settings-layout">
+            <label class="settings-layout__field" for="cards-per-row">
+              <span>Cards per row</span>
+              <input type="number" id="cards-per-row" min="1" max="10" step="1" />
+            </label>
+            <label class="settings-layout__field" for="rows-per-page">
+              <span>Rows per page</span>
+              <input type="number" id="rows-per-page" min="1" max="10" step="1" />
+            </label>
+          </div>
         </fieldset>
         <fieldset class="settings-section">
           <legend>Data</legend>
@@ -311,6 +325,16 @@
     <span aria-hidden="true">⚙</span>
     <span class="sr-only">Open settings</span>
   </button>
+
+  <div id="confirmModal" class="confirm-modal hidden">
+    <div class="confirm-box">
+      <p id="confirmText">Delete this bookmark?</p>
+      <div class="confirm-buttons">
+        <button id="confirmYes">Delete</button>
+        <button id="confirmNo">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <script src="bubbles-background.js"></script>
   <script src="script.js"></script>
