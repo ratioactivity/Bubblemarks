@@ -10,18 +10,14 @@ const FALLBACK_PALETTES = [
 const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
-const defaultCategories = [
-  { name: "All", color: "#a7b8ff" },
-  { name: "AI", color: "#f6d0eb" },
-  { name: "AV", color: "#f2e8d0" },
-  { name: "Games", color: "#fffadc" },
-  { name: "Google", color: "#d8f2d8" },
-  { name: "Pages", color: "#dbfbe3" },
-  { name: "Shopping", color: "#d8eefd" },
-  { name: "Stories", color: "#e0d8f7" },
-  { name: "Tools", color: "#e7d9f8" },
-  { name: "Work", color: "#f7e0e0" },
-  { name: "Unsorted", color: "#ebebeb" }
+const DEFAULT_CATEGORY_SETTINGS = [
+  { key: "ai", label: "AI", color: "#ff80c8" },
+  { key: "av", label: "AV", color: "#92a9ff" },
+  { key: "shop", label: "Shop", color: "#ffc778" },
+  { key: "tools", label: "Tools", color: "#6ad6a6" },
+  { key: "games", label: "Games", color: "#b592ff" },
+  { key: "work", label: "Work", color: "#ff9dbb" },
+  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" },
 ];
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
 const LAYOUT_MIN_COUNT = 1;
