@@ -1,3 +1,4 @@
+
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
 const DEFAULT_SOURCE = "bookmarks.json";
 const FALLBACK_PALETTES = [
@@ -9,36 +10,15 @@ const FALLBACK_PALETTES = [
 const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
-const defaultCategories = [
-  { name: "All", color: "#aeb7ff" },
-  { name: "AI", color: "#f5c4d4" },
-  { name: "AV", color: "#dcd6f6" },
-  { name: "Games", color: "#f9f6d2" },
-  { name: "Google", color: "#c9e7d8" },
-  { name: "Pages", color: "#bdeed1" },
-  { name: "Shopping", color: "#d7ecf9" },
-  { name: "Stories", color: "#dcd6f6" },
-  { name: "Tools", color: "#e3d6f6" },
-  { name: "Work", color: "#f5d5d9" },
-  { name: "Unsorted", color: "#e8e8e8" },
+const DEFAULT_CATEGORY_SETTINGS = [
+  { key: "ai", label: "AI", color: "#ff80c8" },
+  { key: "av", label: "AV", color: "#92a9ff" },
+  { key: "shop", label: "Shop", color: "#ffc778" },
+  { key: "tools", label: "Tools", color: "#6ad6a6" },
+  { key: "games", label: "Games", color: "#b592ff" },
+  { key: "work", label: "Work", color: "#ff9dbb" },
+  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" },
 ];
-
-const DEFAULT_CATEGORY_SETTINGS = defaultCategories
-  .filter((entry) => entry.name.toLowerCase() !== "all")
-  .map((entry) => {
-    const label = entry.name;
-    const normalized = normalizeCategoryKey(label);
-    const key =
-      label.toLowerCase() === DEFAULT_CATEGORY_LABEL.toLowerCase()
-        ? DEFAULT_CATEGORY_SLUG
-        : normalized;
-    return {
-      key,
-      label,
-      color: ensureHexColor(entry.color) || entry.color,
-      isExtra: false,
-    };
-  });
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
 const LAYOUT_MIN_COUNT = 1;
 const LAYOUT_MAX_COUNT = 10;
@@ -454,33 +434,16 @@ function setupControlTabs() {
   }
 }
 
-function createBookmarkId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `bookmark-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 function sanitizeBookmarks(entries) {
   if (!Array.isArray(entries)) return [];
 
   return entries
-    .map((entry) => {
-      const name = String(entry.name ?? "Untitled").trim();
-      const url = String(entry.url ?? "").trim();
-      const category = entry.category ? String(entry.category).trim() : "Unsorted";
-      const image = entry.image ? String(entry.image).trim() : "";
-      const idValue = typeof entry.id === "string" ? entry.id.trim() : "";
-      const id = idValue || createBookmarkId();
-
-      return {
-        id,
-        name,
-        url,
-        category,
-        image,
-      };
-    })
+    .map((entry) => ({
+      name: String(entry.name ?? "Untitled").trim(),
+      url: String(entry.url ?? "").trim(),
+      category: entry.category ? String(entry.category).trim() : "Unsorted",
+      image: entry.image ? String(entry.image).trim() : "",
+    }))
     .filter((entry) => entry.name && entry.url);
 }
 
@@ -807,21 +770,6 @@ function getCategoryColor(key) {
 }
 
 function pickCategoryColor(seed) {
-  let candidateKey = "";
-  if (typeof seed === "string") {
-    candidateKey = normalizeCategoryKey(seed);
-  }
-
-  if (candidateKey) {
-    const preset = defaultCategories.find(
-      (entry) => normalizeCategoryKey(entry.name) === candidateKey
-    );
-    const presetColor = ensureHexColor(preset?.color);
-    if (presetColor) {
-      return presetColor;
-    }
-  }
-
   const palette = pickFallbackPalette(seed || "category");
   return palette.accent || "#ff99da";
 }
@@ -2009,7 +1957,7 @@ function syncActiveCategoryVisuals() {
 
         if (!confirm(`Delete "${bookmark.name}"?`)) return;
 
-        const nextBookmarks = bookmarks.filter((item) => item.id !== bookmark.id);
+        const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
         setBookmarks(nextBookmarks, { persist: true });
       });
 
