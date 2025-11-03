@@ -1856,41 +1856,101 @@ function syncActiveCategoryVisuals() {
 }
 
   function renderBookmarks(collection) {
-    if (!grid) {
-      console.error("Cannot render bookmarks without #bookmarks element");
-      return;
-    }
+  if (!grid) {
+    console.error("Cannot render bookmarks without #bookmarks element");
+    return;
+  }
 
-    if (!template?.content?.firstElementChild) {
-      console.error("Missing bookmark card template");
-      return;
-    }
+  if (!template?.content?.firstElementChild) {
+    console.error("Missing bookmark card template");
+    return;
+  }
 
-    lastRenderedCollection = Array.isArray(collection) ? [...collection] : [];
-    const layout = getCurrentLayout();
-    const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
+  lastRenderedCollection = Array.isArray(collection) ? [...collection] : [];
+  const layout = getCurrentLayout();
+  const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
 
-    if (!lastRenderedCollection.length) {
-      replaceChildrenSafe(grid, []);
-      showEmptyState("No bookmarks match that vibe yet. Try a different search or category!");
-      applyGridLayout(layout.cardsPerRow, layout.rowsPerPage);
-      updatePaginationUI(0, 0);
-      console.log("[Bubblemarks] Pagination update → no bookmarks to display");
-      return;
-    }
+  if (!lastRenderedCollection.length) {
+    replaceChildrenSafe(grid, []);
+    showEmptyState("No bookmarks match that vibe yet. Try a different search or category!");
+    applyGridLayout(layout.cardsPerRow, layout.rowsPerPage);
+    updatePaginationUI(0, 0);
+    console.log("[Bubblemarks] Pagination update → no bookmarks to display");
+    return;
+  }
 
-    hideEmptyState();
+  hideEmptyState();
 
-    const totalItems = lastRenderedCollection.length;
-    const previousIndex = normalizePageIndex(preferences.pageIndex);
-    const totalPages = Math.max(Math.ceil(totalItems / pageSize), 1);
-    const pageIndex = clampPageIndex(previousIndex, totalItems, layout);
+  const totalItems = lastRenderedCollection.length;
+  const previousIndex = normalizePageIndex(preferences.pageIndex);
+  const totalPages = Math.max(Math.ceil(totalItems / pageSize), 1);
+  const pageIndex = clampPageIndex(previousIndex, totalItems, layout);
 
-    if (pageIndex !== previousIndex) {
-      preferences.pageIndex = pageIndex;
-      savePreferences();
-      console.log(`[Bubblemarks] Page changed → ${pageIndex + 1}`);
-    }
+  if (pageIndex !== previousIndex) {
+    preferences.pageIndex = pageIndex;
+    savePreferences();
+    console.log(`[Bubblemarks] Page changed → ${pageIndex + 1}`);
+  }
+
+  const start = pageIndex * pageSize;
+  const end = Math.min(start + pageSize, totalItems);
+  const visibleBookmarks = lastRenderedCollection.slice(start, end);
+
+  // Clear the grid before rendering
+  replaceChildrenSafe(grid, []);
+
+  visibleBookmarks.forEach((bookmark) => {
+    const card = template.content.firstElementChild.cloneNode(true);
+    const link = card.querySelector("a");
+    const titleEl = card.querySelector(".bookmark-title");
+    const imageEl = card.querySelector(".bookmark-image");
+
+    if (link) link.href = bookmark.url || "#";
+    if (titleEl) titleEl.textContent = bookmark.title || "Untitled";
+    if (imageEl && bookmark.image) imageEl.src = bookmark.image;
+
+    // --- Inline delete button setup ---
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-bookmark";
+    deleteBtn.textContent = "✕";
+
+    deleteBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const existing = card.querySelector(".delete-confirm");
+      if (existing) {
+        existing.remove();
+        return;
+      }
+
+      const confirm = document.createElement("div");
+      confirm.className = "delete-confirm";
+      confirm.innerHTML = `
+        <span>Delete?</span>
+        <button class="yes">Yes</button>
+        <button class="no">No</button>
+      `;
+
+      confirm.querySelector(".yes").addEventListener("click", () => {
+        const updated = bookmarks.filter(b => b !== bookmark);
+        setBookmarks(updated);
+        applyFilters();
+      });
+
+      confirm.querySelector(".no").addEventListener("click", () => confirm.remove());
+      card.appendChild(confirm);
+    });
+
+    card.appendChild(deleteBtn);
+    // --- end delete setup ---
+
+    grid.appendChild(card);
+  });
+
+  applyGridLayout(layout.cardsPerRow, layout.rowsPerPage);
+  updatePaginationUI(pageIndex, totalPages);
+}
 
     const start = pageIndex * pageSize;
     const end = Math.min(start + pageSize, totalItems);
