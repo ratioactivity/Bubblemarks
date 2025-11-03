@@ -10,18 +10,23 @@ const FALLBACK_PALETTES = [
 const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
-const defaultCategories = [
-  { name: "All", color: "#aeb7ff" },
-  { name: "AI", color: "#f5c4d4" },
-  { name: "AV", color: "#dcd6f6" },
-  { name: "Games", color: "#f9f6d2" },
-  { name: "Google", color: "#c9e7d8" },
-  { name: "Pages", color: "#bdeed1" },
-  { name: "Shopping", color: "#d7ecf9" },
-  { name: "Stories", color: "#dcd6f6" },
-  { name: "Tools", color: "#e3d6f6" },
-  { name: "Work", color: "#f5d5d9" },
-  { name: "Unsorted", color: "#e8e8e8" },
+const ALL_CATEGORY_COLOR = "#AEB7FF";
+
+/**
+ * Display order we want (All is derived at runtime and not stored).
+ * Colors chosen to match the UI chips in the screenshot.
+ */
+const DEFAULT_CATEGORY_SETTINGS = [
+  { key: "ai", label: "AI", color: "#F5C4D4" },
+  { key: "av", label: "AV", color: "#DCD6F6" },
+  { key: "games", label: "Games", color: "#F9F6D2" },
+  { key: "google", label: "Google", color: "#C9E7D8" },
+  { key: "pages", label: "Pages", color: "#BDEED1" },
+  { key: "shopping", label: "Shopping", color: "#D7ECF9" },
+  { key: "stories", label: "Stories", color: "#DCD6F6" },
+  { key: "tools", label: "Tools", color: "#E3D6F6" },
+  { key: "work", label: "Work", color: "#F5D5D9" },
+  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#E8E8E8" },
 ];
 
 const DEFAULT_CATEGORY_SETTINGS = defaultCategories
@@ -275,9 +280,14 @@ let rowsPerPageInput;
 let paginationControls;
 let prevPageBtn;
 let nextPageBtn;
+let confirmModalEl;
+let confirmTextEl;
+let confirmYesEl;
+let confirmNoEl;
 let lastRenderedCollection = [];
 let pendingResizeFrame = null;
 let lastLoggedLayout = { cardsPerRow: null, rowsPerPage: null };
+let pendingDeleteId = null;
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
@@ -296,6 +306,21 @@ function replaceChildrenSafe(target, nodes) {
     target.innerHTML = "";
     list.forEach((node) => target.appendChild(node));
   }
+}
+
+function openConfirmFor(bookmark) {
+  pendingDeleteId = bookmark.id;
+
+  if (confirmTextEl) {
+    confirmTextEl.textContent = `Delete “${bookmark.name}”?`;
+  }
+
+  confirmModalEl?.removeAttribute("hidden");
+}
+
+function closeConfirm() {
+  pendingDeleteId = null;
+  confirmModalEl?.setAttribute("hidden", "");
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
@@ -344,6 +369,31 @@ window.addEventListener("DOMContentLoaded", async () => {
   paginationControls = document.getElementById("pagination-controls");
   prevPageBtn = document.getElementById("prev-page");
   nextPageBtn = document.getElementById("next-page");
+  confirmModalEl = document.getElementById("confirm-modal");
+  confirmTextEl = document.getElementById("confirm-text");
+  confirmYesEl = document.getElementById("confirm-yes");
+  confirmNoEl = document.getElementById("confirm-no");
+
+  confirmYesEl?.addEventListener("click", () => {
+    if (!pendingDeleteId) {
+      return;
+    }
+
+    const next = (bookmarks || []).filter((bookmarkItem) => bookmarkItem.id !== pendingDeleteId);
+    setBookmarks(next, { persist: true });
+    closeConfirm();
+    applyFilters();
+  });
+
+  confirmNoEl?.addEventListener("click", () => {
+    closeConfirm();
+  });
+
+  confirmModalEl?.addEventListener("click", (event) => {
+    if (event.target === confirmModalEl) {
+      closeConfirm();
+    }
+  });
 
   if (!grid) console.error("Missing #bookmarks element in DOM");
   if (!keyboardContainer) console.error("Missing #keyboard element in DOM");
@@ -465,21 +515,26 @@ function createBookmarkId() {
 function sanitizeBookmarks(entries) {
   if (!Array.isArray(entries)) return [];
 
+  const makeId = () =>
+    (crypto?.randomUUID?.() || `bm-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
   return entries
-    .map((entry) => {
-      const name = String(entry.name ?? "Untitled").trim();
-      const url = String(entry.url ?? "").trim();
-      const category = entry.category ? String(entry.category).trim() : "Unsorted";
-      const image = entry.image ? String(entry.image).trim() : "";
-      const idValue = typeof entry.id === "string" ? entry.id.trim() : "";
-      const id = idValue || createBookmarkId();
+    .map((raw) => {
+      const name = String(raw.name ?? "Untitled").trim();
+      const url = String(raw.url ?? "").trim();
+      const cat = raw.category ? String(raw.category).trim() : DEFAULT_CATEGORY_LABEL;
+      const img = raw.image ? String(raw.image).trim() : "";
+      const id =
+        typeof raw.id === "string" && raw.id.trim()
+          ? raw.id.trim()
+          : makeId();
 
       return {
         id,
         name,
         url,
-        category,
-        image,
+        category: cat,
+        image: img,
       };
     })
     .filter((entry) => entry.name && entry.url);
@@ -814,8 +869,12 @@ function pickCategoryColor(seed) {
   }
 
   if (candidateKey) {
-    const preset = defaultCategories.find(
-      (entry) => normalizeCategoryKey(entry.name) === candidateKey
+    if (candidateKey === "all") {
+      return ALL_CATEGORY_COLOR;
+    }
+
+    const preset = DEFAULT_CATEGORY_SETTINGS.find(
+      (entry) => entry.key === candidateKey || normalizeCategoryKey(entry.label) === candidateKey
     );
     const presetColor = ensureHexColor(preset?.color);
     if (presetColor) {
@@ -2000,18 +2059,14 @@ function syncActiveCategoryVisuals() {
       });
 
       const deleteBtn = document.createElement("button");
-      deleteBtn.className = "delete-btn";
       deleteBtn.type = "button";
-      deleteBtn.innerHTML = "✕";
+      deleteBtn.className = "bm-delete";
+      deleteBtn.textContent = "✕";
       deleteBtn.title = "Delete bookmark";
       deleteBtn.addEventListener("click", (event) => {
-        event.stopPropagation();
         event.preventDefault();
-
-        if (!confirm(`Delete "${bookmark.name}"?`)) return;
-
-        const nextBookmarks = bookmarks.filter((item) => item.id !== bookmark.id);
-        setBookmarks(nextBookmarks, { persist: true });
+        event.stopPropagation();
+        openConfirmFor(bookmark);
       });
 
       if (bodyEl) {
