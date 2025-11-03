@@ -470,12 +470,7 @@ function sanitizeBookmarks(entries) {
 }
 
 function getDefaultCategorySettings() {
-  return _SETTINGS.map((entry) => ({
-    key: entry.key,
-    label: entry.label,
-    color: entry.color,
-    isExtra: entry.isExtra ?? false,
-  }));
+  return DEFAULT_CATEGORY_SETTINGS;
 }
 
 function mergeCategorySettingsWithDefaults(current) {
@@ -1984,59 +1979,44 @@ function renderBookmarks(collection) {
     // --- Inline delete button setup (Notion-safe) ---
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
-    deleteBtn.className = "bm-delete";
+    deleteBtn.className = "delete-btn";
     deleteBtn.textContent = "✕";
     deleteBtn.title = "Delete bookmark";
 
-    const inlineConfirm = document.createElement("div");
-    inlineConfirm.className = "bm-inline-delete";
-    inlineConfirm.hidden = true;
-
-    const confirmDeleteBtn = document.createElement("button");
-    confirmDeleteBtn.type = "button";
-    confirmDeleteBtn.className = "bm-inline-delete__confirm";
-    confirmDeleteBtn.textContent = "Delete";
-
-    const cancelDeleteBtn = document.createElement("button");
-    cancelDeleteBtn.type = "button";
-    cancelDeleteBtn.className = "bm-inline-delete__cancel";
-    cancelDeleteBtn.textContent = "Cancel";
-
-    // When you click the X, show the little confirm panel
     deleteBtn.addEventListener("click", (event) => {
-      event.preventDefault();
       event.stopPropagation();
-      showInlineDeletePanel(inlineConfirm);
+      event.preventDefault();
+
+      const confirmation = document.createElement("div");
+      confirmation.className = "inline-delete-confirmation";
+      confirmation.innerHTML = `
+    <span>Delete this bookmark?</span>
+    <button class="confirm">Yes</button>
+    <button class="cancel">No</button>
+  `;
+
+      const confirmBtn = confirmation.querySelector(".confirm");
+      const cancelBtn = confirmation.querySelector(".cancel");
+
+      confirmBtn.addEventListener("click", () => {
+        const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
+        setBookmarks(nextBookmarks, { persist: true });
+        confirmation.remove();
+      });
+
+      cancelBtn.addEventListener("click", () => {
+        confirmation.remove();
+      });
+
+      card.appendChild(confirmation);
     });
 
-    // Confirm delete
-    confirmDeleteBtn.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const next = (bookmarks || []).filter(
-        (bookmarkItem) => bookmarkItem.id !== bookmark.id
-      );
-      setBookmarks(next, { persist: true });
-      applyFilters();
-      hideInlineDeletePanel(inlineConfirm);
-    });
-
-    // Cancel delete
-    cancelDeleteBtn.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      hideInlineDeletePanel(inlineConfirm);
-    });
-
-    inlineConfirm.appendChild(confirmDeleteBtn);
-    inlineConfirm.appendChild(cancelDeleteBtn);
-
-    if (bodyEl) {
-      bodyEl.appendChild(deleteBtn);
-      bodyEl.appendChild(inlineConfirm);
+    // Append delete button to the white card body (not the category label)
+    const footer = card.querySelector(".bookmark-body");
+    if (footer) {
+      footer.appendChild(deleteBtn);
     } else {
       card.appendChild(deleteBtn);
-      card.appendChild(inlineConfirm);
     }
     // --- end inline delete setup ---
 
