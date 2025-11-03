@@ -280,14 +280,10 @@ let rowsPerPageInput;
 let paginationControls;
 let prevPageBtn;
 let nextPageBtn;
-let confirmModalEl;
-let confirmTextEl;
-let confirmYesEl;
-let confirmNoEl;
 let lastRenderedCollection = [];
 let pendingResizeFrame = null;
 let lastLoggedLayout = { cardsPerRow: null, rowsPerPage: null };
-let pendingDeleteId = null;
+let activeInlineDeletePanel = null;
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
@@ -308,19 +304,31 @@ function replaceChildrenSafe(target, nodes) {
   }
 }
 
-function openConfirmFor(bookmark) {
-  pendingDeleteId = bookmark.id;
-
-  if (confirmTextEl) {
-    confirmTextEl.textContent = `Delete “${bookmark.name}”?`;
+function showInlineDeletePanel(panel) {
+  if (!panel) {
+    return;
   }
 
-  confirmModalEl?.removeAttribute("hidden");
+  if (activeInlineDeletePanel && activeInlineDeletePanel !== panel) {
+    hideInlineDeletePanel(activeInlineDeletePanel);
+  }
+
+  panel.hidden = false;
+  panel.dataset.active = "true";
+  activeInlineDeletePanel = panel;
 }
 
-function closeConfirm() {
-  pendingDeleteId = null;
-  confirmModalEl?.setAttribute("hidden", "");
+function hideInlineDeletePanel(panel) {
+  if (!panel) {
+    return;
+  }
+
+  panel.hidden = true;
+  panel.removeAttribute("data-active");
+
+  if (activeInlineDeletePanel === panel) {
+    activeInlineDeletePanel = null;
+  }
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
@@ -369,31 +377,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   paginationControls = document.getElementById("pagination-controls");
   prevPageBtn = document.getElementById("prev-page");
   nextPageBtn = document.getElementById("next-page");
-  confirmModalEl = document.getElementById("confirm-modal");
-  confirmTextEl = document.getElementById("confirm-text");
-  confirmYesEl = document.getElementById("confirm-yes");
-  confirmNoEl = document.getElementById("confirm-no");
-
-  confirmYesEl?.addEventListener("click", () => {
-    if (!pendingDeleteId) {
-      return;
-    }
-
-    const next = (bookmarks || []).filter((bookmarkItem) => bookmarkItem.id !== pendingDeleteId);
-    setBookmarks(next, { persist: true });
-    closeConfirm();
-    applyFilters();
-  });
-
-  confirmNoEl?.addEventListener("click", () => {
-    closeConfirm();
-  });
-
-  confirmModalEl?.addEventListener("click", (event) => {
-    if (event.target === confirmModalEl) {
-      closeConfirm();
-    }
-  });
 
   if (!grid) console.error("Missing #bookmarks element in DOM");
   if (!keyboardContainer) console.error("Missing #keyboard element in DOM");
@@ -1975,6 +1958,10 @@ function syncActiveCategoryVisuals() {
       return;
     }
 
+    if (activeInlineDeletePanel) {
+      hideInlineDeletePanel(activeInlineDeletePanel);
+    }
+
     lastRenderedCollection = Array.isArray(collection) ? [...collection] : [];
     const layout = getCurrentLayout();
     const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
@@ -2063,16 +2050,51 @@ function syncActiveCategoryVisuals() {
       deleteBtn.className = "bm-delete";
       deleteBtn.textContent = "✕";
       deleteBtn.title = "Delete bookmark";
+
+      const inlineConfirm = document.createElement("div");
+      inlineConfirm.className = "bm-inline-delete";
+      inlineConfirm.hidden = true;
+
+      const confirmDeleteBtn = document.createElement("button");
+      confirmDeleteBtn.type = "button";
+      confirmDeleteBtn.className = "bm-inline-delete__confirm";
+      confirmDeleteBtn.textContent = "Delete";
+
+      const cancelDeleteBtn = document.createElement("button");
+      cancelDeleteBtn.type = "button";
+      cancelDeleteBtn.className = "bm-inline-delete__cancel";
+      cancelDeleteBtn.textContent = "Cancel";
+
       deleteBtn.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
-        openConfirmFor(bookmark);
+        showInlineDeletePanel(inlineConfirm);
       });
+
+      confirmDeleteBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const next = (bookmarks || []).filter((bookmarkItem) => bookmarkItem.id !== bookmark.id);
+        setBookmarks(next, { persist: true });
+        applyFilters();
+        hideInlineDeletePanel(inlineConfirm);
+      });
+
+      cancelDeleteBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        hideInlineDeletePanel(inlineConfirm);
+      });
+
+      inlineConfirm.appendChild(confirmDeleteBtn);
+      inlineConfirm.appendChild(cancelDeleteBtn);
 
       if (bodyEl) {
         bodyEl.appendChild(deleteBtn);
+        bodyEl.appendChild(inlineConfirm);
       } else {
         card.appendChild(deleteBtn);
+        card.appendChild(inlineConfirm);
       }
 
       return card;
