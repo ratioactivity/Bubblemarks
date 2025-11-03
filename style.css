@@ -879,6 +879,7 @@ body {
   gap: var(--card-body-gap, 0.35rem);
   align-content: start;
   position: relative;
+  pointer-events: auto;
 }
 
 .card-category {
@@ -1471,6 +1472,7 @@ body.modal-open {
   cursor: pointer;
   transition: background 0.2s ease;
   z-index: 10;
+  pointer-events: all;
 }
 
 .delete-btn:hover {
