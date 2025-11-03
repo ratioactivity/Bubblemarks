@@ -278,6 +278,27 @@ function replaceChildrenSafe(target, nodes) {
   }
 }
 
+let activeInlineDeletePanel = null;
+
+function showInlineDeletePanel(panel) {
+  if (!panel) return;
+  if (activeInlineDeletePanel && activeInlineDeletePanel !== panel) {
+    hideInlineDeletePanel(activeInlineDeletePanel);
+  }
+  panel.hidden = false;
+  panel.dataset.active = "true";
+  activeInlineDeletePanel = panel;
+}
+
+function hideInlineDeletePanel(panel) {
+  if (!panel) return;
+  panel.hidden = true;
+  panel.removeAttribute("data-active");
+  if (activeInlineDeletePanel === panel) {
+    activeInlineDeletePanel = null;
+  }
+}
+
 window.addEventListener("DOMContentLoaded", async () => {
   grid = document.getElementById("bookmarks");
   emptyState = document.getElementById("empty-state");
