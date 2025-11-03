@@ -274,9 +274,14 @@ let rowsPerPageInput;
 let paginationControls;
 let prevPageBtn;
 let nextPageBtn;
+let confirmModal;
+let confirmText;
+let confirmYes;
+let confirmNo;
 let lastRenderedCollection = [];
 let pendingResizeFrame = null;
 let lastLoggedLayout = { cardsPerRow: null, rowsPerPage: null };
+let pendingDelete = null;
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
@@ -294,6 +299,18 @@ function replaceChildrenSafe(target, nodes) {
   } else {
     target.innerHTML = "";
     list.forEach((node) => target.appendChild(node));
+  }
+}
+
+function openConfirm(bookmark) {
+  pendingDelete = bookmark;
+
+  if (confirmText) {
+    confirmText.textContent = `Delete "${bookmark.name}"?`;
+  }
+
+  if (confirmModal) {
+    confirmModal.classList.remove("hidden");
   }
 }
 
@@ -343,6 +360,45 @@ window.addEventListener("DOMContentLoaded", async () => {
   paginationControls = document.getElementById("pagination-controls");
   prevPageBtn = document.getElementById("prev-page");
   nextPageBtn = document.getElementById("next-page");
+  confirmModal = document.getElementById("confirmModal");
+  confirmText = document.getElementById("confirmText");
+  confirmYes = document.getElementById("confirmYes");
+  confirmNo = document.getElementById("confirmNo");
+
+  if (confirmYes) {
+    confirmYes.addEventListener("click", () => {
+      if (!pendingDelete) {
+        return;
+      }
+
+      const nextBookmarks = bookmarks.filter(
+        (bookmarkItem) => bookmarkItem.id !== pendingDelete.id
+      );
+      setBookmarks(nextBookmarks, { persist: true });
+      pendingDelete = null;
+      if (confirmModal) {
+        confirmModal.classList.add("hidden");
+      }
+    });
+  }
+
+  if (confirmNo) {
+    confirmNo.addEventListener("click", () => {
+      pendingDelete = null;
+      if (confirmModal) {
+        confirmModal.classList.add("hidden");
+      }
+    });
+  }
+
+  if (confirmModal) {
+    confirmModal.addEventListener("click", (event) => {
+      if (event.target === confirmModal) {
+        pendingDelete = null;
+        confirmModal.classList.add("hidden");
+      }
+    });
+  }
 
   if (!grid) console.error("Missing #bookmarks element in DOM");
   if (!keyboardContainer) console.error("Missing #keyboard element in DOM");
@@ -2006,11 +2062,7 @@ function syncActiveCategoryVisuals() {
       deleteBtn.addEventListener("click", (event) => {
         event.stopPropagation();
         event.preventDefault();
-
-        if (!confirm(`Delete "${bookmark.name}"?`)) return;
-
-        const nextBookmarks = bookmarks.filter((item) => item.id !== bookmark.id);
-        setBookmarks(nextBookmarks, { persist: true });
+        openConfirm(bookmark);
       });
 
       if (bodyEl) {
@@ -2029,6 +2081,17 @@ function syncActiveCategoryVisuals() {
       `[Bubblemarks] Pagination update → page ${pageIndex + 1} of ${totalPages} (showing ${visible.length} of ${totalItems})`
     );
   }
+  const normalizedCards = normalizeLayoutCount(cardsPerRow, DEFAULT_CARDS_PER_ROW);
+  const normalizedRows = normalizeLayoutCount(rowsPerPage, DEFAULT_ROWS_PER_PAGE);
+  grid.style.gridTemplateColumns = `repeat(${normalizedCards}, 1fr)`;
+  if (
+    lastLoggedLayout.cardsPerRow !== normalizedCards ||
+    lastLoggedLayout.rowsPerPage !== normalizedRows
+  ) {
+    console.log(`[Bubblemarks] Layout set → ${normalizedCards} columns × ${normalizedRows} rows`);
+    lastLoggedLayout = { cardsPerRow: normalizedCards, rowsPerPage: normalizedRows };
+  }
+}
 
 function getCurrentLayout() {
   const cardsPerRow = normalizeLayoutCount(preferences.cardsPerRow, DEFAULT_CARDS_PER_ROW);
