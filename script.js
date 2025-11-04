@@ -10,23 +10,15 @@ const FALLBACK_PALETTES = [
 const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
-const ALL_CATEGORY_COLOR = "#AEB7FF";
-
-/**
- * Display order we want (All is derived at runtime and not stored).
- * Colors chosen to match the UI chips in the screenshot.
- */
 const DEFAULT_CATEGORY_SETTINGS = [
-  { key: "ai", label: "AI", color: "#F5C4D4" },
-  { key: "av", label: "AV", color: "#DCD6F6" },
-  { key: "games", label: "Games", color: "#F9F6D2" },
-  { key: "google", label: "Google", color: "#C9E7D8" },
-  { key: "pages", label: "Pages", color: "#BDEED1" },
-  { key: "shopping", label: "Shopping", color: "#D7ECF9" },
-  { key: "stories", label: "Stories", color: "#DCD6F6" },
-  { key: "tools", label: "Tools", color: "#E3D6F6" },
-  { key: "work", label: "Work", color: "#F5D5D9" },
-  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#E8E8E8" },
+  { key: "ai", label: "AI", color: "#ff80c8" },
+  { key: "av", label: "AV", color: "#92a9ff" },
+  { key: "games", label: "Games", color: "#b592ff" },
+  { key: "shopping", label: "Shopping", color: "#ffc778" },
+  { key: "stories", label: "Stories", color: "#ffb0d9" },
+  { key: "tools", label: "Tools", color: "#6ad6a6" },
+  { key: "work", label: "Work", color: "#ff9dbb" },
+  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" }, // Unsorted
 ];
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
 const LAYOUT_MIN_COUNT = 1;
@@ -266,7 +258,6 @@ let nextPageBtn;
 let lastRenderedCollection = [];
 let pendingResizeFrame = null;
 let lastLoggedLayout = { cardsPerRow: null, rowsPerPage: null };
-let activeInlineDeletePanel = null;
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
@@ -287,28 +278,22 @@ function replaceChildrenSafe(target, nodes) {
   }
 }
 
-function showInlineDeletePanel(panel) {
-  if (!panel) {
-    return;
-  }
+let activeInlineDeletePanel = null;
 
+function showInlineDeletePanel(panel) {
+  if (!panel) return;
   if (activeInlineDeletePanel && activeInlineDeletePanel !== panel) {
     hideInlineDeletePanel(activeInlineDeletePanel);
   }
-
   panel.hidden = false;
   panel.dataset.active = "true";
   activeInlineDeletePanel = panel;
 }
 
 function hideInlineDeletePanel(panel) {
-  if (!panel) {
-    return;
-  }
-
+  if (!panel) return;
   panel.hidden = true;
   panel.removeAttribute("data-active");
-
   if (activeInlineDeletePanel === panel) {
     activeInlineDeletePanel = null;
   }
@@ -471,38 +456,16 @@ function setupControlTabs() {
   }
 }
 
-function createBookmarkId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `bookmark-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 function sanitizeBookmarks(entries) {
   if (!Array.isArray(entries)) return [];
 
-  const makeId = () =>
-    (crypto?.randomUUID?.() || `bm-${Date.now()}-${Math.random().toString(16).slice(2)}`);
-
   return entries
-    .map((raw) => {
-      const name = String(raw.name ?? "Untitled").trim();
-      const url = String(raw.url ?? "").trim();
-      const cat = raw.category ? String(raw.category).trim() : DEFAULT_CATEGORY_LABEL;
-      const img = raw.image ? String(raw.image).trim() : "";
-      const id =
-        typeof raw.id === "string" && raw.id.trim()
-          ? raw.id.trim()
-          : makeId();
-
-      return {
-        id,
-        name,
-        url,
-        category: cat,
-        image: img,
-      };
-    })
+    .map((entry) => ({
+      name: String(entry.name ?? "Untitled").trim(),
+      url: String(entry.url ?? "").trim(),
+      category: entry.category ? String(entry.category).trim() : "Unsorted",
+      image: entry.image ? String(entry.image).trim() : "",
+    }))
     .filter((entry) => entry.name && entry.url);
 }
 
@@ -824,25 +787,6 @@ function getCategoryColor(key) {
 }
 
 function pickCategoryColor(seed) {
-  let candidateKey = "";
-  if (typeof seed === "string") {
-    candidateKey = normalizeCategoryKey(seed);
-  }
-
-  if (candidateKey) {
-    if (candidateKey === "all") {
-      return ALL_CATEGORY_COLOR;
-    }
-
-    const preset = DEFAULT_CATEGORY_SETTINGS.find(
-      (entry) => entry.key === candidateKey || normalizeCategoryKey(entry.label) === candidateKey
-    );
-    const presetColor = ensureHexColor(preset?.color);
-    if (presetColor) {
-      return presetColor;
-    }
-  }
-
   const palette = pickFallbackPalette(seed || "category");
   return palette.accent || "#ff99da";
 }
@@ -1936,255 +1880,155 @@ function renderBookmarks(collection) {
     return;
   }
 
-    if (activeInlineDeletePanel) {
-      hideInlineDeletePanel(activeInlineDeletePanel);
-    }
+  // Close any open inline delete panel when re-rendering
+  if (activeInlineDeletePanel) {
+    hideInlineDeletePanel(activeInlineDeletePanel);
+  }
 
-    if (activeInlineDeletePanel) {
-      hideInlineDeletePanel(activeInlineDeletePanel);
-    }
+  // Take a clean copy of the collection
+  lastRenderedCollection = Array.isArray(collection) ? [...collection] : [];
+  const layout = getCurrentLayout();
+  const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
 
-    lastRenderedCollection = Array.isArray(collection) ? [...collection] : [];
-    const layout = getCurrentLayout();
-    const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
+  if (!lastRenderedCollection.length) {
+    replaceChildrenSafe(grid, []);
+    showEmptyState(
+      "No bookmarks match that vibe yet. Try a different search or category!"
+    );
+    applyGridLayout(layout.cardsPerRow, layout.rowsPerPage);
+    updatePaginationUI(0, 0);
+    console.log("[Bubblemarks] Pagination update → no bookmarks to display");
+    return;
+  }
 
-    if (!lastRenderedCollection.length) {
-      replaceChildrenSafe(grid, []);
-      showEmptyState("No bookmarks match that vibe yet. Try a different search or category!");
-      applyGridLayout(layout.cardsPerRow, layout.rowsPerPage);
-      updatePaginationUI(0, 0);
-      console.log("[Bubblemarks] Pagination update → no bookmarks to display");
-      return;
-    }
+  hideEmptyState();
+
+  const totalItems = lastRenderedCollection.length;
+  const previousIndex = normalizePageIndex(preferences.pageIndex);
+  const totalPages = Math.max(Math.ceil(totalItems / pageSize), 1);
+  const pageIndex = clampPageIndex(previousIndex, totalItems, layout);
+
+  if (pageIndex !== previousIndex) {
+    preferences.pageIndex = pageIndex;
+    savePreferences();
+    console.log(`[Bubblemarks] Page changed → ${pageIndex + 1}`);
+  }
 
   const start = pageIndex * pageSize;
   const end = Math.min(start + pageSize, totalItems);
   const visible = lastRenderedCollection.slice(start, end);
 
-    const totalItems = lastRenderedCollection.length;
-    const previousIndex = normalizePageIndex(preferences.pageIndex);
-    const totalPages = Math.max(Math.ceil(totalItems / pageSize), 1);
-    const pageIndex = clampPageIndex(previousIndex, totalItems, layout);
+  const cards = visible.map((bookmark) => {
+    const card = template.content.firstElementChild.cloneNode(true);
+    const imageEl = card.querySelector(".card-image");
+    const mediaEl = card.querySelector(".card-media");
+    const titleEl = card.querySelector(".card-title");
+    const categoryEl = card.querySelector(".card-category");
+    const bodyEl = card.querySelector(".card-body");
 
-    if (pageIndex !== previousIndex) {
-      preferences.pageIndex = pageIndex;
-      savePreferences();
-      console.log(`[Bubblemarks] Page changed → ${pageIndex + 1}`);
-    }
+    applyBookmarkImage(imageEl, bookmark);
+    imageEl.alt = bookmark.name;
+    titleEl.textContent = bookmark.name;
 
-    const start = pageIndex * pageSize;
-    const end = Math.min(start + pageSize, totalItems);
-    const visible = lastRenderedCollection.slice(start, end);
+    const categoryKey =
+      normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
+      DEFAULT_CATEGORY_SLUG;
+    const displayLabel = getCategoryLabel(
+      categoryKey,
+      bookmark.category || DEFAULT_CATEGORY_LABEL
+    );
+    categoryEl.textContent = displayLabel;
+    applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
-    const totalItems = lastRenderedCollection.length;
-    const previousIndex = normalizePageIndex(preferences.pageIndex);
-    const totalPages = Math.max(Math.ceil(totalItems / pageSize), 1);
-    const pageIndex = clampPageIndex(previousIndex, totalItems, layout);
+    const openBookmark = () => {
+      window.open(bookmark.url, "_blank", "noopener,noreferrer");
+    };
 
-    if (pageIndex !== previousIndex) {
-      preferences.pageIndex = pageIndex;
-      savePreferences();
-      console.log(`[Bubblemarks] Page changed → ${pageIndex + 1}`);
-    }
-
-    const start = pageIndex * pageSize;
-    const end = Math.min(start + pageSize, totalItems);
-    const visible = lastRenderedCollection.slice(start, end);
-
-    const cards = visible.map((bookmark) => {
-      const card = template.content.firstElementChild.cloneNode(true);
-      const imageEl = card.querySelector(".card-image");
-      const mediaEl = card.querySelector(".card-media");
-      const titleEl = card.querySelector(".card-title");
-      const categoryEl = card.querySelector(".card-category");
-      const bodyEl = card.querySelector(".card-body");
-
-      applyBookmarkImage(imageEl, bookmark);
-      imageEl.alt = bookmark.name;
-      titleEl.textContent = bookmark.name;
-      const categoryKey = normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
-        DEFAULT_CATEGORY_SLUG;
-      const displayLabel = getCategoryLabel(categoryKey, bookmark.category || DEFAULT_CATEGORY_LABEL);
-      categoryEl.textContent = displayLabel;
-      applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
-
-      const openBookmark = () => {
-        if (!bookmark || !bookmark.url) {
-          return;
-        }
-
-        const link = document.createElement("a");
-        link.href = bookmark.url;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      };
-      card.addEventListener("keydown", (event) => {
-        if (event.target !== card) {
-          return;
-        }
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          openBookmark();
-        }
+    // Main click behavior
+    if (mediaEl) {
+      mediaEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openBookmark();
+      });
+    } else {
+      card.addEventListener("click", (event) => {
+        event.preventDefault();
+        openBookmark();
       });
     }
 
-      const deleteBtn = document.createElement("button");
-      deleteBtn.type = "button";
-      deleteBtn.className = "delete-bookmark";
-      deleteBtn.textContent = "✕";
-      deleteBtn.title = "Delete bookmark";
-
-      const inlineConfirm = document.createElement("div");
-      inlineConfirm.className = "delete-confirm";
-      inlineConfirm.hidden = true;
-
-      const confirmDeleteBtn = document.createElement("button");
-      confirmDeleteBtn.type = "button";
-      confirmDeleteBtn.textContent = "Delete";
-
-      const cancelDeleteBtn = document.createElement("button");
-      cancelDeleteBtn.type = "button";
-      cancelDeleteBtn.textContent = "Cancel";
-
-      deleteBtn.addEventListener("click", (event) => {
+    // Prevent clicks inside media area from bubbling weirdly
+    card.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) return;
+      if (mediaEl && mediaEl.contains(event.target)) {
         event.preventDefault();
-        event.stopPropagation();
-        showInlineDeletePanel(inlineConfirm);
-      });
-
-      confirmDeleteBtn.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const next = (bookmarks || []).filter((bookmarkItem) => bookmarkItem.id !== bookmark.id);
-        setBookmarks(next, { persist: true });
-        applyFilters();
-        hideInlineDeletePanel(inlineConfirm);
-      });
-
-      cancelDeleteBtn.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        hideInlineDeletePanel(inlineConfirm);
-      });
-
-      inlineConfirm.appendChild(confirmDeleteBtn);
-      inlineConfirm.appendChild(cancelDeleteBtn);
-
-      if (bodyEl) {
-        bodyEl.appendChild(deleteBtn);
-        bodyEl.appendChild(inlineConfirm);
-      } else {
-        card.appendChild(deleteBtn);
-        card.appendChild(inlineConfirm);
+        openBookmark();
       }
-
-      const link = document.createElement("a");
-      link.href = bookmark.url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.classList.add("bookmark-link");
-
-      while (card.firstChild && card.firstChild !== link) {
-        link.appendChild(card.firstChild);
-      }
-      card.appendChild(link);
-
-      const deleteBtn = document.createElement("button");
-      deleteBtn.type = "button";
-      deleteBtn.className = "delete-bookmark";
-      deleteBtn.textContent = "✕";
-      deleteBtn.title = "Delete bookmark";
-
-      const inlineConfirm = document.createElement("div");
-      inlineConfirm.className = "delete-confirm";
-      inlineConfirm.hidden = true;
-
-      const confirmDeleteBtn = document.createElement("button");
-      confirmDeleteBtn.type = "button";
-      confirmDeleteBtn.textContent = "Delete";
-
-      const cancelDeleteBtn = document.createElement("button");
-      cancelDeleteBtn.type = "button";
-      cancelDeleteBtn.textContent = "Cancel";
-
-      deleteBtn.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        showInlineDeletePanel(inlineConfirm);
-      });
-
-      confirmDeleteBtn.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const next = (bookmarks || []).filter((bookmarkItem) => bookmarkItem.id !== bookmark.id);
-        setBookmarks(next, { persist: true });
-        applyFilters();
-        hideInlineDeletePanel(inlineConfirm);
-      });
-
-      cancelDeleteBtn.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        hideInlineDeletePanel(inlineConfirm);
-      });
-
-      inlineConfirm.appendChild(confirmDeleteBtn);
-      inlineConfirm.appendChild(cancelDeleteBtn);
-
-      if (bodyEl) {
-        bodyEl.appendChild(deleteBtn);
-        bodyEl.appendChild(inlineConfirm);
-      } else {
-        card.appendChild(deleteBtn);
-        card.appendChild(inlineConfirm);
-      }
-
-      const link = document.createElement("a");
-      link.href = bookmark.url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.classList.add("bookmark-link");
-
-      while (card.firstChild && card.firstChild !== link) {
-        link.appendChild(card.firstChild);
-      }
-      card.appendChild(link);
-
-      return card;
     });
 
-    replaceChildrenSafe(grid, cards);
-    applyGridLayout(layout.cardsPerRow, layout.rowsPerPage);
-    updatePaginationUI(pageIndex, totalPages);
-    console.log(
-      `[Bubblemarks] Pagination update → page ${pageIndex + 1} of ${totalPages} (showing ${visible.length} of ${totalItems})`
-    );
-  }
-  preferences.pageIndex = nextIndex;
-  savePreferences();
-  console.log(`[Bubblemarks] Page changed → ${nextIndex + 1}`);
-  renderBookmarks(lastRenderedCollection);
-}
+    // Keyboard access
+    card.addEventListener("keydown", (event) => {
+      if (event.target !== card) return;
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openBookmark();
+      }
+    });
 
-function applyGridLayout(cardsPerRow, rowsPerPage) {
-  if (!grid) {
-    return;
-  }
-  const normalizedCards = normalizeLayoutCount(cardsPerRow, DEFAULT_CARDS_PER_ROW);
-  const normalizedRows = normalizeLayoutCount(rowsPerPage, DEFAULT_ROWS_PER_PAGE);
-  grid.style.gridTemplateColumns = `repeat(${normalizedCards}, 1fr)`;
-  if (
-    lastLoggedLayout.cardsPerRow !== normalizedCards ||
-    lastLoggedLayout.rowsPerPage !== normalizedRows
-  ) {
-    console.log(`[Bubblemarks] Layout set → ${normalizedCards} columns × ${normalizedRows} rows`);
-    lastLoggedLayout = { cardsPerRow: normalizedCards, rowsPerPage: normalizedRows };
-  }
+    // --- Inline delete button setup (Notion-safe) ---
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "✕";
+    deleteBtn.title = "Delete bookmark";
+
+    deleteBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      event.preventDefault();
+
+      const confirmation = document.createElement("div");
+      confirmation.className = "inline-delete-confirmation";
+      confirmation.innerHTML = `
+    <span>Delete this bookmark?</span>
+    <button class="confirm">Yes</button>
+    <button class="cancel">No</button>
+  `;
+
+      const confirmBtn = confirmation.querySelector(".confirm");
+      const cancelBtn = confirmation.querySelector(".cancel");
+
+      confirmBtn.addEventListener("click", () => {
+        const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
+        setBookmarks(nextBookmarks, { persist: true });
+        confirmation.remove();
+      });
+
+      cancelBtn.addEventListener("click", () => {
+        confirmation.remove();
+      });
+
+      card.appendChild(confirmation);
+    });
+
+    // Append delete button to the white card body (not the category label)
+    const footer = card.querySelector(".bookmark-body");
+    if (footer) {
+      footer.appendChild(deleteBtn);
+    } else {
+      card.appendChild(deleteBtn);
+    }
+    // --- end inline delete setup ---
+
+    return card;
+  });
+
+  replaceChildrenSafe(grid, cards);
+  applyGridLayout(layout.cardsPerRow, layout.rowsPerPage);
+  updatePaginationUI(pageIndex, totalPages);
+  console.log(
+    `[Bubblemarks] Pagination update → page ${pageIndex + 1} of ${totalPages} (showing ${visible.length} of ${totalItems})`
+  );
 }
 
 function getCurrentLayout() {
