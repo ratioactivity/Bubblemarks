@@ -1929,7 +1929,7 @@ function renderBookmarks(collection) {
     titleEl.textContent = bookmark.name;
 
     // Safely set the clickable link behavior
-    const linkElement = card.querySelector(".bookmark-link") || card;
+    const linkElement = card.querySelector(".bookmark-link") || mediaEl || imageEl;
     if (linkElement && bookmark.url) {
       linkElement.style.cursor = "pointer";
       linkElement.addEventListener("click", (event) => {
@@ -1959,6 +1959,11 @@ function renderBookmarks(collection) {
     deleteBtn.addEventListener("click", (event) => {
       event.stopImmediatePropagation();
       event.preventDefault();
+
+      const existingConfirm = card.querySelector(".delete-confirm");
+      if (existingConfirm) {
+        existingConfirm.remove();
+      }
 
       // Build an inline confirm popup instead of using window.confirm (for Notion embeds)
       const confirmBox = document.createElement("div");
