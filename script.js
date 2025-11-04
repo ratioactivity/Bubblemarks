@@ -10,15 +10,22 @@ const FALLBACK_PALETTES = [
 const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
+const CATEGORY_ALIAS_MAP = new Map([
+  ["shop", "shop"],
+  ["shopping", "shop"],
+  ["story", "stories"],
+]);
 const DEFAULT_CATEGORY_SETTINGS = [
-  { key: "ai", label: "AI", color: "#ff80c8" },
-  { key: "av", label: "AV", color: "#92a9ff" },
-  { key: "games", label: "Games", color: "#b592ff" },
-  { key: "shopping", label: "Shopping", color: "#ffc778" },
-  { key: "stories", label: "Stories", color: "#ffb0d9" },
-  { key: "tools", label: "Tools", color: "#6ad6a6" },
-  { key: "work", label: "Work", color: "#ff9dbb" },
-  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" }, // Unsorted
+  { key: "ai",      label: "AI",      color: "#ffb0d9" }, // pink
+  { key: "av",      label: "AV",      color: "#c4b5ff" }, // periwinkle
+  { key: "games",   label: "Games",   color: "#ffe9a9" }, // soft yellow
+  { key: "google",  label: "Google",  color: "#c6f4c6" }, // mint
+  { key: "pages",   label: "Pages",   color: "#c8e4ff" }, // light blue
+  { key: "shop",    label: "Shop",    color: "#ffd6b8" }, // peach
+  { key: "stories", label: "Stories", color: "#f9c4ff" }, // lavender-pink
+  { key: "tools",   label: "Tools",   color: "#d4ffe4" }, // pale green
+  { key: "work",    label: "Work",    color: "#ffd1de" }, // rosy
+  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ebebeb" }, // Unsorted
 ];
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
 const LAYOUT_MIN_COUNT = 1;
@@ -1930,6 +1937,16 @@ function renderBookmarks(collection) {
     imageEl.alt = bookmark.name;
     titleEl.textContent = bookmark.name;
 
+    // Safely set the clickable link behavior
+    const linkElement = card.querySelector(".bookmark-link") || card;
+    if (linkElement && bookmark.url) {
+      linkElement.style.cursor = "pointer";
+      linkElement.addEventListener("click", (event) => {
+        event.preventDefault();
+        window.open(bookmark.url, "_blank", "noopener,noreferrer");
+      });
+    }
+
     const categoryKey =
       normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
       DEFAULT_CATEGORY_SLUG;
@@ -1940,41 +1957,6 @@ function renderBookmarks(collection) {
     categoryEl.textContent = displayLabel;
     applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
-    const openBookmark = () => {
-      window.open(bookmark.url, "_blank", "noopener,noreferrer");
-    };
-
-    // Main click behavior
-    if (mediaEl) {
-      mediaEl.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        openBookmark();
-      });
-    } else {
-      card.addEventListener("click", (event) => {
-        event.preventDefault();
-        openBookmark();
-      });
-    }
-
-    // Prevent clicks inside media area from bubbling weirdly
-    card.addEventListener("click", (event) => {
-      if (!(event.target instanceof Element)) return;
-      if (mediaEl && mediaEl.contains(event.target)) {
-        event.preventDefault();
-        openBookmark();
-      }
-    });
-
-    // Keyboard access
-    card.addEventListener("keydown", (event) => {
-      if (event.target !== card) return;
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        openBookmark();
-      }
-    });
 
     // --- Inline delete button setup (Notion-safe) ---
     const deleteBtn = document.createElement("button");
