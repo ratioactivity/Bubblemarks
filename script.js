@@ -11,7 +11,6 @@ const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
 const CATEGORY_ALIAS_MAP = new Map([
-  ["shop", "shop"],
   ["shopping", "shop"],
   ["story", "stories"],
 ]);
