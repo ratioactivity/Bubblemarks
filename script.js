@@ -1941,7 +1941,15 @@ function renderBookmarks(collection) {
     applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
     const openBookmark = () => {
-      window.open(bookmark.url, "_blank", "noopener,noreferrer");
+      if (!bookmark.url) return;
+      const anchor = document.createElement("a");
+      anchor.href = bookmark.url;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.dataset.tempBookmarkLink = "true";
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
     };
 
     // Main click behavior
@@ -1951,6 +1959,13 @@ function renderBookmarks(collection) {
         event.stopPropagation();
         openBookmark();
       });
+      if (imageEl) {
+        imageEl.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          openBookmark();
+        });
+      }
     } else {
       card.addEventListener("click", (event) => {
         event.preventDefault();
