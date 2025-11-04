@@ -1951,6 +1951,13 @@ function renderBookmarks(collection) {
         event.stopPropagation();
         openBookmark();
       });
+      if (imageEl) {
+        imageEl.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          openBookmark();
+        });
+      }
     } else {
       card.addEventListener("click", (event) => {
         event.preventDefault();
