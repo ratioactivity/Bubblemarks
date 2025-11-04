@@ -823,7 +823,7 @@ body {
   background: var(--card-gradient);
   border-radius: calc(var(--soft-radius) * 0.9);
   overflow: hidden;
-  cursor: pointer;
+  cursor: default;
   text-align: left;
   box-shadow: var(--shadow-card);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -859,6 +859,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
 
 .card-image {

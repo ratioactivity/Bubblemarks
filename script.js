@@ -1928,13 +1928,41 @@ function renderBookmarks(collection) {
     imageEl.alt = bookmark.name;
     titleEl.textContent = bookmark.name;
 
-    // Safely set the clickable link behavior
-    const linkElement = card.querySelector(".bookmark-link") || mediaEl || imageEl;
-    if (linkElement && bookmark.url) {
-      linkElement.style.cursor = "pointer";
-      linkElement.addEventListener("click", (event) => {
+    const openBookmark = () => {
+      if (!bookmark.url) return;
+      window.open(bookmark.url, "_blank", "noopener,noreferrer");
+    };
+
+    if (bookmark.url && mediaEl) {
+      card.style.cursor = "default";
+      mediaEl.style.cursor = "pointer";
+      mediaEl.addEventListener("click", (event) => {
         event.preventDefault();
-        window.open(bookmark.url, "_blank", "noopener,noreferrer");
+        event.stopPropagation();
+        openBookmark();
+      });
+      card.addEventListener("click", (event) => {
+        if (!(event.target instanceof Element)) return;
+        if (mediaEl.contains(event.target)) {
+          event.preventDefault();
+          event.stopPropagation();
+          openBookmark();
+        }
+      });
+    } else if (bookmark.url) {
+      card.addEventListener("click", (event) => {
+        event.preventDefault();
+        openBookmark();
+      });
+    }
+
+    if (bookmark.url) {
+      card.addEventListener("keydown", (event) => {
+        if (event.target !== card) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openBookmark();
+        }
       });
     }
 
@@ -1960,12 +1988,19 @@ function renderBookmarks(collection) {
       event.stopImmediatePropagation();
       event.preventDefault();
 
+      if (activeInlineDeletePanel && activeInlineDeletePanel.isConnected) {
+        if (activeInlineDeletePanel !== card.querySelector(".delete-confirm")) {
+          activeInlineDeletePanel.remove();
+        }
+        activeInlineDeletePanel = null;
+      }
+
       const existingConfirm = card.querySelector(".delete-confirm");
       if (existingConfirm) {
         existingConfirm.remove();
+        return;
       }
 
-      // Build an inline confirm popup instead of using window.confirm (for Notion embeds)
       const confirmBox = document.createElement("div");
       confirmBox.className = "delete-confirm";
       confirmBox.innerHTML = `
@@ -1976,8 +2011,12 @@ function renderBookmarks(collection) {
     </div>
   `;
 
-      // Position and show inside the card
+      confirmBox.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+
       card.appendChild(confirmBox);
+      activeInlineDeletePanel = confirmBox;
 
       const yesBtn = confirmBox.querySelector(".confirm-yes");
       const noBtn = confirmBox.querySelector(".confirm-no");
@@ -1986,6 +2025,9 @@ function renderBookmarks(collection) {
         e.stopImmediatePropagation();
         e.preventDefault();
         confirmBox.remove();
+        if (activeInlineDeletePanel === confirmBox) {
+          activeInlineDeletePanel = null;
+        }
 
         const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
         setBookmarks(nextBookmarks, { persist: true });
@@ -1995,6 +2037,9 @@ function renderBookmarks(collection) {
         e.stopImmediatePropagation();
         e.preventDefault();
         confirmBox.remove();
+        if (activeInlineDeletePanel === confirmBox) {
+          activeInlineDeletePanel = null;
+        }
       });
     });
 
