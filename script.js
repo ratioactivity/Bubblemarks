@@ -1940,6 +1940,10 @@ function renderBookmarks(collection) {
       hideInlineDeletePanel(activeInlineDeletePanel);
     }
 
+    if (activeInlineDeletePanel) {
+      hideInlineDeletePanel(activeInlineDeletePanel);
+    }
+
     lastRenderedCollection = Array.isArray(collection) ? [...collection] : [];
     const layout = getCurrentLayout();
     const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
@@ -1956,6 +1960,21 @@ function renderBookmarks(collection) {
   const start = pageIndex * pageSize;
   const end = Math.min(start + pageSize, totalItems);
   const visible = lastRenderedCollection.slice(start, end);
+
+    const totalItems = lastRenderedCollection.length;
+    const previousIndex = normalizePageIndex(preferences.pageIndex);
+    const totalPages = Math.max(Math.ceil(totalItems / pageSize), 1);
+    const pageIndex = clampPageIndex(previousIndex, totalItems, layout);
+
+    if (pageIndex !== previousIndex) {
+      preferences.pageIndex = pageIndex;
+      savePreferences();
+      console.log(`[Bubblemarks] Page changed → ${pageIndex + 1}`);
+    }
+
+    const start = pageIndex * pageSize;
+    const end = Math.min(start + pageSize, totalItems);
+    const visible = lastRenderedCollection.slice(start, end);
 
     const totalItems = lastRenderedCollection.length;
     const previousIndex = normalizePageIndex(preferences.pageIndex);
@@ -1990,7 +2009,18 @@ function renderBookmarks(collection) {
       applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
       const openBookmark = () => {
-        window.open(bookmark.url, "_blank", "noopener,noreferrer");
+        if (!bookmark || !bookmark.url) {
+          return;
+        }
+
+        const link = document.createElement("a");
+        link.href = bookmark.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       };
       card.addEventListener("keydown", (event) => {
         if (event.target !== card) {
@@ -2064,6 +2094,67 @@ function renderBookmarks(collection) {
       }
       card.appendChild(link);
 
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "delete-bookmark";
+      deleteBtn.textContent = "✕";
+      deleteBtn.title = "Delete bookmark";
+
+      const inlineConfirm = document.createElement("div");
+      inlineConfirm.className = "delete-confirm";
+      inlineConfirm.hidden = true;
+
+      const confirmDeleteBtn = document.createElement("button");
+      confirmDeleteBtn.type = "button";
+      confirmDeleteBtn.textContent = "Delete";
+
+      const cancelDeleteBtn = document.createElement("button");
+      cancelDeleteBtn.type = "button";
+      cancelDeleteBtn.textContent = "Cancel";
+
+      deleteBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        showInlineDeletePanel(inlineConfirm);
+      });
+
+      confirmDeleteBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const next = (bookmarks || []).filter((bookmarkItem) => bookmarkItem.id !== bookmark.id);
+        setBookmarks(next, { persist: true });
+        applyFilters();
+        hideInlineDeletePanel(inlineConfirm);
+      });
+
+      cancelDeleteBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        hideInlineDeletePanel(inlineConfirm);
+      });
+
+      inlineConfirm.appendChild(confirmDeleteBtn);
+      inlineConfirm.appendChild(cancelDeleteBtn);
+
+      if (bodyEl) {
+        bodyEl.appendChild(deleteBtn);
+        bodyEl.appendChild(inlineConfirm);
+      } else {
+        card.appendChild(deleteBtn);
+        card.appendChild(inlineConfirm);
+      }
+
+      const link = document.createElement("a");
+      link.href = bookmark.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.classList.add("bookmark-link");
+
+      while (card.firstChild && card.firstChild !== link) {
+        link.appendChild(card.firstChild);
+      }
+      card.appendChild(link);
+
       return card;
     });
 
@@ -2073,33 +2164,6 @@ function renderBookmarks(collection) {
     console.log(
       `[Bubblemarks] Pagination update → page ${pageIndex + 1} of ${totalPages} (showing ${visible.length} of ${totalItems})`
     );
-  }
-  pendingResizeFrame = window.requestAnimationFrame(() => {
-    pendingResizeFrame = null;
-    refreshBookmarksView();
-  });
-}
-
-function changePage(delta) {
-  if (!Number.isFinite(delta) || delta === 0) {
-    return;
-  }
-  const layout = getCurrentLayout();
-  const totalItems = lastRenderedCollection.length;
-  const pageSize = Math.max(layout.cardsPerRow * layout.rowsPerPage, 1);
-  if (totalItems <= 0 || pageSize <= 0) {
-    return;
-  }
-  const totalPages = Math.ceil(totalItems / pageSize);
-  if (totalPages <= 1) {
-    updatePaginationUI(0, totalPages);
-    return;
-  }
-  const currentIndex = clamp(normalizePageIndex(preferences.pageIndex), 0, totalPages - 1);
-  const nextIndex = clamp(currentIndex + delta, 0, totalPages - 1);
-  if (nextIndex === currentIndex) {
-    updatePaginationUI(nextIndex, totalPages);
-    return;
   }
   preferences.pageIndex = nextIndex;
   savePreferences();
