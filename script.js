@@ -13,6 +13,7 @@ const DEFAULT_CATEGORY_SLUG = "unsorted";
 const CATEGORY_ALIAS_MAP = new Map([
   ["shopping", "shop"],
   ["story", "stories"],
+  ["google", "tools"],
 ]);
 const DEFAULT_CATEGORY_SETTINGS = [
   { key: "ai",      label: "AI",      color: "#ffb0d9" }, // pink
