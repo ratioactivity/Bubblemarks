@@ -11,9 +11,9 @@ const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
 const CATEGORY_ALIAS_MAP = new Map([
-  ["shop", "shopping"],
+  ["shop", "shop"],
+  ["shopping", "shop"],
   ["story", "stories"],
-  ["google", "tools"],
 ]);
 const DEFAULT_CATEGORY_SETTINGS = [
   { key: "ai",      label: "AI",      color: "#ffb0d9" }, // pink
@@ -1949,49 +1949,56 @@ function renderBookmarks(collection) {
     applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
 
-    // --- Inline delete button setup (Notion-safe) ---
     const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
     deleteBtn.className = "delete-btn";
-    deleteBtn.textContent = "✕";
+    deleteBtn.type = "button";
+    deleteBtn.innerHTML = "✕";
     deleteBtn.title = "Delete bookmark";
 
+    // Ensure clicking delete never triggers the link
     deleteBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
+      event.stopImmediatePropagation();
       event.preventDefault();
 
-      const confirmation = document.createElement("div");
-      confirmation.className = "inline-delete-confirmation";
-      confirmation.innerHTML = `
-    <span>Delete this bookmark?</span>
-    <button class="confirm">Yes</button>
-    <button class="cancel">No</button>
+      // Build an inline confirm popup instead of using window.confirm (for Notion embeds)
+      const confirmBox = document.createElement("div");
+      confirmBox.className = "delete-confirm";
+      confirmBox.innerHTML = `
+    <p>Delete <strong>${bookmark.name}</strong>?</p>
+    <div class="delete-actions">
+      <button class="confirm-yes">Yes</button>
+      <button class="confirm-no">No</button>
+    </div>
   `;
 
-      const confirmBtn = confirmation.querySelector(".confirm");
-      const cancelBtn = confirmation.querySelector(".cancel");
+      // Position and show inside the card
+      card.appendChild(confirmBox);
 
-      confirmBtn.addEventListener("click", () => {
+      const yesBtn = confirmBox.querySelector(".confirm-yes");
+      const noBtn = confirmBox.querySelector(".confirm-no");
+
+      yesBtn.addEventListener("click", (e) => {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        confirmBox.remove();
+
         const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
         setBookmarks(nextBookmarks, { persist: true });
-        confirmation.remove();
       });
 
-      cancelBtn.addEventListener("click", () => {
-        confirmation.remove();
+      noBtn.addEventListener("click", (e) => {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        confirmBox.remove();
       });
-
-      card.appendChild(confirmation);
     });
 
-    // Append delete button to the white card body (not the category label)
     const footer = card.querySelector(".bookmark-body");
     if (footer) {
       footer.appendChild(deleteBtn);
     } else {
       card.appendChild(deleteBtn);
     }
-    // --- end inline delete setup ---
 
     return card;
   });
