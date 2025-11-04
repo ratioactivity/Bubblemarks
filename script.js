@@ -1930,6 +1930,16 @@ function renderBookmarks(collection) {
     imageEl.alt = bookmark.name;
     titleEl.textContent = bookmark.name;
 
+    // Safely set the clickable link behavior
+    const linkElement = card.querySelector(".bookmark-link") || card;
+    if (linkElement && bookmark.url) {
+      linkElement.style.cursor = "pointer";
+      linkElement.addEventListener("click", (event) => {
+        event.preventDefault();
+        window.open(bookmark.url, "_blank", "noopener,noreferrer");
+      });
+    }
+
     const categoryKey =
       normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
       DEFAULT_CATEGORY_SLUG;
@@ -1940,56 +1950,6 @@ function renderBookmarks(collection) {
     categoryEl.textContent = displayLabel;
     applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
-    const openBookmark = () => {
-      if (!bookmark.url) return;
-      const anchor = document.createElement("a");
-      anchor.href = bookmark.url;
-      anchor.target = "_blank";
-      anchor.rel = "noopener noreferrer";
-      anchor.dataset.tempBookmarkLink = "true";
-      document.body.append(anchor);
-      anchor.click();
-      anchor.remove();
-    };
-
-    // Main click behavior
-    if (mediaEl) {
-      mediaEl.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        openBookmark();
-      });
-      if (imageEl) {
-        imageEl.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          openBookmark();
-        });
-      }
-    } else {
-      card.addEventListener("click", (event) => {
-        event.preventDefault();
-        openBookmark();
-      });
-    }
-
-    // Prevent clicks inside media area from bubbling weirdly
-    card.addEventListener("click", (event) => {
-      if (!(event.target instanceof Element)) return;
-      if (mediaEl && mediaEl.contains(event.target)) {
-        event.preventDefault();
-        openBookmark();
-      }
-    });
-
-    // Keyboard access
-    card.addEventListener("keydown", (event) => {
-      if (event.target !== card) return;
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        openBookmark();
-      }
-    });
 
     // --- Inline delete button setup (Notion-safe) ---
     const deleteBtn = document.createElement("button");
