@@ -25,7 +25,7 @@ const DEFAULT_CATEGORY_SETTINGS = [
   { key: "stories", label: "Stories", color: "#f9c4ff" }, // lavender-pink
   { key: "tools",   label: "Tools",   color: "#d4ffe4" }, // pale green
   { key: "work",    label: "Work",    color: "#ffd1de" }, // rosy
-  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ebebeb" }, // Unsorted
+  { key: "unsorted", label: "Unsorted", color: "#ebebeb" },
 ];
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
 const LAYOUT_MIN_COUNT = 1;
@@ -1456,9 +1456,46 @@ function setupKeyboard() {
   }
 
   const buttons = [
-    "A","B","C","D","E","F","G","H","I","J","K","L","M",
-    "N","O","P","Q","R","S","T","U","V","W","X","Y","Z",
-    "0","1","2","3","4","5","6","7","8","9",
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "-",
+    ".",
+    "/",
+    { label: "⌫", action: "backspace" },
   ];
 
   container.innerHTML = "";
@@ -1473,19 +1510,28 @@ function setupKeyboard() {
     audio.play().catch(() => {}); // prevent errors if user hasn’t interacted yet
   }
 
-  buttons.forEach((char) => {
+  buttons.forEach((key) => {
+    const label = typeof key === "string" ? key : key.label;
+    const action = typeof key === "string" ? null : key.action;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "key-btn";
-    button.textContent = char;
-    button.setAttribute("aria-label", `Type ${char}`);
+    button.textContent = label;
+    button.setAttribute("aria-label", `Type ${label}`);
     button.addEventListener("click", () => {
       const search = searchInput || document.getElementById("search");
       if (!search) return;
-      search.value += char;
+      if (action === "backspace") {
+        search.value = search.value.slice(0, -1);
+        search.dispatchEvent(new Event("input", { bubbles: true }));
+        search.focus({ preventScroll: true });
+        playKeySound(label);
+        return;
+      }
+      search.value += label;
       search.dispatchEvent(new Event("input", { bubbles: true }));
       search.focus({ preventScroll: true });
-      playKeySound(char);
+      playKeySound(label);
     });
     container.appendChild(button);
   });
