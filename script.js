@@ -1977,16 +1977,21 @@ function renderBookmarks(collection) {
       mediaEl.classList.add("bookmark-link");
     }
 
-    // BEGIN LINK FIX
-    const linkTarget = card.querySelector(".bookmark-link") || card;
-    if (linkTarget && bookmark.url) {
-      linkTarget.style.cursor = "pointer";
-      linkTarget.addEventListener("click", (e) => {
+    // === BEGIN: OPEN-LINK FIX ===
+    if (bookmark.url) {
+      card.addEventListener("click", (e) => {
+        // Only trigger if user didn't press the delete X
+        if (e.target.closest(".delete-btn")) return;
         e.preventDefault();
-        window.open(bookmark.url, "_blank", "noopener,noreferrer");
+        try {
+          window.open(bookmark.url, "_blank", "noopener,noreferrer");
+        } catch (err) {
+          console.warn("Could not open link", err);
+        }
       });
+      card.style.cursor = "pointer";
     }
-    // END LINK FIX
+    // === END: OPEN-LINK FIX ===
 
     const openBookmark = () => {
       if (!bookmark.url) return;
