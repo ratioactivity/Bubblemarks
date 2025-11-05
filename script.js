@@ -1495,7 +1495,6 @@ function setupKeyboard() {
     "-",
     ".",
     "/",
-    { label: "⌫", action: "backspace" },
   ];
 
   container.innerHTML = "";
