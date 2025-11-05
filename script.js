@@ -1492,7 +1492,9 @@ function setupKeyboard() {
     "7",
     "8",
     "9",
-    { label: "⌫", action: "backspace" },
+    "-",
+    ".",
+    "/",
   ];
 
   container.innerHTML = "";
@@ -1532,6 +1534,30 @@ function setupKeyboard() {
     });
     container.appendChild(button);
   });
+
+  // Add a backspace key at the end of the keyboard
+  const backspaceBtn = document.createElement("button");
+  backspaceBtn.type = "button";
+  backspaceBtn.className = "key-btn key-btn--backspace";
+  backspaceBtn.textContent = "⌫";
+  backspaceBtn.setAttribute("aria-label", "Backspace");
+
+  backspaceBtn.addEventListener("click", () => {
+    const search = searchInput || document.getElementById("search");
+    if (!search) return;
+
+    // Remove the last character from the search input
+    search.value = search.value.slice(0, -1);
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    search.focus({ preventScroll: true });
+
+    // Optional: reuse "allothers" sound for backspace
+    try {
+      playKeySound("backspace");
+    } catch (_) {}
+  });
+
+  container.appendChild(backspaceBtn);
 }
 
 function setupSettingsMenu() {
