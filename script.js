@@ -1977,21 +1977,13 @@ function renderBookmarks(collection) {
       mediaEl.classList.add("bookmark-link");
     }
 
-    // === BEGIN: OPEN-LINK FIX ===
-    if (bookmark.url) {
-      card.addEventListener("click", (e) => {
-        // Only trigger if user didn't press the delete X
-        if (e.target.closest(".delete-btn")) return;
-        e.preventDefault();
-        try {
-          window.open(bookmark.url, "_blank", "noopener,noreferrer");
-        } catch (err) {
-          console.warn("Could not open link", err);
-        }
+    if (mediaEl && bookmark.url) {
+      mediaEl.style.cursor = "pointer";
+      mediaEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        window.open(bookmark.url, "_blank", "noopener,noreferrer");
       });
-      card.style.cursor = "pointer";
     }
-    // === END: OPEN-LINK FIX ===
 
     const openBookmark = () => {
       if (!bookmark.url) return;
@@ -2025,68 +2017,11 @@ function renderBookmarks(collection) {
     deleteBtn.innerHTML = "✕";
     deleteBtn.title = "Delete bookmark";
 
-    // Ensure clicking delete never triggers the link
-    deleteBtn.addEventListener("click", (event) => {
-      event.stopImmediatePropagation();
-      event.preventDefault();
-
-      const existingConfirm = card.querySelector(".delete-confirm");
-      if (existingConfirm) {
-        existingConfirm.remove();
-        if (activeInlineDeletePanel === existingConfirm) {
-          activeInlineDeletePanel = null;
-        }
-        return;
-      }
-
-      if (activeInlineDeletePanel && activeInlineDeletePanel.isConnected) {
-        activeInlineDeletePanel.remove();
-      }
-      activeInlineDeletePanel = null;
-
-      const confirmBox = document.createElement("div");
-      confirmBox.className = "delete-confirm";
-      confirmBox.innerHTML = `
-    <p>Delete <strong>${bookmark.name}</strong>?</p>
-    <div class="delete-actions">
-      <button class="confirm-yes">Yes</button>
-      <button class="confirm-no">No</button>
-    </div>
-  `;
-
-      confirmBox.addEventListener("click", (e) => {
-        e.stopPropagation();
-      });
-
-      const closeConfirm = () => {
-        if (confirmBox.isConnected) {
-          confirmBox.remove();
-        }
-        if (activeInlineDeletePanel === confirmBox) {
-          activeInlineDeletePanel = null;
-        }
-      };
-
-      const yesBtn = confirmBox.querySelector(".confirm-yes");
-      const noBtn = confirmBox.querySelector(".confirm-no");
-
-      yesBtn.addEventListener("click", (e) => {
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        closeConfirm();
-
-        const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
-        setBookmarks(nextBookmarks, { persist: true });
-      });
-
-      noBtn.addEventListener("click", (e) => {
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        closeConfirm();
-      });
-
-      card.appendChild(confirmBox);
-      activeInlineDeletePanel = confirmBox;
+    deleteBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const next = bookmarks.filter((b) => b !== bookmark);
+      setBookmarks(next, { persist: true });
     });
 
     if (bodyEl) {
