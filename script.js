@@ -1973,28 +1973,25 @@ function renderBookmarks(collection) {
     imageEl.alt = bookmark.name;
     titleEl.textContent = bookmark.name;
 
+    if (mediaEl) {
+      mediaEl.classList.add("bookmark-link");
+    }
+
+    // BEGIN LINK FIX
+    const linkTarget = card.querySelector(".bookmark-link") || card;
+    if (linkTarget && bookmark.url) {
+      linkTarget.style.cursor = "pointer";
+      linkTarget.addEventListener("click", (e) => {
+        e.preventDefault();
+        window.open(bookmark.url, "_blank", "noopener,noreferrer");
+      });
+    }
+    // END LINK FIX
+
     const openBookmark = () => {
       if (!bookmark.url) return;
       window.open(bookmark.url, "_blank", "noopener,noreferrer");
     };
-
-    if (bookmark.url && mediaEl) {
-      mediaEl.style.cursor = "pointer";
-      if (imageEl) {
-        imageEl.style.cursor = "pointer";
-      }
-      const handleMediaActivation = (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        openBookmark();
-      };
-      mediaEl.addEventListener("click", handleMediaActivation);
-    } else if (bookmark.url) {
-      card.addEventListener("click", (event) => {
-        event.preventDefault();
-        openBookmark();
-      });
-    }
 
     if (bookmark.url) {
       card.addEventListener("keydown", (event) => {
