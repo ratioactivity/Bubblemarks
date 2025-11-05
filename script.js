@@ -1934,21 +1934,16 @@ function renderBookmarks(collection) {
     };
 
     if (bookmark.url && mediaEl) {
-      card.style.cursor = "default";
       mediaEl.style.cursor = "pointer";
-      mediaEl.addEventListener("click", (event) => {
+      if (imageEl) {
+        imageEl.style.cursor = "pointer";
+      }
+      const handleMediaActivation = (event) => {
         event.preventDefault();
         event.stopPropagation();
         openBookmark();
-      });
-      card.addEventListener("click", (event) => {
-        if (!(event.target instanceof Element)) return;
-        if (mediaEl.contains(event.target)) {
-          event.preventDefault();
-          event.stopPropagation();
-          openBookmark();
-        }
-      });
+      };
+      mediaEl.addEventListener("click", handleMediaActivation);
     } else if (bookmark.url) {
       card.addEventListener("click", (event) => {
         event.preventDefault();
@@ -1988,18 +1983,19 @@ function renderBookmarks(collection) {
       event.stopImmediatePropagation();
       event.preventDefault();
 
-      if (activeInlineDeletePanel && activeInlineDeletePanel.isConnected) {
-        if (activeInlineDeletePanel !== card.querySelector(".delete-confirm")) {
-          activeInlineDeletePanel.remove();
-        }
-        activeInlineDeletePanel = null;
-      }
-
       const existingConfirm = card.querySelector(".delete-confirm");
       if (existingConfirm) {
         existingConfirm.remove();
+        if (activeInlineDeletePanel === existingConfirm) {
+          activeInlineDeletePanel = null;
+        }
         return;
       }
+
+      if (activeInlineDeletePanel && activeInlineDeletePanel.isConnected) {
+        activeInlineDeletePanel.remove();
+      }
+      activeInlineDeletePanel = null;
 
       const confirmBox = document.createElement("div");
       confirmBox.className = "delete-confirm";
@@ -2015,8 +2011,14 @@ function renderBookmarks(collection) {
         e.stopPropagation();
       });
 
-      card.appendChild(confirmBox);
-      activeInlineDeletePanel = confirmBox;
+      const closeConfirm = () => {
+        if (confirmBox.isConnected) {
+          confirmBox.remove();
+        }
+        if (activeInlineDeletePanel === confirmBox) {
+          activeInlineDeletePanel = null;
+        }
+      };
 
       const yesBtn = confirmBox.querySelector(".confirm-yes");
       const noBtn = confirmBox.querySelector(".confirm-no");
@@ -2024,10 +2026,7 @@ function renderBookmarks(collection) {
       yesBtn.addEventListener("click", (e) => {
         e.stopImmediatePropagation();
         e.preventDefault();
-        confirmBox.remove();
-        if (activeInlineDeletePanel === confirmBox) {
-          activeInlineDeletePanel = null;
-        }
+        closeConfirm();
 
         const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
         setBookmarks(nextBookmarks, { persist: true });
@@ -2036,16 +2035,15 @@ function renderBookmarks(collection) {
       noBtn.addEventListener("click", (e) => {
         e.stopImmediatePropagation();
         e.preventDefault();
-        confirmBox.remove();
-        if (activeInlineDeletePanel === confirmBox) {
-          activeInlineDeletePanel = null;
-        }
+        closeConfirm();
       });
+
+      card.appendChild(confirmBox);
+      activeInlineDeletePanel = confirmBox;
     });
 
-    const footer = card.querySelector(".bookmark-body");
-    if (footer) {
-      footer.appendChild(deleteBtn);
+    if (bodyEl) {
+      bodyEl.appendChild(deleteBtn);
     } else {
       card.appendChild(deleteBtn);
     }
