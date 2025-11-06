@@ -294,16 +294,103 @@ function showInlineDeletePanel(panel) {
   }
   panel.hidden = false;
   panel.dataset.active = "true";
+  if (panel._triggerButton) {
+    panel._triggerButton.setAttribute("aria-expanded", "true");
+    panel._triggerButton.classList.add("is-active");
+  }
   activeInlineDeletePanel = panel;
+  if (panel._confirmButton) {
+    panel._confirmButton.focus({ preventScroll: true });
+  }
 }
 
 function hideInlineDeletePanel(panel) {
   if (!panel) return;
   panel.hidden = true;
   panel.removeAttribute("data-active");
+  if (panel._triggerButton) {
+    panel._triggerButton.setAttribute("aria-expanded", "false");
+    panel._triggerButton.classList.remove("is-active");
+  }
   if (activeInlineDeletePanel === panel) {
     activeInlineDeletePanel = null;
   }
+}
+
+function createDeleteConfirmationPanel(bookmark, triggerButton) {
+  const panel = document.createElement("div");
+  panel.className = "delete-confirm";
+  panel.hidden = true;
+  panel.dataset.bookmarkId = bookmark.id || "";
+  panel.setAttribute("role", "group");
+  panel.setAttribute("aria-label", "Delete bookmark confirmation");
+  panel._triggerButton = triggerButton || null;
+  panel._confirmButton = null;
+  panel._cancelButton = null;
+
+  const message = document.createElement("p");
+  message.className = "delete-message";
+  const bookmarkName = bookmark.name?.trim() || "this bookmark";
+  message.textContent = `Remove "${bookmarkName}"?`;
+  panel.appendChild(message);
+
+  const actions = document.createElement("div");
+  actions.className = "delete-actions";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "confirm-no";
+  cancelBtn.textContent = "Cancel";
+
+  const confirmBtn = document.createElement("button");
+  confirmBtn.type = "button";
+  confirmBtn.className = "confirm-yes";
+  confirmBtn.textContent = "Delete";
+
+  panel._confirmButton = confirmBtn;
+  panel._cancelButton = cancelBtn;
+
+  actions.append(cancelBtn, confirmBtn);
+  panel.appendChild(actions);
+
+  panel.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  cancelBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    hideInlineDeletePanel(panel);
+    if (panel._triggerButton) {
+      panel._triggerButton.focus({ preventScroll: true });
+    }
+  });
+
+  confirmBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (!Array.isArray(bookmarks) || !bookmark || !bookmark.id) {
+      console.warn("Cannot delete bookmark: missing id or store", bookmark);
+      hideInlineDeletePanel(panel);
+      return;
+    }
+
+    const index = bookmarks.findIndex((b) => b && b.id === bookmark.id);
+    if (index === -1) {
+      console.warn("Bookmark not found in store for deletion", bookmark);
+      hideInlineDeletePanel(panel);
+      return;
+    }
+
+    const next = bookmarks.slice();
+    next.splice(index, 1);
+
+    hideInlineDeletePanel(panel);
+    setBookmarks(next, { persist: true });
+  });
+
+  return panel;
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
@@ -338,6 +425,23 @@ window.addEventListener("DOMContentLoaded", async () => {
   settingsModal = document.getElementById("settings-modal");
   settingsForm = document.getElementById("settings-form");
   settingsDialog = document.querySelector(".settings-modal__dialog");
+
+  document.addEventListener("click", (event) => {
+    if (!activeInlineDeletePanel) return;
+    if (
+      activeInlineDeletePanel.contains(event.target) ||
+      event.target.closest(".delete-btn")
+    ) {
+      return;
+    }
+    hideInlineDeletePanel(activeInlineDeletePanel);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && activeInlineDeletePanel) {
+      hideInlineDeletePanel(activeInlineDeletePanel);
+    }
+  });
   toggleHeadingInput = document.getElementById("toggle-heading");
   toggleAxolotlInput = document.getElementById("toggle-axolotl");
   cardSizeInput = document.getElementById("card-size");
@@ -1980,37 +2084,53 @@ function renderBookmarks(collection) {
     const titleEl = card.querySelector(".card-title");
     const categoryEl = card.querySelector(".card-category");
     const bodyEl = card.querySelector(".card-body");
+    let headerLink = null;
+
+    const bookmarkTitle = bookmark.name?.trim() || "Untitled bookmark";
 
     applyBookmarkImage(imageEl, bookmark);
-    imageEl.alt = bookmark.name;
-    titleEl.textContent = bookmark.name;
+    imageEl.alt = bookmarkTitle;
+    titleEl.textContent = bookmarkTitle;
+
+    if (bookmark.url && mediaEl && imageEl) {
+      headerLink = document.createElement("a");
+      headerLink.className = "card-link";
+      headerLink.href = bookmark.url;
+      headerLink.target = "_blank";
+      headerLink.rel = "noopener noreferrer";
+      headerLink.setAttribute(
+        "aria-label",
+        `Open ${bookmarkTitle} in a new tab`
+      );
+      headerLink.appendChild(imageEl);
+      mediaEl.replaceChildren(headerLink);
+      headerLink.addEventListener("click", (event) => {
+        if (activeInlineDeletePanel) {
+          hideInlineDeletePanel(activeInlineDeletePanel);
+        }
+        event.stopPropagation();
+      });
+    } else if (mediaEl) {
+      mediaEl.classList.add("card-media--no-link");
+    }
 
     function openBookmark(evt) {
+      if (!headerLink) {
+        return;
+      }
       evt.preventDefault();
       evt.stopPropagation();
-      if (!bookmark.url) return;
-      try {
-        window.open(bookmark.url, "_blank", "noopener,noreferrer");
-      } catch (e) {
-        console.error("Failed to open bookmark", e);
+      if (activeInlineDeletePanel) {
+        hideInlineDeletePanel(activeInlineDeletePanel);
       }
-    }
-
-    if (mediaEl) {
-      if (bookmark.url) {
-        mediaEl.style.cursor = "pointer";
-      }
-      mediaEl.addEventListener("click", openBookmark);
-    }
-
-    if (imageEl) {
-      if (bookmark.url) {
-        imageEl.style.cursor = "pointer";
-      }
-      imageEl.addEventListener("click", openBookmark);
+      headerLink.click();
     }
 
     card.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && activeInlineDeletePanel) {
+        hideInlineDeletePanel(activeInlineDeletePanel);
+        return;
+      }
       if (event.target !== card) return;
       if (event.key === "Enter" || event.key === " ") {
         openBookmark(event);
@@ -2033,26 +2153,40 @@ function renderBookmarks(collection) {
     deleteBtn.type = "button";
     deleteBtn.innerHTML = "✕";
     deleteBtn.title = "Delete bookmark";
+    deleteBtn.setAttribute("aria-label", `Delete ${bookmarkTitle}`);
+    deleteBtn.setAttribute("aria-haspopup", "dialog");
+    deleteBtn.setAttribute("aria-expanded", "false");
+
+    const deletePanel = createDeleteConfirmationPanel(bookmark, deleteBtn);
+    if (!deletePanel.id) {
+      const idSource =
+        bookmark.id != null
+          ? String(bookmark.id)
+          : `temp-${Math.random().toString(36).slice(2, 8)}`;
+      const safeId = idSource
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-zA-Z0-9_-]/g, "");
+      deletePanel.id = `delete-confirm-${safeId || "fallback"}`;
+    }
+    deleteBtn.setAttribute("aria-controls", deletePanel.id);
+
+    if (bodyEl) {
+      bodyEl.appendChild(deletePanel);
+    } else {
+      card.appendChild(deletePanel);
+    }
 
     deleteBtn.addEventListener("click", (event) => {
       event.stopPropagation();
       event.preventDefault();
 
-      if (!Array.isArray(bookmarks) || !bookmark || !bookmark.id) {
-        console.warn("Cannot delete bookmark: missing id or store", bookmark);
+      if (deletePanel.dataset.active === "true") {
+        hideInlineDeletePanel(deletePanel);
         return;
       }
 
-      const index = bookmarks.findIndex((b) => b && b.id === bookmark.id);
-      if (index === -1) {
-        console.warn("Bookmark not found in store for deletion", bookmark);
-        return;
-      }
-
-      const next = bookmarks.slice();
-      next.splice(index, 1);
-
-      setBookmarks(next, { persist: true });
+      showInlineDeletePanel(deletePanel);
     });
 
     if (bodyEl) {
