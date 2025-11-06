@@ -2003,6 +2003,13 @@ function renderBookmarks(collection) {
       mediaEl.addEventListener("click", openBookmark);
     }
 
+    if (imageEl) {
+      if (bookmark.url) {
+        imageEl.style.cursor = "pointer";
+      }
+      imageEl.addEventListener("click", openBookmark);
+    }
+
     card.addEventListener("keydown", (event) => {
       if (event.target !== card) return;
       if (event.key === "Enter" || event.key === " ") {
