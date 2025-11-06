@@ -2177,6 +2177,9 @@ function renderBookmarks(collection) {
       card.appendChild(deletePanel);
     }
 
+    const deletePanel = createDeleteConfirmationPanel(card, bookmark);
+    card.appendChild(deletePanel);
+
     deleteBtn.addEventListener("click", (event) => {
       event.stopPropagation();
       event.preventDefault();
