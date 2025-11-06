@@ -2086,44 +2086,37 @@ function renderBookmarks(collection) {
     const bodyEl = card.querySelector(".card-body");
     let headerLink = null;
 
-    const bookmarkTitle = bookmark.name?.trim() || "Untitled bookmark";
-
     applyBookmarkImage(imageEl, bookmark);
-    imageEl.alt = bookmarkTitle;
-    titleEl.textContent = bookmarkTitle;
+    imageEl.alt = bookmark.name;
+    titleEl.textContent = bookmark.name;
 
-    if (bookmark.url && mediaEl && imageEl) {
-      headerLink = document.createElement("a");
-      headerLink.className = "card-link";
-      headerLink.href = bookmark.url;
-      headerLink.target = "_blank";
-      headerLink.rel = "noopener noreferrer";
-      headerLink.setAttribute(
-        "aria-label",
-        `Open ${bookmarkTitle} in a new tab`
-      );
-      headerLink.appendChild(imageEl);
-      mediaEl.replaceChildren(headerLink);
-      headerLink.addEventListener("click", (event) => {
-        if (activeInlineDeletePanel) {
-          hideInlineDeletePanel(activeInlineDeletePanel);
-        }
-        event.stopPropagation();
-      });
-    } else if (mediaEl) {
-      mediaEl.classList.add("card-media--no-link");
+    if (mediaEl) {
+      mediaEl.classList.add("bookmark-link");
+      if (bookmark.url) {
+        mediaEl.style.cursor = "pointer";
+      }
     }
 
-    function openBookmark(evt) {
-      if (!headerLink) {
-        return;
-      }
-      evt.preventDefault();
-      evt.stopPropagation();
-      if (activeInlineDeletePanel) {
-        hideInlineDeletePanel(activeInlineDeletePanel);
-      }
-      headerLink.click();
+    const openBookmark = () => {
+      if (!bookmark.url) return;
+      window.open(bookmark.url, "_blank", "noopener,noreferrer");
+    };
+
+    if (bookmark.url) {
+      card.addEventListener("click", (event) => {
+        if (!event.target.closest(".card-media")) return;
+        if (event.target.closest(".delete-btn")) return;
+        event.preventDefault();
+        openBookmark();
+      });
+
+      card.addEventListener("keydown", (event) => {
+        if (event.target !== card) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openBookmark();
+        }
+      });
     }
 
     card.addEventListener("keydown", (event) => {
