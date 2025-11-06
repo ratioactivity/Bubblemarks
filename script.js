@@ -10,15 +10,22 @@ const FALLBACK_PALETTES = [
 const CATEGORY_STORAGE_KEY = "bubblemarks.categories.v1";
 const DEFAULT_CATEGORY_LABEL = "Unsorted";
 const DEFAULT_CATEGORY_SLUG = "unsorted";
+const CATEGORY_ALIAS_MAP = new Map([
+  ["shop", "shop"],
+  ["shopping", "shop"],
+  ["story", "stories"],
+]);
 const DEFAULT_CATEGORY_SETTINGS = [
-  { key: "ai", label: "AI", color: "#ff80c8" },
-  { key: "av", label: "AV", color: "#92a9ff" },
-  { key: "games", label: "Games", color: "#b592ff" },
-  { key: "shopping", label: "Shopping", color: "#ffc778" },
-  { key: "stories", label: "Stories", color: "#ffb0d9" },
-  { key: "tools", label: "Tools", color: "#6ad6a6" },
-  { key: "work", label: "Work", color: "#ff9dbb" },
-  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#ffb0d9" }, // Unsorted
+  { key: "ai", label: "AI", color: "#ff80c8" }, // pink
+  { key: "av", label: "AV", color: "#92a9ff" }, // lilac/blue
+  { key: "games", label: "Games", color: "#ffeaa6" }, // yellow
+  { key: "google", label: "Google", color: "#b4f5cf" }, // mint
+  { key: "pages", label: "Pages", color: "#d2ffe8" }, // light mint
+  { key: "shop", label: "Shop", color: "#ffe1b0" }, // peach
+  { key: "stories", label: "Stories", color: "#ffe9cf" }, // soft peach
+  { key: "tools", label: "Tools", color: "#b6f3d2" }, // minty green
+  { key: "work", label: "Work", color: "#ffc4d6" }, // coral/pink
+  { key: DEFAULT_CATEGORY_SLUG, label: DEFAULT_CATEGORY_LABEL, color: "#f7ddff" }, // Unsorted
 ];
 const PREFERENCES_STORAGE_KEY = "bubblemarks.preferences.v1";
 const LAYOUT_MIN_COUNT = 1;
@@ -460,17 +467,29 @@ function sanitizeBookmarks(entries) {
   if (!Array.isArray(entries)) return [];
 
   return entries
-    .map((entry) => ({
-      name: String(entry.name ?? "Untitled").trim(),
-      url: String(entry.url ?? "").trim(),
-      category: entry.category ? String(entry.category).trim() : "Unsorted",
-      image: entry.image ? String(entry.image).trim() : "",
-    }))
+    .map((entry, index) => {
+      const name = String(entry.name ?? "Untitled").trim();
+      const url = String(entry.url ?? "").trim();
+      const category = entry.category ? String(entry.category).trim() : "Unsorted";
+      const image = entry.image ? String(entry.image).trim() : "";
+      const idValue =
+        typeof entry.id === "string" && entry.id.trim()
+          ? entry.id.trim()
+          : `${url || "bookmark"}::${index}`;
+
+      return {
+        id: idValue,
+        name,
+        url,
+        category,
+        image,
+      };
+    })
     .filter((entry) => entry.name && entry.url);
 }
 
 function getDefaultCategorySettings() {
-  return DEFAULT_CATEGORY_SETTINGS;
+  return DEFAULT_CATEGORY_SETTINGS.map((item) => ({ ...item }));
 }
 
 function mergeCategorySettingsWithDefaults(current) {
@@ -1485,6 +1504,7 @@ function setupKeyboard() {
     "7",
     "8",
     "9",
+    { label: "⌫", action: "backspace" },
   ];
 
   container.innerHTML = "";
@@ -1499,19 +1519,28 @@ function setupKeyboard() {
     audio.play().catch(() => {}); // prevent errors if user hasn’t interacted yet
   }
 
-  buttons.forEach((char) => {
+  buttons.forEach((key) => {
+    const label = typeof key === "string" ? key : key.label;
+    const action = typeof key === "string" ? null : key.action;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "key-btn";
-    button.textContent = char;
-    button.setAttribute("aria-label", `Type ${char}`);
+    button.textContent = label;
+    button.setAttribute("aria-label", `Type ${label}`);
     button.addEventListener("click", () => {
       const search = searchInput || document.getElementById("search");
       if (!search) return;
-      search.value += char;
+      if (action === "backspace") {
+        search.value = search.value.slice(0, -1);
+        search.dispatchEvent(new Event("input", { bubbles: true }));
+        search.focus({ preventScroll: true });
+        playKeySound(label);
+        return;
+      }
+      search.value += label;
       search.dispatchEvent(new Event("input", { bubbles: true }));
       search.focus({ preventScroll: true });
-      playKeySound(char);
+      playKeySound(label);
     });
     container.appendChild(button);
   });
@@ -1930,6 +1959,38 @@ function renderBookmarks(collection) {
     imageEl.alt = bookmark.name;
     titleEl.textContent = bookmark.name;
 
+    function openBookmark(evt) {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (!bookmark.url) return;
+      try {
+        window.open(bookmark.url, "_blank", "noopener,noreferrer");
+      } catch (e) {
+        console.error("Failed to open bookmark", e);
+      }
+    }
+
+    if (mediaEl) {
+      if (bookmark.url) {
+        mediaEl.style.cursor = "pointer";
+      }
+      mediaEl.addEventListener("click", openBookmark);
+    }
+
+    if (imageEl) {
+      if (bookmark.url) {
+        imageEl.style.cursor = "pointer";
+      }
+      imageEl.addEventListener("click", openBookmark);
+    }
+
+    card.addEventListener("keydown", (event) => {
+      if (event.target !== card) return;
+      if (event.key === "Enter" || event.key === " ") {
+        openBookmark(event);
+      }
+    });
+
     const categoryKey =
       normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
       DEFAULT_CATEGORY_SLUG;
@@ -1940,85 +2001,39 @@ function renderBookmarks(collection) {
     categoryEl.textContent = displayLabel;
     applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
-    const openBookmark = () => {
-      window.open(bookmark.url, "_blank", "noopener,noreferrer");
-    };
 
-    // Main click behavior
-    if (mediaEl) {
-      mediaEl.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        openBookmark();
-      });
-    } else {
-      card.addEventListener("click", (event) => {
-        event.preventDefault();
-        openBookmark();
-      });
-    }
-
-    // Prevent clicks inside media area from bubbling weirdly
-    card.addEventListener("click", (event) => {
-      if (!(event.target instanceof Element)) return;
-      if (mediaEl && mediaEl.contains(event.target)) {
-        event.preventDefault();
-        openBookmark();
-      }
-    });
-
-    // Keyboard access
-    card.addEventListener("keydown", (event) => {
-      if (event.target !== card) return;
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        openBookmark();
-      }
-    });
-
-    // --- Inline delete button setup (Notion-safe) ---
     const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
     deleteBtn.className = "delete-btn";
-    deleteBtn.textContent = "✕";
+    deleteBtn.type = "button";
+    deleteBtn.innerHTML = "✕";
     deleteBtn.title = "Delete bookmark";
 
     deleteBtn.addEventListener("click", (event) => {
       event.stopPropagation();
       event.preventDefault();
 
-      const confirmation = document.createElement("div");
-      confirmation.className = "inline-delete-confirmation";
-      confirmation.innerHTML = `
-    <span>Delete this bookmark?</span>
-    <button class="confirm">Yes</button>
-    <button class="cancel">No</button>
-  `;
+      if (!Array.isArray(bookmarks) || !bookmark || !bookmark.id) {
+        console.warn("Cannot delete bookmark: missing id or store", bookmark);
+        return;
+      }
 
-      const confirmBtn = confirmation.querySelector(".confirm");
-      const cancelBtn = confirmation.querySelector(".cancel");
+      const index = bookmarks.findIndex((b) => b && b.id === bookmark.id);
+      if (index === -1) {
+        console.warn("Bookmark not found in store for deletion", bookmark);
+        return;
+      }
 
-      confirmBtn.addEventListener("click", () => {
-        const nextBookmarks = bookmarks.filter((item) => item !== bookmark);
-        setBookmarks(nextBookmarks, { persist: true });
-        confirmation.remove();
-      });
+      const next = bookmarks.slice();
+      next.splice(index, 1);
 
-      cancelBtn.addEventListener("click", () => {
-        confirmation.remove();
-      });
-
-      card.appendChild(confirmation);
+      setBookmarks(next, { persist: true });
     });
 
-    // Append delete button to the white card body (not the category label)
-    const footer = card.querySelector(".bookmark-body");
-    if (footer) {
-      footer.appendChild(deleteBtn);
+    if (bodyEl) {
+      bodyEl.appendChild(deleteBtn);
     } else {
       card.appendChild(deleteBtn);
     }
-    // --- end inline delete setup ---
 
     return card;
   });
