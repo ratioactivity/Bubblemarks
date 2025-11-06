@@ -1996,33 +1996,12 @@ function renderBookmarks(collection) {
       }
     }
 
-    if (bookmark.url) {
-      card.style.cursor = "pointer";
-    }
-
     if (mediaEl) {
       if (bookmark.url) {
         mediaEl.style.cursor = "pointer";
       }
       mediaEl.addEventListener("click", openBookmark);
     }
-
-    if (bodyEl) {
-      if (bookmark.url) {
-        bodyEl.style.cursor = "pointer";
-      }
-      bodyEl.addEventListener("click", (event) => {
-        if (event.target.closest(".delete-btn")) return;
-        openBookmark(event);
-      });
-    }
-
-    card.addEventListener("click", (event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      if (target.closest(".delete-btn")) return;
-      openBookmark(event);
-    });
 
     card.addEventListener("keydown", (event) => {
       if (event.target !== card) return;
