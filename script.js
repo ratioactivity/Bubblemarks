@@ -1,4 +1,5 @@
 
+
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
 const DEFAULT_SOURCE = "bookmarks.json";
 const FALLBACK_PALETTES = [
@@ -294,39 +295,23 @@ function showInlineDeletePanel(panel) {
   }
   panel.hidden = false;
   panel.dataset.active = "true";
-  if (panel._triggerButton) {
-    panel._triggerButton.setAttribute("aria-expanded", "true");
-    panel._triggerButton.classList.add("is-active");
-  }
   activeInlineDeletePanel = panel;
-  if (panel._confirmButton) {
-    panel._confirmButton.focus({ preventScroll: true });
-  }
 }
 
 function hideInlineDeletePanel(panel) {
   if (!panel) return;
   panel.hidden = true;
   panel.removeAttribute("data-active");
-  if (panel._triggerButton) {
-    panel._triggerButton.setAttribute("aria-expanded", "false");
-    panel._triggerButton.classList.remove("is-active");
-  }
   if (activeInlineDeletePanel === panel) {
     activeInlineDeletePanel = null;
   }
 }
 
-function createDeleteConfirmationPanel(bookmark, triggerButton) {
+function createDeleteConfirmationPanel(card, bookmark) {
   const panel = document.createElement("div");
   panel.className = "delete-confirm";
   panel.hidden = true;
   panel.dataset.bookmarkId = bookmark.id || "";
-  panel.setAttribute("role", "group");
-  panel.setAttribute("aria-label", "Delete bookmark confirmation");
-  panel._triggerButton = triggerButton || null;
-  panel._confirmButton = null;
-  panel._cancelButton = null;
 
   const message = document.createElement("p");
   message.className = "delete-message";
@@ -347,9 +332,6 @@ function createDeleteConfirmationPanel(bookmark, triggerButton) {
   confirmBtn.className = "confirm-yes";
   confirmBtn.textContent = "Delete";
 
-  panel._confirmButton = confirmBtn;
-  panel._cancelButton = cancelBtn;
-
   actions.append(cancelBtn, confirmBtn);
   panel.appendChild(actions);
 
@@ -361,9 +343,6 @@ function createDeleteConfirmationPanel(bookmark, triggerButton) {
     event.stopPropagation();
     event.preventDefault();
     hideInlineDeletePanel(panel);
-    if (panel._triggerButton) {
-      panel._triggerButton.focus({ preventScroll: true });
-    }
   });
 
   confirmBtn.addEventListener("click", (event) => {
@@ -2084,39 +2063,37 @@ function renderBookmarks(collection) {
     const titleEl = card.querySelector(".card-title");
     const categoryEl = card.querySelector(".card-category");
     const bodyEl = card.querySelector(".card-body");
-    let headerLink = null;
 
     applyBookmarkImage(imageEl, bookmark);
     imageEl.alt = bookmark.name;
     titleEl.textContent = bookmark.name;
 
-    if (mediaEl) {
-      mediaEl.classList.add("bookmark-link");
-      if (bookmark.url) {
-        mediaEl.style.cursor = "pointer";
+    function openBookmark(evt) {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (activeInlineDeletePanel) {
+        hideInlineDeletePanel(activeInlineDeletePanel);
+      }
+      if (!bookmark.url) return;
+      try {
+        window.open(bookmark.url, "_blank", "noopener,noreferrer");
+      } catch (e) {
+        console.error("Failed to open bookmark", e);
       }
     }
 
-    const openBookmark = () => {
-      if (!bookmark.url) return;
-      window.open(bookmark.url, "_blank", "noopener,noreferrer");
-    };
+    if (mediaEl) {
+      if (bookmark.url) {
+        mediaEl.style.cursor = "pointer";
+      }
+      mediaEl.addEventListener("click", openBookmark);
+    }
 
-    if (bookmark.url) {
-      card.addEventListener("click", (event) => {
-        if (!event.target.closest(".card-media")) return;
-        if (event.target.closest(".delete-btn")) return;
-        event.preventDefault();
-        openBookmark();
-      });
-
-      card.addEventListener("keydown", (event) => {
-        if (event.target !== card) return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          openBookmark();
-        }
-      });
+    if (imageEl) {
+      if (bookmark.url) {
+        imageEl.style.cursor = "pointer";
+      }
+      imageEl.addEventListener("click", openBookmark);
     }
 
     card.addEventListener("keydown", (event) => {
@@ -2146,29 +2123,6 @@ function renderBookmarks(collection) {
     deleteBtn.type = "button";
     deleteBtn.innerHTML = "✕";
     deleteBtn.title = "Delete bookmark";
-    deleteBtn.setAttribute("aria-label", `Delete ${bookmarkTitle}`);
-    deleteBtn.setAttribute("aria-haspopup", "dialog");
-    deleteBtn.setAttribute("aria-expanded", "false");
-
-    const deletePanel = createDeleteConfirmationPanel(bookmark, deleteBtn);
-    if (!deletePanel.id) {
-      const idSource =
-        bookmark.id != null
-          ? String(bookmark.id)
-          : `temp-${Math.random().toString(36).slice(2, 8)}`;
-      const safeId = idSource
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-zA-Z0-9_-]/g, "");
-      deletePanel.id = `delete-confirm-${safeId || "fallback"}`;
-    }
-    deleteBtn.setAttribute("aria-controls", deletePanel.id);
-
-    if (bodyEl) {
-      bodyEl.appendChild(deletePanel);
-    } else {
-      card.appendChild(deletePanel);
-    }
 
     const deletePanel = createDeleteConfirmationPanel(card, bookmark);
     card.appendChild(deletePanel);
