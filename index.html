@@ -102,6 +102,9 @@
           <button id="customize-categories" type="button" class="soft-btn soft-btn--ghost">
             Customize Categories
           </button>
+          <button id="manage-bookmarks" type="button" class="soft-btn soft-btn--ghost">
+            Manage Bookmarks
+          </button>
         </div>
       </div>
 
@@ -138,7 +141,7 @@
   </main>
 
   <template id="bookmark-card-template">
-    <article class="card" tabindex="0" role="button">
+    <a class="card" target="_blank" rel="noopener noreferrer">
       <div class="card-media">
         <img class="card-image" alt="" loading="lazy" />
       </div>
@@ -146,7 +149,7 @@
         <span class="card-category"></span>
         <h2 class="card-title"></h2>
       </div>
-    </article>
+    </a>
   </template>
 
   <div
@@ -244,6 +247,56 @@
         <button type="button" class="category-setting__move" data-direction="up" aria-label="Move up">▲</button>
         <button type="button" class="category-setting__move" data-direction="down" aria-label="Move down">▼</button>
         <button type="button" class="category-setting__remove" aria-label="Remove category">Remove</button>
+      </div>
+    </div>
+  </template>
+
+  <div
+    id="manage-bookmarks-modal"
+    class="bookmark-manager-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="manage-bookmarks-title"
+    hidden
+  >
+    <div class="bookmark-manager-modal__backdrop" data-manager-dismiss="true"></div>
+    <div class="bookmark-manager-modal__dialog" tabindex="-1">
+      <div class="bookmark-manager-modal__header">
+        <h2 id="manage-bookmarks-title">Manage Bookmarks</h2>
+        <button
+          type="button"
+          class="bookmark-manager-modal__close"
+          data-manager-dismiss="true"
+          aria-label="Close manage bookmarks"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="bookmark-manager-modal__body">
+        <p id="bookmark-manager-empty" class="bookmark-manager-modal__empty" hidden>
+          Your bookmark cloud is clear! Add a few links to see them here.
+        </p>
+        <div id="bookmark-manager-list" class="bookmark-manager-list" role="list"></div>
+      </div>
+    </div>
+  </div>
+
+  <template id="bookmark-manager-item-template">
+    <div class="bookmark-manager-item" role="listitem">
+      <div class="bookmark-manager-item__info">
+        <span class="bookmark-manager-item__title"></span>
+        <span class="bookmark-manager-item__category"></span>
+        <span class="bookmark-manager-item__url"></span>
+      </div>
+      <div class="bookmark-manager-item__actions">
+        <button type="button" class="bookmark-manager-item__delete soft-btn soft-btn--ghost">Delete</button>
+        <div class="bookmark-manager-item__confirm" hidden>
+          <span class="bookmark-manager-item__confirm-text">Remove this bookmark?</span>
+          <div class="bookmark-manager-item__confirm-buttons">
+            <button type="button" class="soft-btn soft-btn--danger" data-manager-action="confirm">Delete</button>
+            <button type="button" class="soft-btn soft-btn--ghost" data-manager-action="cancel">Cancel</button>
+          </div>
+        </div>
       </div>
     </div>
   </template>
