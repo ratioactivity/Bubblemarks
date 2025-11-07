@@ -451,236 +451,6 @@ function deleteBookmarkById(bookmarkId) {
   }
 }
 
-function renderBookmarkManagerList() {
-  if (!manageBookmarksList || !manageBookmarksTemplate) {
-    return;
-  }
-
-  resetBookmarkManagerConfirm();
-
-  if (!Array.isArray(bookmarks) || bookmarks.length === 0) {
-    replaceChildrenSafe(manageBookmarksList, []);
-    if (manageBookmarksEmpty) {
-      manageBookmarksEmpty.hidden = false;
-    }
-    return;
-  }
-
-  const items = bookmarks
-    .map((bookmark) => {
-      const node = manageBookmarksTemplate.content?.firstElementChild
-        ? manageBookmarksTemplate.content.firstElementChild.cloneNode(true)
-        : null;
-
-      if (!node) {
-        return null;
-      }
-
-      node.dataset.bookmarkId = bookmark.id || "";
-
-      const titleEl = node.querySelector(".bookmark-manager-item__title");
-      const categoryEl = node.querySelector(".bookmark-manager-item__category");
-      const urlEl = node.querySelector(".bookmark-manager-item__url");
-      const confirmEl = node.querySelector(".bookmark-manager-item__confirm");
-      const deleteBtn = node.querySelector(".bookmark-manager-item__delete");
-
-      const bookmarkTitle = bookmark.name?.trim() || "Untitled bookmark";
-      const categoryKey =
-        normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
-        DEFAULT_CATEGORY_SLUG;
-      const displayCategory = getCategoryLabel(
-        categoryKey,
-        bookmark.category || DEFAULT_CATEGORY_LABEL
-      );
-
-      if (titleEl) {
-        titleEl.textContent = bookmarkTitle;
-      }
-
-      if (categoryEl) {
-        categoryEl.textContent = displayCategory;
-        applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
-      }
-
-      if (urlEl) {
-        urlEl.textContent = bookmark.url || "";
-        urlEl.title = bookmark.url || "";
-      }
-
-      if (confirmEl) {
-        confirmEl.hidden = true;
-      }
-
-      if (deleteBtn) {
-        deleteBtn.hidden = false;
-        deleteBtn.setAttribute("aria-label", `Delete ${bookmarkTitle}`);
-      }
-
-      return node;
-    })
-    .filter(Boolean);
-
-  replaceChildrenSafe(manageBookmarksList, items);
-
-  if (manageBookmarksEmpty) {
-    manageBookmarksEmpty.hidden = true;
-  }
-}
-
-function refreshBookmarkManagerUI() {
-  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
-    renderBookmarkManagerList();
-  }
-}
-
-function deleteBookmarkById(bookmarkId) {
-  if (!bookmarkId) {
-    return;
-  }
-
-  const index = bookmarks.findIndex((bookmark) => bookmark && bookmark.id === bookmarkId);
-  if (index === -1) {
-    return;
-  }
-
-  const next = bookmarks.slice();
-  next.splice(index, 1);
-
-  resetBookmarkManagerConfirm();
-  setBookmarks(next, { persist: true });
-
-  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
-    window.requestAnimationFrame(() => {
-      const nextDelete = manageBookmarksList?.querySelector(
-        ".bookmark-manager-item__delete"
-      );
-      if (nextDelete) {
-        nextDelete.focus({ preventScroll: true });
-        return;
-      }
-      const closeBtn = manageBookmarksModal.querySelector(
-        ".bookmark-manager-modal__close"
-      );
-      closeBtn?.focus({ preventScroll: true });
-    });
-  }
-}
-
-function renderBookmarkManagerList() {
-  if (!manageBookmarksList || !manageBookmarksTemplate) {
-    return;
-  }
-
-  resetBookmarkManagerConfirm();
-
-  if (!Array.isArray(bookmarks) || bookmarks.length === 0) {
-    replaceChildrenSafe(manageBookmarksList, []);
-    if (manageBookmarksEmpty) {
-      manageBookmarksEmpty.hidden = false;
-    }
-    return;
-  }
-
-  const items = bookmarks
-    .map((bookmark) => {
-      const node = manageBookmarksTemplate.content?.firstElementChild
-        ? manageBookmarksTemplate.content.firstElementChild.cloneNode(true)
-        : null;
-
-      if (!node) {
-        return null;
-      }
-
-      node.dataset.bookmarkId = bookmark.id || "";
-
-      const titleEl = node.querySelector(".bookmark-manager-item__title");
-      const categoryEl = node.querySelector(".bookmark-manager-item__category");
-      const urlEl = node.querySelector(".bookmark-manager-item__url");
-      const confirmEl = node.querySelector(".bookmark-manager-item__confirm");
-      const deleteBtn = node.querySelector(".bookmark-manager-item__delete");
-
-      const bookmarkTitle = bookmark.name?.trim() || "Untitled bookmark";
-      const categoryKey =
-        normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
-        DEFAULT_CATEGORY_SLUG;
-      const displayCategory = getCategoryLabel(
-        categoryKey,
-        bookmark.category || DEFAULT_CATEGORY_LABEL
-      );
-
-      if (titleEl) {
-        titleEl.textContent = bookmarkTitle;
-      }
-
-      if (categoryEl) {
-        categoryEl.textContent = displayCategory;
-        applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
-      }
-
-      if (urlEl) {
-        urlEl.textContent = bookmark.url || "";
-        urlEl.title = bookmark.url || "";
-      }
-
-      if (confirmEl) {
-        confirmEl.hidden = true;
-      }
-
-      if (deleteBtn) {
-        deleteBtn.hidden = false;
-        deleteBtn.setAttribute("aria-label", `Delete ${bookmarkTitle}`);
-      }
-
-      return node;
-    })
-    .filter(Boolean);
-
-  replaceChildrenSafe(manageBookmarksList, items);
-
-  if (manageBookmarksEmpty) {
-    manageBookmarksEmpty.hidden = true;
-  }
-}
-
-function refreshBookmarkManagerUI() {
-  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
-    renderBookmarkManagerList();
-  }
-}
-
-function deleteBookmarkById(bookmarkId) {
-  if (!bookmarkId) {
-    return;
-  }
-
-  const index = bookmarks.findIndex((bookmark) => bookmark && bookmark.id === bookmarkId);
-  if (index === -1) {
-    return;
-  }
-
-  const next = bookmarks.slice();
-  next.splice(index, 1);
-
-  resetBookmarkManagerConfirm();
-  setBookmarks(next, { persist: true });
-
-  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
-    window.requestAnimationFrame(() => {
-      const nextDelete = manageBookmarksList?.querySelector(
-        ".bookmark-manager-item__delete"
-      );
-      if (nextDelete) {
-        nextDelete.focus({ preventScroll: true });
-        return;
-      }
-      const closeBtn = manageBookmarksModal.querySelector(
-        ".bookmark-manager-modal__close"
-      );
-      closeBtn?.focus({ preventScroll: true });
-    });
-  }
-}
-
 function createDeleteConfirmationPanel(card, bookmark) {
   const panel = document.createElement("div");
   panel.className = "delete-confirm";
@@ -829,16 +599,53 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 async function hydrateData() {
   setLoading(true);
+  let hasRendered = false;
+
   try {
-    const response = await fetch("bookmarks.json", { cache: "no-store" });
-    if (!response.ok) throw new Error("Unable to load bookmarks.json");
-    const data = await response.json();
-    setBookmarks(sanitizeBookmarks(data));
+    const stored = loadStoredBookmarks();
+    if (stored.length) {
+      setBookmarks(stored, { persist: false });
+      hasRendered = true;
+    }
+
+    const response = await fetch(DEFAULT_SOURCE, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("Unable to load bookmarks.json");
+    }
+
+    const remote = sanitizeBookmarks(await response.json());
+    if (remote.length) {
+      setBookmarks(remote, { persist: true });
+      hasRendered = true;
+    } else if (!hasRendered) {
+      renderBookmarks([]);
+    }
   } catch (error) {
     console.error("Error loading bookmarks:", error);
-    renderBookmarks([]);
+    if (!hasRendered) {
+      renderBookmarks([]);
+    }
   } finally {
     setLoading(false);
+  }
+}
+
+function loadStoredBookmarks() {
+  if (typeof localStorage === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    return sortBookmarksAlphabetically(sanitizeBookmarks(parsed));
+  } catch (error) {
+    console.warn("Unable to load stored bookmarks", error);
+    return [];
   }
 }
 
