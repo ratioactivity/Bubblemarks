@@ -3938,18 +3938,16 @@ function setupDataTools() {
       return;
     }
 
-    const blob = new Blob([JSON.stringify(bookmarks, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `bubblemarks-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  });
+    exportBtn.addEventListener("click", () => {
+  if (!bookmarks.length) return alert("No bookmarks to export.");
+
+  const data = JSON.stringify(bookmarks, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  // Instead of triggering a download, open the JSON in a new tab.
+  window.open(url, "_blank", "noopener,noreferrer");
+});
 
   restoreBtn.addEventListener("click", async () => {
     if (
