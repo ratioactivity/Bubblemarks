@@ -450,6 +450,121 @@ function deleteBookmarkById(bookmarkId) {
   }
 }
 
+function renderBookmarkManagerList() {
+  if (!manageBookmarksList || !manageBookmarksTemplate) {
+    return;
+  }
+
+  resetBookmarkManagerConfirm();
+
+  if (!Array.isArray(bookmarks) || bookmarks.length === 0) {
+    replaceChildrenSafe(manageBookmarksList, []);
+    if (manageBookmarksEmpty) {
+      manageBookmarksEmpty.hidden = false;
+    }
+    return;
+  }
+
+  const items = bookmarks
+    .map((bookmark) => {
+      const node = manageBookmarksTemplate.content?.firstElementChild
+        ? manageBookmarksTemplate.content.firstElementChild.cloneNode(true)
+        : null;
+
+      if (!node) {
+        return null;
+      }
+
+      node.dataset.bookmarkId = bookmark.id || "";
+
+      const titleEl = node.querySelector(".bookmark-manager-item__title");
+      const categoryEl = node.querySelector(".bookmark-manager-item__category");
+      const urlEl = node.querySelector(".bookmark-manager-item__url");
+      const confirmEl = node.querySelector(".bookmark-manager-item__confirm");
+      const deleteBtn = node.querySelector(".bookmark-manager-item__delete");
+
+      const bookmarkTitle = bookmark.name?.trim() || "Untitled bookmark";
+      const categoryKey =
+        normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
+        DEFAULT_CATEGORY_SLUG;
+      const displayCategory = getCategoryLabel(
+        categoryKey,
+        bookmark.category || DEFAULT_CATEGORY_LABEL
+      );
+
+      if (titleEl) {
+        titleEl.textContent = bookmarkTitle;
+      }
+
+      if (categoryEl) {
+        categoryEl.textContent = displayCategory;
+        applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
+      }
+
+      if (urlEl) {
+        urlEl.textContent = bookmark.url || "";
+        urlEl.title = bookmark.url || "";
+      }
+
+      if (confirmEl) {
+        confirmEl.hidden = true;
+      }
+
+      if (deleteBtn) {
+        deleteBtn.hidden = false;
+        deleteBtn.setAttribute("aria-label", `Delete ${bookmarkTitle}`);
+      }
+
+      return node;
+    })
+    .filter(Boolean);
+
+  replaceChildrenSafe(manageBookmarksList, items);
+
+  if (manageBookmarksEmpty) {
+    manageBookmarksEmpty.hidden = true;
+  }
+}
+
+function refreshBookmarkManagerUI() {
+  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
+    renderBookmarkManagerList();
+  }
+}
+
+function deleteBookmarkById(bookmarkId) {
+  if (!bookmarkId) {
+    return;
+  }
+
+  const index = bookmarks.findIndex((bookmark) => bookmark && bookmark.id === bookmarkId);
+  if (index === -1) {
+    return;
+  }
+
+  const next = bookmarks.slice();
+  next.splice(index, 1);
+
+  resetBookmarkManagerConfirm();
+  setBookmarks(next, { persist: true });
+
+  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
+    window.requestAnimationFrame(() => {
+      const nextDelete = manageBookmarksList?.querySelector(
+        ".bookmark-manager-item__delete"
+      );
+      if (nextDelete) {
+        nextDelete.focus({ preventScroll: true });
+        return;
+      }
+      const closeBtn = manageBookmarksModal.querySelector(
+        ".bookmark-manager-modal__close"
+      );
+      closeBtn?.focus({ preventScroll: true });
+    });
+  }
+}
+
 function createDeleteConfirmationPanel(card, bookmark) {
   const panel = document.createElement("div");
   panel.className = "delete-confirm";
@@ -702,6 +817,18 @@ function sanitizeBookmarks(entries) {
       };
     })
     .filter((entry) => entry.name && entry.url);
+}
+
+function sortBookmarksAlphabetically(entries) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  return [...entries].sort((a, b) => {
+    const nameA = a?.name ?? "";
+    const nameB = b?.name ?? "";
+    return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+  });
 }
 
 function getDefaultCategorySettings() {
@@ -1705,7 +1832,7 @@ function handleCategoryFormSubmit() {
 }
 
 function setBookmarks(next, { persist } = { persist: true }) {
-  bookmarks = sanitizeBookmarks(next);
+  bookmarks = sortBookmarksAlphabetically(sanitizeBookmarks(next));
   categoryInfo = collectCategoryInfo();
   if (persist) {
     try {
@@ -3818,8 +3945,10 @@ function setupDataTools() {
     const link = document.createElement("a");
     link.href = url;
     link.download = `bubblemarks-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   });
 
   restoreBtn.addEventListener("click", async () => {
