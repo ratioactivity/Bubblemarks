@@ -265,6 +265,12 @@ let nextPageBtn;
 let lastRenderedCollection = [];
 let pendingResizeFrame = null;
 let lastLoggedLayout = { cardsPerRow: null, rowsPerPage: null };
+let manageBookmarksBtn;
+let manageBookmarksModal;
+let manageBookmarksList;
+let manageBookmarksTemplate;
+let manageBookmarksEmpty;
+let activeBookmarkManagerConfirm = null;
 const getControlPanels = () =>
   Array.from(document.querySelectorAll("[data-controls-panel]"));
 
@@ -285,24 +291,161 @@ function replaceChildrenSafe(target, nodes) {
   }
 }
 
-let activeInlineDeletePanel = null;
-
-function showInlineDeletePanel(panel) {
-  if (!panel) return;
-  if (activeInlineDeletePanel && activeInlineDeletePanel !== panel) {
-    hideInlineDeletePanel(activeInlineDeletePanel);
+function showBookmarkManagerConfirm(item) {
+  if (!item) return;
+  if (activeBookmarkManagerConfirm && activeBookmarkManagerConfirm !== item) {
+    hideBookmarkManagerConfirm(activeBookmarkManagerConfirm);
   }
-  panel.hidden = false;
-  panel.dataset.active = "true";
-  activeInlineDeletePanel = panel;
+  const confirm = item.querySelector(".bookmark-manager-item__confirm");
+  const deleteButton = item.querySelector(".bookmark-manager-item__delete");
+  if (deleteButton) {
+    deleteButton.hidden = true;
+  }
+  if (confirm) {
+    confirm.hidden = false;
+    const confirmBtn = confirm.querySelector('[data-manager-action="confirm"]');
+    if (confirmBtn) {
+      confirmBtn.focus({ preventScroll: true });
+    }
+  }
+  item.dataset.confirming = "true";
+  activeBookmarkManagerConfirm = item;
 }
 
-function hideInlineDeletePanel(panel) {
-  if (!panel) return;
-  panel.hidden = true;
-  panel.removeAttribute("data-active");
-  if (activeInlineDeletePanel === panel) {
-    activeInlineDeletePanel = null;
+function hideBookmarkManagerConfirm(item) {
+  if (!item) return;
+  const confirm = item.querySelector(".bookmark-manager-item__confirm");
+  const deleteButton = item.querySelector(".bookmark-manager-item__delete");
+  if (confirm) {
+    confirm.hidden = true;
+  }
+  if (deleteButton) {
+    deleteButton.hidden = false;
+  }
+  item.removeAttribute("data-confirming");
+  if (activeBookmarkManagerConfirm === item) {
+    activeBookmarkManagerConfirm = null;
+  }
+}
+
+function resetBookmarkManagerConfirm() {
+  if (activeBookmarkManagerConfirm) {
+    hideBookmarkManagerConfirm(activeBookmarkManagerConfirm);
+  }
+}
+
+function renderBookmarkManagerList() {
+  if (!manageBookmarksList || !manageBookmarksTemplate) {
+    return;
+  }
+
+  resetBookmarkManagerConfirm();
+
+  if (!Array.isArray(bookmarks) || bookmarks.length === 0) {
+    replaceChildrenSafe(manageBookmarksList, []);
+    if (manageBookmarksEmpty) {
+      manageBookmarksEmpty.hidden = false;
+    }
+    return;
+  }
+
+  const items = bookmarks
+    .map((bookmark) => {
+      const node = manageBookmarksTemplate.content?.firstElementChild
+        ? manageBookmarksTemplate.content.firstElementChild.cloneNode(true)
+        : null;
+
+      if (!node) {
+        return null;
+      }
+
+      node.dataset.bookmarkId = bookmark.id || "";
+
+      const titleEl = node.querySelector(".bookmark-manager-item__title");
+      const categoryEl = node.querySelector(".bookmark-manager-item__category");
+      const urlEl = node.querySelector(".bookmark-manager-item__url");
+      const confirmEl = node.querySelector(".bookmark-manager-item__confirm");
+      const deleteBtn = node.querySelector(".bookmark-manager-item__delete");
+
+      const bookmarkTitle = bookmark.name?.trim() || "Untitled bookmark";
+      const categoryKey =
+        normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
+        DEFAULT_CATEGORY_SLUG;
+      const displayCategory = getCategoryLabel(
+        categoryKey,
+        bookmark.category || DEFAULT_CATEGORY_LABEL
+      );
+
+      if (titleEl) {
+        titleEl.textContent = bookmarkTitle;
+      }
+
+      if (categoryEl) {
+        categoryEl.textContent = displayCategory;
+        applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
+      }
+
+      if (urlEl) {
+        urlEl.textContent = bookmark.url || "";
+        urlEl.title = bookmark.url || "";
+      }
+
+      if (confirmEl) {
+        confirmEl.hidden = true;
+      }
+
+      if (deleteBtn) {
+        deleteBtn.hidden = false;
+        deleteBtn.setAttribute("aria-label", `Delete ${bookmarkTitle}`);
+      }
+
+      return node;
+    })
+    .filter(Boolean);
+
+  replaceChildrenSafe(manageBookmarksList, items);
+
+  if (manageBookmarksEmpty) {
+    manageBookmarksEmpty.hidden = true;
+  }
+}
+
+function refreshBookmarkManagerUI() {
+  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
+    renderBookmarkManagerList();
+  }
+}
+
+function deleteBookmarkById(bookmarkId) {
+  if (!bookmarkId) {
+    return;
+  }
+
+  const index = bookmarks.findIndex((bookmark) => bookmark && bookmark.id === bookmarkId);
+  if (index === -1) {
+    return;
+  }
+
+  const next = bookmarks.slice();
+  next.splice(index, 1);
+
+  resetBookmarkManagerConfirm();
+  setBookmarks(next, { persist: true });
+
+  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
+    window.requestAnimationFrame(() => {
+      const nextDelete = manageBookmarksList?.querySelector(
+        ".bookmark-manager-item__delete"
+      );
+      if (nextDelete) {
+        nextDelete.focus({ preventScroll: true });
+        return;
+      }
+      const closeBtn = manageBookmarksModal.querySelector(
+        ".bookmark-manager-modal__close"
+      );
+      closeBtn?.focus({ preventScroll: true });
+    });
   }
 }
 
@@ -326,6 +469,11 @@ window.addEventListener("DOMContentLoaded", async () => {
   bookmarkUrlInput = document.getElementById("bookmark-url");
   bookmarkImageInput = document.getElementById("bookmark-image");
   bookmarkCategorySelect = document.getElementById("bookmark-category");
+  manageBookmarksBtn = document.getElementById("manage-bookmarks");
+  manageBookmarksModal = document.getElementById("manage-bookmarks-modal");
+  manageBookmarksList = document.getElementById("bookmark-manager-list");
+  manageBookmarksTemplate = document.getElementById("bookmark-manager-item-template");
+  manageBookmarksEmpty = document.getElementById("bookmark-manager-empty");
   axolotlLayer = document.querySelector(".axolotl-layer");
   axolotlPath = document.getElementById("axolotl-path");
   axolotlSprite = document.getElementById("axolotl-sprite");
@@ -338,6 +486,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   settingsModal = document.getElementById("settings-modal");
   settingsForm = document.getElementById("settings-form");
   settingsDialog = document.querySelector(".settings-modal__dialog");
+
   toggleHeadingInput = document.getElementById("toggle-heading");
   toggleAxolotlInput = document.getElementById("toggle-axolotl");
   cardSizeInput = document.getElementById("card-size");
@@ -364,8 +513,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   setupKeyboard();
   setupSettingsMenu();
   setupDataTools();
-  setupCategoryCustomization();
   setupBookmarkCreation();
+  setupBookmarkManagement();
+  setupCategoryCustomization();
   setupLayoutControls();
 
   applyPreferences({ lazyAxolotl: true });
@@ -486,6 +636,18 @@ function sanitizeBookmarks(entries) {
       };
     })
     .filter((entry) => entry.name && entry.url);
+}
+
+function sortBookmarksAlphabetically(entries) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  return [...entries].sort((a, b) => {
+    const nameA = a?.name ?? "";
+    const nameB = b?.name ?? "";
+    return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+  });
 }
 
 function getDefaultCategorySettings() {
@@ -1151,6 +1313,140 @@ function setupBookmarkCreation() {
   });
 }
 
+function setupBookmarkManagement() {
+  if (
+    !manageBookmarksBtn ||
+    !manageBookmarksModal ||
+    !manageBookmarksList ||
+    !manageBookmarksTemplate
+  ) {
+    return;
+  }
+
+  const focusableSelector = [
+    'button:not([disabled])',
+    '[href]:not([aria-hidden="true"])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(", ");
+
+  const getFocusableElements = () =>
+    Array.from(manageBookmarksModal.querySelectorAll(focusableSelector)).filter((element) => {
+      if (element.hasAttribute("hidden")) return false;
+      if (element.getAttribute("aria-hidden") === "true") return false;
+      if (element.tabIndex < 0) return false;
+      const style = window.getComputedStyle(element);
+      if (style.display === "none" || style.visibility === "hidden") {
+        return false;
+      }
+      return true;
+    });
+
+  const closeManageModal = ({ restoreFocus = true } = {}) => {
+    manageBookmarksModal.hidden = true;
+    document.body.classList.remove("modal-open");
+    resetBookmarkManagerConfirm();
+    if (restoreFocus) {
+      window.setTimeout(() => {
+        manageBookmarksBtn?.focus();
+      }, 20);
+    }
+  };
+
+  const openManageModal = () => {
+    renderBookmarkManagerList();
+    manageBookmarksModal.hidden = false;
+    document.body.classList.add("modal-open");
+    if (manageBookmarksList) {
+      manageBookmarksList.scrollTop = 0;
+    }
+    window.setTimeout(() => {
+      const firstDelete = manageBookmarksList?.querySelector(
+        ".bookmark-manager-item__delete"
+      );
+      if (firstDelete) {
+        firstDelete.focus({ preventScroll: true });
+        return;
+      }
+      const closeBtn = manageBookmarksModal.querySelector(
+        ".bookmark-manager-modal__close"
+      );
+      closeBtn?.focus({ preventScroll: true });
+    }, 20);
+  };
+
+  manageBookmarksBtn.addEventListener("click", () => {
+    openManageModal();
+  });
+
+  manageBookmarksModal.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target && target.dataset && target.dataset.managerDismiss === "true") {
+      closeManageModal();
+    }
+  });
+
+  manageBookmarksModal.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeManageModal();
+      return;
+    }
+
+    if (event.key === "Tab") {
+      const focusable = getFocusableElements();
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey) {
+        if (document.activeElement === first || !manageBookmarksModal.contains(document.activeElement)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  });
+
+  manageBookmarksList.addEventListener("click", (event) => {
+    const button = event.target?.closest?.("button");
+    if (!button) {
+      return;
+    }
+
+    const item = button.closest(".bookmark-manager-item");
+    if (!item) {
+      return;
+    }
+
+    if (button.classList.contains("bookmark-manager-item__delete")) {
+      event.preventDefault();
+      showBookmarkManagerConfirm(item);
+      return;
+    }
+
+    const action = button.dataset.managerAction;
+    if (action === "confirm") {
+      event.preventDefault();
+      deleteBookmarkById(item.dataset.bookmarkId || "");
+      return;
+    }
+
+    if (action === "cancel") {
+      event.preventDefault();
+      hideBookmarkManagerConfirm(item);
+      const deleteBtn = item.querySelector(".bookmark-manager-item__delete");
+      deleteBtn?.focus({ preventScroll: true });
+    }
+  });
+}
+
 function setupCategoryCustomization() {
   if (!customizeCategoriesBtn || !categoryModal || !categoryForm || !categorySettingsList) {
     return;
@@ -1355,7 +1651,7 @@ function handleCategoryFormSubmit() {
 }
 
 function setBookmarks(next, { persist } = { persist: true }) {
-  bookmarks = sanitizeBookmarks(next);
+  bookmarks = sortBookmarksAlphabetically(sanitizeBookmarks(next));
   categoryInfo = collectCategoryInfo();
   if (persist) {
     try {
@@ -1371,6 +1667,7 @@ function setBookmarks(next, { persist } = { persist: true }) {
   } else {
     renderBookmarks(bookmarks);
   }
+  refreshBookmarkManagerUI();
 }
 
 function setupSearch() {
@@ -1935,11 +2232,6 @@ function renderBookmarks(collection) {
     return;
   }
 
-  // Close any open inline delete panel when re-rendering
-  if (activeInlineDeletePanel) {
-    hideInlineDeletePanel(activeInlineDeletePanel);
-  }
-
   // Take a clean copy of the collection
   lastRenderedCollection = Array.isArray(collection) ? [...collection] : [];
   const layout = getCurrentLayout();
@@ -1979,43 +2271,36 @@ function renderBookmarks(collection) {
     const mediaEl = card.querySelector(".card-media");
     const titleEl = card.querySelector(".card-title");
     const categoryEl = card.querySelector(".card-category");
-    const bodyEl = card.querySelector(".card-body");
 
-    applyBookmarkImage(imageEl, bookmark);
-    imageEl.alt = bookmark.name;
-    titleEl.textContent = bookmark.name;
+    const bookmarkTitle = bookmark.name?.trim() || "Untitled bookmark";
 
-    function openBookmark(evt) {
-      evt.preventDefault();
-      evt.stopPropagation();
-      if (!bookmark.url) return;
-      try {
-        window.open(bookmark.url, "_blank", "noopener,noreferrer");
-      } catch (e) {
-        console.error("Failed to open bookmark", e);
-      }
-    }
-
-    if (mediaEl) {
-      if (bookmark.url) {
-        mediaEl.style.cursor = "pointer";
-      }
-      mediaEl.addEventListener("click", openBookmark);
+    if (card instanceof HTMLElement) {
+      card.title = bookmarkTitle;
     }
 
     if (imageEl) {
-      if (bookmark.url) {
-        imageEl.style.cursor = "pointer";
-      }
-      imageEl.addEventListener("click", openBookmark);
+      applyBookmarkImage(imageEl, bookmark);
+      imageEl.alt = bookmarkTitle;
     }
 
-    card.addEventListener("keydown", (event) => {
-      if (event.target !== card) return;
-      if (event.key === "Enter" || event.key === " ") {
-        openBookmark(event);
+    if (titleEl) {
+      titleEl.textContent = bookmarkTitle;
+    }
+
+    if (card instanceof HTMLAnchorElement && bookmark.url) {
+      card.href = bookmark.url;
+      card.target = "_blank";
+      card.rel = "noopener noreferrer";
+    } else if (card instanceof HTMLAnchorElement) {
+      card.removeAttribute("href");
+      card.removeAttribute("target");
+      card.removeAttribute("rel");
+      card.classList.add("card--disabled");
+      card.tabIndex = -1;
+      if (mediaEl) {
+        mediaEl.classList.add("card-media--no-link");
       }
-    });
+    }
 
     const categoryKey =
       normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
@@ -2024,41 +2309,10 @@ function renderBookmarks(collection) {
       categoryKey,
       bookmark.category || DEFAULT_CATEGORY_LABEL
     );
-    categoryEl.textContent = displayLabel;
-    applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
 
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "delete-btn";
-    deleteBtn.type = "button";
-    deleteBtn.innerHTML = "✕";
-    deleteBtn.title = "Delete bookmark";
-
-    deleteBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      event.preventDefault();
-
-      if (!Array.isArray(bookmarks) || !bookmark || !bookmark.id) {
-        console.warn("Cannot delete bookmark: missing id or store", bookmark);
-        return;
-      }
-
-      const index = bookmarks.findIndex((b) => b && b.id === bookmark.id);
-      if (index === -1) {
-        console.warn("Bookmark not found in store for deletion", bookmark);
-        return;
-      }
-
-      const next = bookmarks.slice();
-      next.splice(index, 1);
-
-      setBookmarks(next, { persist: true });
-    });
-
-    if (bodyEl) {
-      bodyEl.appendChild(deleteBtn);
-    } else {
-      card.appendChild(deleteBtn);
+    if (categoryEl) {
+      categoryEl.textContent = displayLabel;
+      applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
     }
 
     return card;
@@ -3510,8 +3764,10 @@ function setupDataTools() {
     const link = document.createElement("a");
     link.href = url;
     link.download = `bubblemarks-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   });
 
   restoreBtn.addEventListener("click", async () => {
