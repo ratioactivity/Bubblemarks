@@ -1,4 +1,5 @@
 
+
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
 const DEFAULT_SOURCE = "bookmarks.json";
 const FALLBACK_PALETTES = [
@@ -461,6 +462,170 @@ function deleteBookmarkById(bookmarkId) {
       closeBtn?.focus({ preventScroll: true });
     });
   }
+
+  const items = bookmarks
+    .map((bookmark) => {
+      const node = manageBookmarksTemplate.content?.firstElementChild
+        ? manageBookmarksTemplate.content.firstElementChild.cloneNode(true)
+        : null;
+
+      if (!node) {
+        return null;
+      }
+
+      node.dataset.bookmarkId = bookmark.id || "";
+
+      const titleEl = node.querySelector(".bookmark-manager-item__title");
+      const categoryEl = node.querySelector(".bookmark-manager-item__category");
+      const urlEl = node.querySelector(".bookmark-manager-item__url");
+      const confirmEl = node.querySelector(".bookmark-manager-item__confirm");
+      const deleteBtn = node.querySelector(".bookmark-manager-item__delete");
+
+      const bookmarkTitle = bookmark.name?.trim() || "Untitled bookmark";
+      const categoryKey =
+        normalizeCategoryKey(bookmark.category || DEFAULT_CATEGORY_LABEL) ||
+        DEFAULT_CATEGORY_SLUG;
+      const displayCategory = getCategoryLabel(
+        categoryKey,
+        bookmark.category || DEFAULT_CATEGORY_LABEL
+      );
+
+      if (titleEl) {
+        titleEl.textContent = bookmarkTitle;
+      }
+
+      if (categoryEl) {
+        categoryEl.textContent = displayCategory;
+        applyCategoryStylesToBadge(categoryEl, getCategoryColor(categoryKey));
+      }
+
+      if (urlEl) {
+        urlEl.textContent = bookmark.url || "";
+        urlEl.title = bookmark.url || "";
+      }
+
+      if (confirmEl) {
+        confirmEl.hidden = true;
+      }
+
+      if (deleteBtn) {
+        deleteBtn.hidden = false;
+        deleteBtn.setAttribute("aria-label", `Delete ${bookmarkTitle}`);
+      }
+
+      return node;
+    })
+    .filter(Boolean);
+
+  replaceChildrenSafe(manageBookmarksList, items);
+
+  if (manageBookmarksEmpty) {
+    manageBookmarksEmpty.hidden = true;
+  }
+}
+
+function refreshBookmarkManagerUI() {
+  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
+    renderBookmarkManagerList();
+  }
+}
+
+function deleteBookmarkById(bookmarkId) {
+  if (!bookmarkId) {
+    return;
+  }
+
+  const index = bookmarks.findIndex((bookmark) => bookmark && bookmark.id === bookmarkId);
+  if (index === -1) {
+    return;
+  }
+
+  const next = bookmarks.slice();
+  next.splice(index, 1);
+
+  resetBookmarkManagerConfirm();
+  setBookmarks(next, { persist: true });
+
+  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
+    window.requestAnimationFrame(() => {
+      const nextDelete = manageBookmarksList?.querySelector(
+        ".bookmark-manager-item__delete"
+      );
+      if (nextDelete) {
+        nextDelete.focus({ preventScroll: true });
+        return;
+      }
+      const closeBtn = manageBookmarksModal.querySelector(
+        ".bookmark-manager-modal__close"
+      );
+      closeBtn?.focus({ preventScroll: true });
+    });
+  }
+}
+
+function createDeleteConfirmationPanel(card, bookmark) {
+  const panel = document.createElement("div");
+  panel.className = "delete-confirm";
+  panel.hidden = true;
+  panel.dataset.bookmarkId = bookmark.id || "";
+
+  const message = document.createElement("p");
+  message.className = "delete-message";
+  const bookmarkName = bookmark.name?.trim() || "this bookmark";
+  message.textContent = `Remove "${bookmarkName}"?`;
+  panel.appendChild(message);
+
+  const actions = document.createElement("div");
+  actions.className = "delete-actions";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "confirm-no";
+  cancelBtn.textContent = "Cancel";
+
+  const confirmBtn = document.createElement("button");
+  confirmBtn.type = "button";
+  confirmBtn.className = "confirm-yes";
+  confirmBtn.textContent = "Delete";
+
+  actions.append(cancelBtn, confirmBtn);
+  panel.appendChild(actions);
+
+  panel.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  cancelBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    hideInlineDeletePanel(panel);
+  });
+
+  confirmBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (!Array.isArray(bookmarks) || !bookmark || !bookmark.id) {
+      console.warn("Cannot delete bookmark: missing id or store", bookmark);
+      hideInlineDeletePanel(panel);
+      return;
+    }
+
+    const index = bookmarks.findIndex((b) => b && b.id === bookmark.id);
+    if (index === -1) {
+      console.warn("Bookmark not found in store for deletion", bookmark);
+      hideInlineDeletePanel(panel);
+      return;
+    }
+
+    const next = bookmarks.slice();
+    next.splice(index, 1);
+
+    hideInlineDeletePanel(panel);
+    setBookmarks(next, { persist: true });
+  });
+
+  return panel;
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
