@@ -8,6 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bubblemarks</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="assets/icon128.png" />
 </head>
 <body>
   <div class="floating-charms">
@@ -312,7 +313,10 @@
     <div class="settings-modal__backdrop" data-settings-dismiss="true"></div>
     <div class="settings-modal__dialog" tabindex="-1">
       <div class="settings-modal__header">
-        <h2 id="settings-modal-title">Bubblemarks Settings</h2>
+        <div class="settings-title">
+          <img src="assets/icon128.png" alt="Bubblemarks Icon" />
+          <h2 id="settings-modal-title">Bubblemarks Settings</h2>
+        </div>
         <button
           type="button"
           class="settings-modal__close"
@@ -384,5 +388,6 @@
 
   <script src="bubbles-background.js"></script>
   <script src="script.js"></script>
+  <img src="assets/icon128.png" alt="Bubblemarks Icon" class="app-logo" />
 </body>
 </html>
