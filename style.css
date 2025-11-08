@@ -1748,3 +1748,16 @@ body.modal-open {
 .delete-actions .confirm-no {
   background: #ddd;
 }
+
+/* === Scroll Lock Mode === */
+.scroll-locked,
+.scroll-locked body {
+  overflow: hidden !important;
+}
+
+/* Optional smoother centering for embedded layouts */
+.scroll-locked .app-shell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}

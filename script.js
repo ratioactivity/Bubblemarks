@@ -252,6 +252,7 @@ let settingsForm;
 let settingsDialog;
 let toggleHeadingInput;
 let toggleAxolotlInput;
+let scrollLockToggleInput;
 let cardSizeInput;
 let customizeCategoriesBtn;
 let categoryModal;
@@ -573,6 +574,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   if (!keyboardContainer) console.error("Missing #keyboard element in DOM");
 
   preferences = loadPreferences();
+  applyScrollLock(preferences.scrollLocked);
   applyPreferences({ syncInputs: false, lazyAxolotl: true });
 
   setupControlTabs();
@@ -919,6 +921,7 @@ function getDefaultPreferences() {
   return {
     showHeading: true,
     showAxolotl: true,
+    scrollLocked: false,
     cardSize: "comfy",
     cardsPerRow: DEFAULT_CARDS_PER_ROW,
     rowsPerPage: DEFAULT_ROWS_PER_PAGE,
@@ -938,6 +941,7 @@ function normalizePreferences(value) {
   return {
     showHeading: value.showHeading !== false,
     showAxolotl: value.showAxolotl !== false,
+    scrollLocked: value.scrollLocked === true,
     cardSize: normalizeCardSize(value.cardSize),
     cardsPerRow,
     rowsPerPage,
@@ -1796,6 +1800,7 @@ function setupSearch() {
 function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
   const showHeading = preferences.showHeading !== false;
   const showAxolotl = preferences.showAxolotl !== false;
+  const scrollLocked = preferences.scrollLocked === true;
   const cardSize = normalizeCardSize(preferences.cardSize);
   const cardsPerRow = normalizeLayoutCount(preferences.cardsPerRow, DEFAULT_CARDS_PER_ROW);
   const rowsPerPage = normalizeLayoutCount(preferences.rowsPerPage, DEFAULT_ROWS_PER_PAGE);
@@ -1805,6 +1810,7 @@ function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
   preferences.pageIndex = normalizePageIndex(preferences.pageIndex);
 
   preferences.cardSize = cardSize;
+  preferences.scrollLocked = scrollLocked;
 
   if (heroHeading) {
     heroHeading.hidden = !showHeading;
@@ -1816,6 +1822,9 @@ function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
     }
     if (toggleAxolotlInput) {
       toggleAxolotlInput.checked = showAxolotl;
+    }
+    if (scrollLockToggleInput) {
+      scrollLockToggleInput.checked = scrollLocked;
     }
     if (cardSizeInput) {
       cardSizeInput.value = String(cardSizeToIndex(cardSize));
@@ -1837,6 +1846,7 @@ function applyPreferences({ syncInputs = true, lazyAxolotl = false } = {}) {
   }
 
   applyGridLayout(cardsPerRow, rowsPerPage);
+  applyScrollLock(scrollLocked);
 
   if (showAxolotl) {
     if (!lazyAxolotl) {
@@ -2087,6 +2097,38 @@ function setupSettingsMenu() {
       savePreferences();
       applyPreferences({ syncInputs: false });
     });
+  }
+
+  const displaySection = settingsForm?.querySelector(".settings-section");
+  if (displaySection && !displaySection.querySelector('[data-preference="scroll-lock"]')) {
+    const scrollLockLabel = document.createElement("label");
+    scrollLockLabel.className = "settings-toggle";
+    scrollLockLabel.dataset.preference = "scroll-lock";
+
+    const scrollLockCheckbox = document.createElement("input");
+    scrollLockCheckbox.type = "checkbox";
+    scrollLockCheckbox.checked = preferences.scrollLocked === true;
+    scrollLockCheckbox.addEventListener("change", () => {
+      preferences.scrollLocked = scrollLockCheckbox.checked;
+      savePreferences();
+      applyScrollLock(preferences.scrollLocked);
+    });
+
+    const scrollLockText = document.createElement("span");
+    scrollLockText.textContent = "Disable scrolling";
+
+    scrollLockLabel.append(scrollLockCheckbox, scrollLockText);
+
+    const insertBeforeTarget =
+      displaySection.querySelector(".settings-slider") ||
+      displaySection.querySelector(".settings-layout");
+    if (insertBeforeTarget) {
+      displaySection.insertBefore(scrollLockLabel, insertBeforeTarget);
+    } else {
+      displaySection.appendChild(scrollLockLabel);
+    }
+
+    scrollLockToggleInput = scrollLockCheckbox;
   }
 
   if (cardSizeInput) {
@@ -2519,6 +2561,34 @@ function applyGridLayout(cardsPerRow, rowsPerPage) {
   ) {
     console.log(`[Bubblemarks] Layout set → ${normalizedCards} columns × ${normalizedRows} rows`);
     lastLoggedLayout = { cardsPerRow: normalizedCards, rowsPerPage: normalizedRows };
+  }
+}
+
+function applyScrollLock(isLocked) {
+  const app = document.querySelector(".app-shell") || document.body;
+
+  if (!app) {
+    return;
+  }
+
+  const wasLocked = app.classList.contains("scroll-locked");
+
+  if (isLocked) {
+    app.classList.add("scroll-locked");
+    if (document.body && app !== document.body) {
+      document.body.classList.add("scroll-locked");
+    }
+    if (!wasLocked) {
+      const centerTarget = Math.max((document.body.scrollHeight - window.innerHeight) / 2, 0);
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: centerTarget, behavior: "smooth" });
+      });
+    }
+  } else {
+    app.classList.remove("scroll-locked");
+    if (document.body) {
+      document.body.classList.remove("scroll-locked");
+    }
   }
 }
 
