@@ -450,6 +450,45 @@ function deleteBookmarkById(bookmarkId) {
       closeBtn?.focus({ preventScroll: true });
     });
   }
+}
+
+function refreshBookmarkManagerUI() {
+  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
+    renderBookmarkManagerList();
+  }
+}
+
+function deleteBookmarkById(bookmarkId) {
+  if (!bookmarkId) {
+    return;
+  }
+
+  const index = bookmarks.findIndex((bookmark) => bookmark && bookmark.id === bookmarkId);
+  if (index === -1) {
+    return;
+  }
+
+  const next = bookmarks.slice();
+  next.splice(index, 1);
+
+  resetBookmarkManagerConfirm();
+  setBookmarks(next, { persist: true });
+
+  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
+    window.requestAnimationFrame(() => {
+      const nextDelete = manageBookmarksList?.querySelector(
+        ".bookmark-manager-item__delete"
+      );
+      if (nextDelete) {
+        nextDelete.focus({ preventScroll: true });
+        return;
+      }
+      const closeBtn = manageBookmarksModal.querySelector(
+        ".bookmark-manager-modal__close"
+      );
+      closeBtn?.focus({ preventScroll: true });
+    });
+  }
 
   resetBookmarkManagerConfirm();
 
