@@ -1,4 +1,5 @@
 
+
 const STORAGE_KEY = "bubblemarks.bookmarks.v1";
 const DEFAULT_SOURCE = "bookmarks.json";
 const FALLBACK_PALETTES = [
@@ -449,6 +450,71 @@ function deleteBookmarkById(bookmarkId) {
       closeBtn?.focus({ preventScroll: true });
     });
   }
+}
+
+function createDeleteConfirmationPanel(card, bookmark) {
+  const panel = document.createElement("div");
+  panel.className = "delete-confirm";
+  panel.hidden = true;
+  panel.dataset.bookmarkId = bookmark.id || "";
+
+  const message = document.createElement("p");
+  message.className = "delete-message";
+  const bookmarkName = bookmark.name?.trim() || "this bookmark";
+  message.textContent = `Remove "${bookmarkName}"?`;
+  panel.appendChild(message);
+
+  const actions = document.createElement("div");
+  actions.className = "delete-actions";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "confirm-no";
+  cancelBtn.textContent = "Cancel";
+
+  const confirmBtn = document.createElement("button");
+  confirmBtn.type = "button";
+  confirmBtn.className = "confirm-yes";
+  confirmBtn.textContent = "Delete";
+
+  actions.append(cancelBtn, confirmBtn);
+  panel.appendChild(actions);
+
+  panel.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  cancelBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    hideInlineDeletePanel(panel);
+  });
+
+  confirmBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (!Array.isArray(bookmarks) || !bookmark || !bookmark.id) {
+      console.warn("Cannot delete bookmark: missing id or store", bookmark);
+      hideInlineDeletePanel(panel);
+      return;
+    }
+
+    const index = bookmarks.findIndex((b) => b && b.id === bookmark.id);
+    if (index === -1) {
+      console.warn("Bookmark not found in store for deletion", bookmark);
+      hideInlineDeletePanel(panel);
+      return;
+    }
+
+    const next = bookmarks.slice();
+    next.splice(index, 1);
+
+    hideInlineDeletePanel(panel);
+    setBookmarks(next, { persist: true });
+  });
+
+  return panel;
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
