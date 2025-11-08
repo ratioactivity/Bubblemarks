@@ -1125,6 +1125,27 @@ body {
   word-break: break-word;
 }
 
+.bookmark-manager-item__position {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.82rem;
+  color: rgba(85, 65, 95, 0.72);
+}
+
+.bookmark-manager-item__position span {
+  font-weight: 600;
+}
+
+.bookmark-manager-item__position select {
+  border-radius: 12px;
+  border: 1px solid rgba(180, 170, 220, 0.55);
+  padding: 0.35rem 0.6rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: rgba(55, 40, 70, 0.9);
+  font-size: 0.82rem;
+  box-shadow: 0 6px 16px rgba(180, 190, 230, 0.25);
+}
+
 .bookmark-manager-item__actions {
   display: grid;
   gap: 0.55rem;
@@ -1769,15 +1790,25 @@ body.modal-open {
   left: 18px;
   width: 64px;
   height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0.9;
   transition: opacity 0.2s, transform 0.2s;
   z-index: 10;
   filter: drop-shadow(0 10px 22px rgba(150, 116, 181, 0.3));
+  text-decoration: none;
 }
 
 .app-logo:hover {
   opacity: 1;
   transform: translateY(-2px);
+}
+
+.app-logo img {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .settings-title {
@@ -1792,4 +1823,11 @@ body.modal-open {
   height: 44px;
   flex-shrink: 0;
   filter: drop-shadow(0 6px 14px rgba(150, 116, 181, 0.28));
+}
+
+/* Bookmark image alignment support */
+.bookmark-card {
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center center;
 }

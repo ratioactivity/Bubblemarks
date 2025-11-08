@@ -34,6 +34,7 @@ const LAYOUT_MIN_COUNT = 1;
 const LAYOUT_MAX_COUNT = 10;
 const DEFAULT_CARDS_PER_ROW = 3;
 const DEFAULT_ROWS_PER_PAGE = 2;
+const IMAGE_POSITION_OPTIONS = new Set(["top", "center", "bottom"]);
 
 const DEFAULT_AXOLOTL_IMAGE = (() => {
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -369,6 +370,7 @@ function renderBookmarkManagerList() {
       const urlEl = node.querySelector(".bookmark-manager-item__url");
       const confirmEl = node.querySelector(".bookmark-manager-item__confirm");
       const deleteBtn = node.querySelector(".bookmark-manager-item__delete");
+      const positionSelect = node.querySelector("[data-pos]");
 
       const bookmarkTitle = bookmark.name?.trim() || "Untitled bookmark";
       const categoryKey =
@@ -378,6 +380,7 @@ function renderBookmarkManagerList() {
         categoryKey,
         bookmark.category || DEFAULT_CATEGORY_LABEL
       );
+      const normalizedPosition = normalizeImagePosition(bookmark.imagePosition);
 
       if (titleEl) {
         titleEl.textContent = bookmarkTitle;
@@ -400,6 +403,15 @@ function renderBookmarkManagerList() {
       if (deleteBtn) {
         deleteBtn.hidden = false;
         deleteBtn.setAttribute("aria-label", `Delete ${bookmarkTitle}`);
+      }
+
+      if (positionSelect instanceof HTMLSelectElement) {
+        positionSelect.value = normalizedPosition;
+        positionSelect.dataset.bookmarkId = bookmark.id || "";
+        positionSelect.setAttribute(
+          "aria-label",
+          `Set image position for ${bookmarkTitle}`
+        );
       }
 
       return node;
@@ -449,55 +461,6 @@ function deleteBookmarkById(bookmarkId) {
       );
       closeBtn?.focus({ preventScroll: true });
     });
-  }
-}
-
-function refreshBookmarkManagerUI() {
-  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
-    renderBookmarkManagerList();
-  }
-}
-
-function deleteBookmarkById(bookmarkId) {
-  if (!bookmarkId) {
-    return;
-  }
-
-  const index = bookmarks.findIndex((bookmark) => bookmark && bookmark.id === bookmarkId);
-  if (index === -1) {
-    return;
-  }
-
-  const next = bookmarks.slice();
-  next.splice(index, 1);
-
-  resetBookmarkManagerConfirm();
-  setBookmarks(next, { persist: true });
-
-  if (manageBookmarksModal && !manageBookmarksModal.hidden) {
-    window.requestAnimationFrame(() => {
-      const nextDelete = manageBookmarksList?.querySelector(
-        ".bookmark-manager-item__delete"
-      );
-      if (nextDelete) {
-        nextDelete.focus({ preventScroll: true });
-        return;
-      }
-      const closeBtn = manageBookmarksModal.querySelector(
-        ".bookmark-manager-modal__close"
-      );
-      closeBtn?.focus({ preventScroll: true });
-    });
-  }
-
-  resetBookmarkManagerConfirm();
-
-  if (!Array.isArray(bookmarks) || bookmarks.length === 0) {
-    replaceChildrenSafe(manageBookmarksList, []);
-    if (manageBookmarksEmpty) {
-      manageBookmarksEmpty.hidden = false;
-    }
-    return;
   }
 
   const items = bookmarks
@@ -867,6 +830,16 @@ function setupControlTabs() {
   }
 }
 
+function normalizeImagePosition(value) {
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (IMAGE_POSITION_OPTIONS.has(normalized)) {
+      return normalized;
+    }
+  }
+  return "center";
+}
+
 function sanitizeBookmarks(entries) {
   if (!Array.isArray(entries)) return [];
 
@@ -876,6 +849,7 @@ function sanitizeBookmarks(entries) {
       const url = String(entry.url ?? "").trim();
       const category = entry.category ? String(entry.category).trim() : "Unsorted";
       const image = entry.image ? String(entry.image).trim() : "";
+      const imagePosition = normalizeImagePosition(entry.imagePosition);
       const idValue =
         typeof entry.id === "string" && entry.id.trim()
           ? entry.id.trim()
@@ -887,6 +861,7 @@ function sanitizeBookmarks(entries) {
         url,
         category,
         image,
+        imagePosition,
       };
     })
     .filter((entry) => entry.name && entry.url);
@@ -1668,6 +1643,57 @@ function setupBookmarkManagement() {
         first.focus();
       }
     }
+  });
+
+  manageBookmarksList.addEventListener("change", (event) => {
+    const select = event.target;
+    if (!(select instanceof HTMLSelectElement) || !select.hasAttribute("data-pos")) {
+      return;
+    }
+
+    const item = select.closest(".bookmark-manager-item");
+    if (!item) {
+      return;
+    }
+
+    const bookmarkId = select.dataset.bookmarkId || item.dataset.bookmarkId || "";
+    if (!bookmarkId) {
+      return;
+    }
+
+    const normalizedValue = normalizeImagePosition(select.value);
+    if (select.value !== normalizedValue) {
+      select.value = normalizedValue;
+    }
+
+    const bookmarkIndex = bookmarks.findIndex((bookmark) => bookmark && bookmark.id === bookmarkId);
+    if (bookmarkIndex === -1) {
+      return;
+    }
+
+    const currentValue = normalizeImagePosition(bookmarks[bookmarkIndex]?.imagePosition);
+    if (currentValue === normalizedValue) {
+      return;
+    }
+
+    const next = bookmarks.slice();
+    next[bookmarkIndex] = {
+      ...next[bookmarkIndex],
+      imagePosition: normalizedValue,
+    };
+
+    hideBookmarkManagerConfirm(item);
+    setBookmarks(next, { persist: true });
+
+    window.requestAnimationFrame(() => {
+      const updatedSelect = Array.from(
+        manageBookmarksList?.querySelectorAll("[data-pos]") || []
+      ).find(
+        (element) =>
+          element instanceof HTMLSelectElement && element.dataset.bookmarkId === bookmarkId
+      );
+      updatedSelect?.focus({ preventScroll: true });
+    });
   });
 
   manageBookmarksList.addEventListener("click", (event) => {
@@ -2567,14 +2593,20 @@ function renderBookmarks(collection) {
     const categoryEl = card.querySelector(".card-category");
 
     const bookmarkTitle = bookmark.name?.trim() || "Untitled bookmark";
+    const imagePosition = normalizeImagePosition(bookmark.imagePosition);
+    const backgroundPosition =
+      imagePosition === "center" ? "center center" : `center ${imagePosition}`;
 
     if (card instanceof HTMLElement) {
       card.title = bookmarkTitle;
+      card.dataset.imagePosition = imagePosition;
+      card.style.backgroundPosition = backgroundPosition;
     }
 
     if (imageEl) {
       applyBookmarkImage(imageEl, bookmark);
       imageEl.alt = bookmarkTitle;
+      imageEl.style.objectPosition = backgroundPosition;
     }
 
     if (titleEl) {
@@ -2749,6 +2781,7 @@ function applyBookmarkImage(imageEl, bookmark) {
   const handleError = () => {
     imageEl.src = createFallbackImage(bookmark);
     imageEl.classList.add("is-fallback");
+    imageEl.style.objectPosition = "center center";
   };
 
   imageEl.addEventListener("error", handleError, { once: true });
