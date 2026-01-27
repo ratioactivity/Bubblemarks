@@ -218,6 +218,8 @@ let searchTerm = "";
 let categorySettings = loadCategorySettings();
 let categoryInfo = new Map();
 let preferences = loadPreferences();
+let scrollLockPosition = { x: 0, y: 0 };
+let scrollLockBodyStyles = null;
 let axolotlInitialized = false;
 let axolotlController = { enable: () => {}, disable: () => {} };
 let axolotlInitPromise = null;
@@ -984,6 +986,7 @@ function saveCategorySettings() {
 
   try {
     localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(categorySettings));
+    console.log("✅ script validated");
   } catch (error) {
     console.warn("Unable to save category preferences", error);
   }
@@ -1097,6 +1100,7 @@ function savePreferences() {
 
   try {
     localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
+    console.log("✅ script validated");
   } catch (error) {
     console.warn("Unable to save preferences", error);
   }
@@ -1938,6 +1942,7 @@ function setBookmarks(next, { persist } = { persist: true }) {
   if (persist) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
+      console.log("✅ script validated");
     } catch (error) {
       console.warn("Unable to save bookmarks", error);
     }
@@ -2746,6 +2751,8 @@ function applyGridLayout(cardsPerRow, rowsPerPage) {
 
 function applyScrollLock(isLocked) {
   const app = document.querySelector(".app-shell") || document.body;
+  const root = document.documentElement;
+  const body = document.body;
 
   if (!app) {
     return;
@@ -2755,19 +2762,55 @@ function applyScrollLock(isLocked) {
 
   if (isLocked) {
     app.classList.add("scroll-locked");
-    if (document.body && app !== document.body) {
-      document.body.classList.add("scroll-locked");
+    if (body && app !== body) {
+      body.classList.add("scroll-locked");
+    }
+    if (root) {
+      root.classList.add("scroll-locked");
     }
     if (!wasLocked) {
-      const centerTarget = Math.max((document.body.scrollHeight - window.innerHeight) / 2, 0);
-      window.requestAnimationFrame(() => {
-        window.scrollTo({ top: centerTarget, behavior: "smooth" });
-      });
+      scrollLockPosition = {
+        x: window.scrollX || window.pageXOffset || 0,
+        y: window.scrollY || window.pageYOffset || 0,
+      };
+      if (body) {
+        scrollLockBodyStyles = {
+          position: body.style.position,
+          top: body.style.top,
+          left: body.style.left,
+          right: body.style.right,
+          width: body.style.width,
+        };
+        body.style.position = "fixed";
+        body.style.top = `-${scrollLockPosition.y}px`;
+        body.style.left = `-${scrollLockPosition.x}px`;
+        body.style.right = "0";
+        body.style.width = "100%";
+      }
     }
   } else {
     app.classList.remove("scroll-locked");
-    if (document.body) {
-      document.body.classList.remove("scroll-locked");
+    if (body) {
+      body.classList.remove("scroll-locked");
+      if (scrollLockBodyStyles) {
+        body.style.position = scrollLockBodyStyles.position;
+        body.style.top = scrollLockBodyStyles.top;
+        body.style.left = scrollLockBodyStyles.left;
+        body.style.right = scrollLockBodyStyles.right;
+        body.style.width = scrollLockBodyStyles.width;
+      } else {
+        body.style.position = "";
+        body.style.top = "";
+        body.style.left = "";
+        body.style.right = "";
+        body.style.width = "";
+      }
+    }
+    if (root) {
+      root.classList.remove("scroll-locked");
+    }
+    if (wasLocked) {
+      window.scrollTo(scrollLockPosition.x, scrollLockPosition.y);
     }
   }
 }

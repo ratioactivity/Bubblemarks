@@ -1772,15 +1772,9 @@ body.modal-open {
 
 /* === Scroll Lock Mode === */
 .scroll-locked,
-.scroll-locked body {
-  overflow: hidden !important;
-}
-
-/* Optional smoother centering for embedded layouts */
+.scroll-locked body,
 .scroll-locked .app-shell {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  overflow: hidden !important;
 }
 
 /* App icon styling */
