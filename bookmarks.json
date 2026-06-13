@@ -261,13 +261,13 @@
     "name": "Ruse",
     "url": "https://app.notion.com/p/Ruse-2f586c3bb6b980ce99bdf967093012f2",
     "category": "Stories",
-    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2F2f3ab3dc-389a-40dc-b6b6-583d019401d6%2FGothic_romance_in_a_stone_chamber.png/size/w=2000?exp=1781315018&sig=IHZvxP05wmGCgAw4CoKqy9glt-CL99mVlVVBp7f0qLo&imgBuildSrc=presignImageUrl&id=2f586c3b-b6b9-80ce-99bd-f967093012f2&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2F2f3ab3dc-389a-40dc-b6b6-583d019401d6%2FGothic_romance_in_a_stone_chamber.png/size/w=2000?exp=1781323591&sig=5VQBTkTxMddP539nxIGTVA04q201m-MGHdeo6YCH6ZE&imgBuildSrc=presignImageUrl&id=2f586c3b-b6b9-80ce-99bd-f967093012f2&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
   },
   {
     "name": "Coup",
-    "url": "https://app.notion.com/p/Ruse-2f586c3bb6b980ce99bdf967093012f2",
+    "url": "https://app.notion.com/p/Coup-2f886c3bb6b98012933cca7662856251",
     "category": "Stories",
-    "image": "https://img.notionusercontent.com/ext/https%3A%2F%2Fi.pinimg.com%2F736x%2F12%2F8b%2F67%2F128b67d615c15b6f493618ffa16097e1.jpg/size/w=2000?exp=1781314829&sig=c4ZzFOHBnHacCiPRTAlDKztW-GlKz-meHYEyYFsxMPI&imgBuildSrc=presignImageUrl&id=2f586c3b-b6b9-8037-8a77-ca9cdb8974dc&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2Fb8d6ff7f-bf31-4772-899a-0d234949026a%2Fimage_2026-04-05_020347713.png/size/w=2000?exp=1781323569&sig=yfav_00oyXtbK5P7p5JjPBqzc3uFkA3qLld5fZg3CCQ&imgBuildSrc=presignImageUrl&id=2f886c3b-b6b9-8012-933c-ca7662856251&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
   },
   {
     "name": "Mask",
@@ -359,10 +359,40 @@
     "category": "Tools",
     "image": "https://www.orau.org/img/blog/history/radium-las-chicas.jpg"
   },
+  {
+    "name": "Yandex Translate",
+    "url": "https://translate.yandex.com/en/translator/English-Russian",
+    "category": "Tools",
+    "image": "https://yastatic.net/s3/translate/microdata/logo.png"
+  },
     {
     "name": "The Archives",
     "url": "https://www.notion.so/The-Archives-10086c3bb6b9804db597ea2fe7fa07cd",
     "category": "Pages",
     "image": "https://64.media.tumblr.com/02ca1a61849271ae5c71dd7fbbd3df48/3234b6ed0dd38d42-ce/s1280x1920/618b55fb0128e4018981d5b24ea5fe5540384031.png"
-  }
+  },
+   {
+    "name": "Media Database",
+    "url": "https://app.notion.com/p/Media-Database-37186c3bb6b980d698faf778a5a7dbb9",
+    "category": "Pages",
+    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2Fe032f359-2c90-4260-9155-5ecd681240f9%2Fimage_2026-05-31_141237483.png/size/w=2000?exp=1781323638&sig=noWzHEPLfCRBv16PBdNaKWsPGdCMGnHDaRJli23l-2s&imgBuildSrc=presignImageUrl&id=37186c3b-b6b9-80d6-98fa-f778a5a7dbb9&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+  },
+  {
+    "name": "3D Printing",
+    "url": "https://app.notion.com/p/3D-Printing-2f086c3bb6b98046a0e2e93ae2546c1b",
+    "category": "Pages",
+    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2F15c2d175-c8e3-4854-9bcf-512a50b7890b%2Fimage_2026-01-27_160808002.png/size/w=2000?exp=1781323701&sig=M5sKbGsxPglfNLfaCh6ysBL5iEHMOtfu8TUpXwV0plk&imgBuildSrc=presignImageUrl&id=2f086c3b-b6b9-8046-a0e2-e93ae2546c1b&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+  },
+  {
+    "name": "Fintastic3D",
+    "url": "https://www.etsy.com/shop/fintastic3D",
+    "category": "Shop",
+    "image": "https://i.etsystatic.com/17800000/c/2983/2983/0/0/isla/d64b63/83566118/isla_200x200.83566118_ak1vboa6.jpg"
+  },
+  {
+    "name": "Etsy Seller Dashboard",
+    "url": "https://www.etsy.com/your/shops/me/dashboard?ref=hdr-mcpa",
+    "category": "Shop",
+    "image": "https://i.etsystatic.com/site-assets/mobile-landing/sell-mobile/etsy-seller-app-icon.png"
+  },
 ]
