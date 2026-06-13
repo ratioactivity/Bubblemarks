@@ -728,7 +728,8 @@ async function hydrateData() {
       throw new Error("Unable to load bookmarks.json");
     }
 
-    const remote = sanitizeBookmarks(await response.json());
+    const remoteText = await response.text();
+    const remote = sanitizeBookmarks(parseBookmarkJson(remoteText));
     if (remote.length) {
       setBookmarks(remote, { persist: true });
       hasRendered = true;
@@ -742,6 +743,24 @@ async function hydrateData() {
     }
   } finally {
     setLoading(false);
+  }
+}
+
+function parseBookmarkJson(text) {
+  if (typeof text !== "string") {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+    console.log("✅ script validated");
+    return parsed;
+  } catch (error) {
+    const normalized = text.replace(/,\s*([}\]])/g, "$1");
+    const parsed = JSON.parse(normalized);
+    console.log("✅ script validated");
+    console.warn("Loaded bookmarks after removing trailing JSON commas", error);
+    return parsed;
   }
 }
 
@@ -4133,7 +4152,7 @@ function setupDataTools() {
 
     try {
       const text = await file.text();
-      const parsed = JSON.parse(text);
+      const parsed = parseBookmarkJson(text);
       const sanitized = sanitizeBookmarks(parsed);
       if (!sanitized.length) {
         alert("We couldn't find any bookmarks in that file. Please check the format and try again.");
