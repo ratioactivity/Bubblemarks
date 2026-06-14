@@ -18,16 +18,10 @@
     "image": "https://hardynet.net/wp-content/uploads/2020/07/HBO-Max-logo3.jpg"
   },
   {
-    "name": "ChatGPT 4o",
-    "url": "https://chatgpt.com/?model=gpt-4o",
+    "name": "ChatGPT",
+    "url": "https://chatgpt.com/",
     "category": "AI",
-    "image": "https://www.c-sharpcorner.com/article/introducing-chatgpt-4o-the-future-of-multimodal-ai-interaction/Images/ChatGPT-4o.jpg"
-  },
-  {
-    "name": "ChatGPT 5o",
-    "url": "https://chatgpt.com/?model=gpt-5",
-    "category": "AI",
-    "image": "https://images.ctfassets.net/kftzwdyauwt9/2BUWdgTaQBs75ThHVwgAQ9/07670be78f9babba79f23515ab434124/20250805_Jupiter_ArtCard_1920x1080_16x9_DZ_v20__00265_.jpg?w=1600&h=900&fit=fill"
+    "image": "https://assets.designhill.com/design-blog/wp-content/uploads/2024/07/2-1.png"
   },
   {
     "name": "Google Drive",
@@ -151,9 +145,9 @@
   },
   {
     "name": "Codex",
-    "url": "https://chatgpt.com/codex",
+    "url": "https://chatgpt.com/codex/cloud",
     "category": "AI",
-    "image": "https://i.ytimg.com/vi/Kd0QGZMy_tA/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAqVomHi3c0ozIhCk6F4qtJL1QFTA"
+    "image": "https://i.ytimg.com/vi/Kd0QGZMy_tA/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAqVomHi3c0ozIhCk6F4qtJL1QFT"
   },
   {
     "name": "itch.io",
@@ -189,7 +183,7 @@
     "name": "2048",
     "url": "https://play2048.co",
     "category": "Games",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/2048_logo.svg/1200px-2048_logo.svg.png"
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/942050/header.jpg?t=1702036552"
   },
   {
     "name": "Netflix",
@@ -225,43 +219,43 @@
     "name": "TEETH",
     "url": "https://www.notion.so/Teeth-25886c3bb6b980839c48c00157c46ca1",
     "category": "Stories",
-    "image": "https://i.pinimg.com/1200x/16/53/89/165389d0768126e5db086db00247395b.jpg"
+    "image": "https://cdn.donmai.us/sample/a3/05/__original_drawn_by_canis_infernalis__sample-a305d9d71c40d690dcc4f85e99d66f15.jpg"
   },
     {
     "name": "Sleeper",
-    "url": "https://www.notion.so/Lysa-23286c3bb6b980598dd2e7b427af60f1",
+    "url": "https://app.notion.com/p/Sleeper-23286c3bb6b980598dd2e7b427af60f1",
     "category": "Stories",
-    "image": "https://img.notionusercontent.com/ext/https%3A%2F%2Fcdna.artstation.com%2Fp%2Fassets%2Fimages%2Fimages%2F053%2F667%2F938%2Flarge%2Fmlarty-extra-rabies-2.jpg%3F1662736717/size/w=2000?exp=1762491166&sig=7OTasvapTgxHgg7YqDNiGkfA5vGlkWPjLr65oVVSiTA&id=23286c3b-b6b9-8059-8dd2-e7b427af60f1&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1"
+    "image": "https://cdna.artstation.com/p/assets/images/images/053/667/938/large/mlarty-extra-rabies-2.jpg?1662736717"
   },
    {
     "name": "Parallel",
     "url": "https://app.notion.com/p/Parallel-2f586c3bb6b980378a77ca9cdb8974dc",
     "category": "Stories",
-    "image": "https://img.notionusercontent.com/ext/https%3A%2F%2Fi.pinimg.com%2F736x%2F12%2F8b%2F67%2F128b67d615c15b6f493618ffa16097e1.jpg/size/w=2000?exp=1781314829&sig=c4ZzFOHBnHacCiPRTAlDKztW-GlKz-meHYEyYFsxMPI&imgBuildSrc=presignImageUrl&id=2f586c3b-b6b9-8037-8a77-ca9cdb8974dc&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+    "image": "https://i.pinimg.com/236x/12/8b/67/128b67d615c15b6f493618ffa16097e1.jpg"
   },
   {
     "name": "Cove",
     "url": "https://app.notion.com/p/Cove-32d86c3bb6b980af93e9f24c62fab064",
     "category": "Stories",
-    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2F8c446e65-4455-45a3-b80b-37d49d351538%2Fcoveart_(1).jpg/size/w=2000?exp=1781314847&sig=K5DfOt12e6N4UwjNNTfeGgiwlwVl5Ja0z4ydnSQw0vI&imgBuildSrc=presignImageUrl&id=32d86c3b-b6b9-80af-93e9-f24c62fab064&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+    "image": "https://i.pinimg.com/originals/23/38/52/233852e211056ca00f235bdf16f1d75e.jpg?nii=t"
   },
    {
     "name": "Kaleidoscope",
     "url": "https://app.notion.com/p/Kaleidoscope-2f886c3bb6b9805db85cfea1f0adcc62",
     "category": "Stories",
-    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2F7ca38b74-a867-4461-8841-d826c9e9415f%2F0dfe1e7d702967546314721165df67d6.jpg/size/w=2000?exp=1781314890&sig=oNWI6mEAHuqozLUnoXZjnsV5NXhSTbCpXoq9JJYh56o&imgBuildSrc=presignImageUrl&id=2f886c3b-b6b9-805d-b85c-fea1f0adcc62&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+    "image": "https://i.pinimg.com/474x/6a/fa/6b/6afa6bba3b0dd43e43cfe575dc5ccb66.jpg"
   },
   {
     "name": "Coup",
     "url": "https://app.notion.com/p/Coup-2f886c3bb6b98012933cca7662856251",
     "category": "Stories",
-    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2Fb8d6ff7f-bf31-4772-899a-0d234949026a%2Fimage_2026-04-05_020347713.png/size/w=2000?exp=1781314916&sig=bTrVVpYxPlMbt7Y3u2qxk-sBOzgOsIBPAFTKh8_Phlc&imgBuildSrc=presignImageUrl&id=2f886c3b-b6b9-8012-933c-ca7662856251&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+    "image": "https://pbs.twimg.com/media/HAnIGX9XoAAONoH.jpg"
   },
   {
     "name": "Ruse",
     "url": "https://app.notion.com/p/Ruse-2f586c3bb6b980ce99bdf967093012f2",
     "category": "Stories",
-    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2F2f3ab3dc-389a-40dc-b6b6-583d019401d6%2FGothic_romance_in_a_stone_chamber.png/size/w=2000?exp=1781323591&sig=5VQBTkTxMddP539nxIGTVA04q201m-MGHdeo6YCH6ZE&imgBuildSrc=presignImageUrl&id=2f586c3b-b6b9-80ce-99bd-f967093012f2&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+    "image": "https://drive.google.com/file/d/10UkntvYWpzu5hEYrKAkt88HyIVafGZ_F/view?usp=sharing"
   },
   {
     "name": "Coup",
@@ -273,13 +267,13 @@
     "name": "Mask",
     "url": "https://app.notion.com/p/Ruse-2f586c3bb6b980ce99bdf967093012f2",
     "category": "Stories",
-    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2F9c602960-7ee9-4c12-923c-1300d80723d4%2Fdownload.jpg/size/w=2000?exp=1781315038&sig=wIAxdJvmne4Pf9HT_bIPGbwUM1-wBmoLedfxL7W8cRE&imgBuildSrc=presignImageUrl&id=91e86c3b-b6b9-83d4-8310-0177d2dd582b&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+    "image": "https://drive.google.com/file/d/1KNoxFSfc3vKg-fJhZz6lbmboCbz2Kh9f/view?usp=sharing"
   },
   {
     "name": "Dioscuri",
     "url": "https://app.notion.com/p/Ruse-2f586c3bb6b980ce99bdf967093012f2",
     "category": "Stories",
-    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2F572b5707-7b72-446d-b3ed-a4bba7932c97%2FRunning_under_the_starry_sky.png/size/w=2000?exp=1781315052&sig=TkuhD6xwvbcJj-3UDn4yPn1t3lv9iwuFWsz3_kF6ED8&imgBuildSrc=presignImageUrl&id=33986c3b-b6b9-80fa-803d-cd46c09039ab&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+    "image": "https://drive.google.com/file/d/1DGVZ3TZP5_3SHQUrUH39brJ3RKHza4qI/view?usp=drive_link"
   },
     {
     "name": "Apothecary",
@@ -375,13 +369,13 @@
     "name": "Media Database",
     "url": "https://app.notion.com/p/Media-Database-37186c3bb6b980d698faf778a5a7dbb9",
     "category": "Pages",
-    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2Fe032f359-2c90-4260-9155-5ecd681240f9%2Fimage_2026-05-31_141237483.png/size/w=2000?exp=1781323638&sig=noWzHEPLfCRBv16PBdNaKWsPGdCMGnHDaRJli23l-2s&imgBuildSrc=presignImageUrl&id=37186c3b-b6b9-80d6-98fa-f778a5a7dbb9&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+    "image": "https://img.magnific.com/free-vector/hand-drawn-psychedelic-groovy-background_23-2148843454.jpg"
   },
   {
     "name": "3D Printing",
     "url": "https://app.notion.com/p/3D-Printing-2f086c3bb6b98046a0e2e93ae2546c1b",
     "category": "Pages",
-    "image": "https://img.notionusercontent.com/s3/prod-files-secure%2F855704af-3325-4727-a2cf-32fb169ca1a2%2F15c2d175-c8e3-4854-9bcf-512a50b7890b%2Fimage_2026-01-27_160808002.png/size/w=2000?exp=1781323701&sig=M5sKbGsxPglfNLfaCh6ysBL5iEHMOtfu8TUpXwV0plk&imgBuildSrc=presignImageUrl&id=2f086c3b-b6b9-8046-a0e2-e93ae2546c1b&table=block&userId=7f8423f1-cb7a-4185-bcc6-442a0e66d4a1&mtd=com"
+    "image": "https://i.pinimg.com/736x/24/9d/58/249d581bef81e3958e4b6cf8039d506f.jpg"
   },
   {
     "name": "Fintastic3D",
